@@ -12,16 +12,16 @@
 //#define SEG_TLS1    6
 //#define SEG_TLS2    7
 #define SEG_TSS     5
-#define SEG_COUNT  (SEG_TSS+1)
+#define SEG_COUNT  (SEG_TSS+2)
 
 /* global descrptor numbers */
-#define GD_KTEXT    ((SEG_KTEXT) << 4)	// kernel text
-#define GD_KDATA    ((SEG_KDATA) << 4)	// kernel data
-#define GD_UTEXT    ((SEG_UTEXT) << 4)	// user text
-#define GD_UDATA    ((SEG_UDATA) << 4)	// user data
-//#define GD_TLS1     ((SEG_TLS1) << 4)
-//#define GD_TLS2     ((SEG_TLS2) << 4)
-#define GD_TSS      ((SEG_TSS) << 4)	// task segment selector
+#define GD_KTEXT    ((SEG_KTEXT) << 3)	// kernel text
+#define GD_KDATA    ((SEG_KDATA) << 3)	// kernel data
+#define GD_UTEXT    ((SEG_UTEXT) << 3)	// user text
+#define GD_UDATA    ((SEG_UDATA) << 3)	// user data
+//#define GD_TLS1     ((SEG_TLS1) << 3)
+//#define GD_TLS2     ((SEG_TLS2) << 3)
+#define GD_TSS      ((SEG_TSS) << 3)	// task segment selector
 
 #define DPL_KERNEL  (0)
 #define DPL_USER    (3)

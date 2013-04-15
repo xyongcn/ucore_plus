@@ -403,3 +403,44 @@ void syscall(void)
 	panic("undefined syscall %d, pid = %d, name = %s.\n",
 	      num, current->pid, current->name);
 }
+
+#include "unistd_64.h"
+
+static uint64_t sys_ioctl(uint64_t arg[])
+{
+	return 0;
+}
+
+
+
+
+static uint64_t(*syscalls_linux[]) (uint64_t arg[]) = {
+[__NR_read] sys_read,
+[__NR_write] sys_write,
+[__NR_ioctl] sys_ioctl
+};
+void syscall_linux()
+{
+	panic("Syscall Linux\n");
+	struct trapframe *tf = current->tf;
+	uint64_t arg[6];
+	int num = tf->tf_regs.reg_rax;
+	if (num >= 0 && num < NUM_SYSCALLS) {
+		if (syscalls_linux[num] != NULL) {
+	kprintf("LINUX syscall %d, pid = %d, name = %s.\n", num, current->pid, current->name);
+			arg[0] = tf->tf_regs.reg_rdi;
+			arg[1] = tf->tf_regs.reg_rsi;
+			arg[2] = tf->tf_regs.reg_rdx;
+			arg[3] = tf->tf_regs.reg_rcx;
+			arg[4] = tf->tf_regs.reg_r8;
+			arg[5] = tf->tf_regs.reg_r9;
+			tf->tf_regs.reg_rax = syscalls_linux[num] (arg);
+	kprintf("syscall return %d.\n", tf->tf_regs.reg_rax);
+			return;
+		}
+	}
+	print_trapframe(tf);
+	panic("undefined LINUX syscall %d, pid = %d, name = %s.\n",
+	      num, current->pid, current->name);
+	tf->tf_regs.reg_rax = 0;
+}

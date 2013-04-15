@@ -9,6 +9,8 @@
 #define T_IPI     0x81
 #define T_IPI_DOS 0x82
 
+#define T_FAST_SYSCALL 0x83
+
 /* Processor-defined: */
 #define T_DIVIDE                0	// divide error
 #define T_DEBUG                 1	// debug exception

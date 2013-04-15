@@ -232,7 +232,7 @@ gdt:
     SEG_DATA(STA_W)
 
 gdtdesc:
-    .word 0x2f
+    .word . - gdt
     .quad gdt
 
 .global cmdline

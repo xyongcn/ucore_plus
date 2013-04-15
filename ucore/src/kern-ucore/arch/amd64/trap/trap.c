@@ -43,6 +43,16 @@ void idt_init(void)
 	lidt(&idt_pd);
 }
 
+void syscall_init()
+{
+	extern uintptr_t __vectors[];
+	writemsr(MSR_EFER, readmsr(MSR_EFER) | (1 << 0));
+	writemsr(MSR_SFMASK, FL_IF); // set EFLAGS
+	writemsr(MSR_LSTAR, __vectors[T_FAST_SYSCALL]); // set syscall entry
+	writemsr(MSR_STAR, ((uint64_t)(GD_UTEXT | 3) << 48) | ((uint64_t)(GD_KTEXT) << 32 ));
+	kprintf("=============================\nINIT fast syscall\n=======================\n");
+}
+
 static const char *trapname(int trapno)
 {
 	static const char *const excnames[] = {
@@ -197,6 +207,9 @@ static void trap_dispatch(struct trapframe *tf)
 	case 0x6:
 		syscall();
 		break;
+	case T_FAST_SYSCALL:
+		syscall_linux();
+		break;
 #ifdef UCONFIG_ENABLE_IPI
 		/* IPI */
 	case T_IPICALL:
@@ -205,7 +218,6 @@ static void trap_dispatch(struct trapframe *tf)
 #endif
 	case T_TLBFLUSH:
 		lcr3(rcr3());	
-		break;
 	case IRQ_OFFSET + IRQ_TIMER:
 		if(id==0){
 			ticks++;

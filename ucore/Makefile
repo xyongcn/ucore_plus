@@ -211,7 +211,7 @@ runamd64smp: kernel sfsimg
 kvmamd64: kernel sfsimg
 	qemu-kvm  -serial mon:stdio -nographic -m 512m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
 kvmamd64smp: kernel sfsimg
-	qemu-kvm  -serial mon:stdio -nographic -m 1g -hda obj/kernel.img -smp 16 -numa node -numa node  -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
+	qemu-kvm  -serial mon:stdio -nographic -m 1g -hda obj/kernel.img -smp 2 -numa node -numa node  -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
 
 FORCE:
 
