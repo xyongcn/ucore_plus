@@ -1,7 +1,16 @@
 #include <memlayout.h>
 
-# vectors.S sends all traps here.
 .text
+
+# syscall instructor goes here 
+.globl syscall_entry
+.type syscall_entry, %function
+syscall_entry:
+	int $0x83
+dead:
+	jmp dead # exit not supported just now
+
+# vectors.S sends all traps here.
 .globl __alltraps
 __alltraps:
     # push registers to build a trap frame

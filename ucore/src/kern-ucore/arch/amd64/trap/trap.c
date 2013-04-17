@@ -45,12 +45,11 @@ void idt_init(void)
 
 void syscall_init()
 {
-	extern uintptr_t __vectors[];
+	extern void syscall_entry();
 	writemsr(MSR_EFER, readmsr(MSR_EFER) | (1 << 0));
 	writemsr(MSR_SFMASK, FL_IF); // set EFLAGS
-	writemsr(MSR_LSTAR, __vectors[T_FAST_SYSCALL]); // set syscall entry
+	writemsr(MSR_LSTAR, syscall_entry); // set syscall entry
 	writemsr(MSR_STAR, ((uint64_t)(GD_UTEXT | 3) << 48) | ((uint64_t)(GD_KTEXT) << 32 ));
-	kprintf("=============================\nINIT fast syscall\n=======================\n");
 }
 
 static const char *trapname(int trapno)
