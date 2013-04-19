@@ -46,10 +46,11 @@ void idt_init(void)
 void syscall_init()
 {
 	extern void syscall_entry();
+	extern void fastcall_entry();
 	writemsr(MSR_EFER, readmsr(MSR_EFER) | (1 << 0));
 	writemsr(MSR_SFMASK, FL_IF); // set EFLAGS
 	writemsr(MSR_LSTAR, syscall_entry); // set syscall entry
-	writemsr(MSR_STAR, ((uint64_t)(GD_UTEXT | 3) << 48) | ((uint64_t)(GD_KTEXT) << 32 ));
+	writemsr(MSR_STAR, ((uint64_t)(GD_UTEXT_32) << 48) | ((uint64_t)(GD_KTEXT) << 32 ));
 }
 
 static const char *trapname(int trapno)
@@ -272,6 +273,7 @@ void trap(struct trapframe *tf)
 		// kprintf("%d %d |||\n", lapic_id, current->pid);
 
 		current->tf = otf;
+
 		if (!in_kernel) {
 			may_killed();
 			if (current->need_resched) {

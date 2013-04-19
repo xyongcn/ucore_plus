@@ -6,9 +6,10 @@
 .globl syscall_entry
 .type syscall_entry, %function
 syscall_entry:
-	int $0x83
-dead:
-	jmp dead # exit not supported just now
+	swapgs
+	call fastcall_entry
+	swapgs
+	sysretq
 
 # vectors.S sends all traps here.
 .globl __alltraps

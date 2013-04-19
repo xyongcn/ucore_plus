@@ -209,9 +209,15 @@ runamd64: kernel sfsimg
 runamd64smp: kernel sfsimg
 	qemu-system-x86_64  -serial mon:stdio -nographic -m 1g -hda obj/kernel.img -smp 16 -numa node -numa node  -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
 kvmamd64: kernel sfsimg
-	qemu-kvm  -serial mon:stdio -nographic -m 512m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
+	qemu-kvm  -serial mon:stdio -nographic -m 64m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
 kvmamd64smp: kernel sfsimg
 	qemu-kvm  -serial mon:stdio -nographic -m 1g -hda obj/kernel.img -smp 2 -numa node -numa node  -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
+
+debug: 
+	#qemu-kvm -S -s -serial mon:stdio -hda $< -nographic &
+#	qemu-kvm -S -serial mon:stdio -nographic -m 1g -hda obj/kernel.img -smp 2 -numa node -numa node  -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s &
+#	sleep 1
+	gnome-terminal -e "gdb -q -x gdbinit.amd64"
 
 FORCE:
 
