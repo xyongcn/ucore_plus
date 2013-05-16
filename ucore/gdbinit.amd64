@@ -1,6 +1,7 @@
 set architecture i386:x86-64:intel
-target remote | exec qemu-kvm -gdb stdio -m 64m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2  
+target remote | exec qemu-system-x86_64 -gdb stdio -m 64m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2  
 symbol-file obj/kernel/kernel-amd64.elf
+file obj/kernel/kernel-amd64.elf
 define hook-stop
 x/i $pc
 end

@@ -2140,3 +2140,38 @@ int do_linux_ugetrlimit(int res, struct linux_rlimit *__user __limit)
 	unlock_mm(mm);
 	return ret;
 }
+
+int do_linux_usetrlimit(int res, const struct linux_rlimit *__user __limit)
+{
+	int ret = 0;
+	struct mm_struct *mm = current->mm;
+	lock_mm(mm);
+	if (!user_mem_check(mm, __limit, sizeof(struct linux_rlimit), 0))
+	{
+		ret = -E_FAULT;
+		goto out;
+	}
+	struct linux_rlimit limit;
+	switch (res) {
+	case RLIMIT_STACK:
+		limit.rlim_cur = USTACKSIZE;
+		limit.rlim_max = USTACKSIZE;
+		break;
+	default:
+		return -E_INVAL;
+	}
+	if (__limit->rlim_cur > limit.rlim_max)
+	{
+		ret = -E_INVAL;
+		goto out;
+	}
+	if (__limit->rlim_max > limit.rlim_max)
+	{
+		ret = -E_PERM;
+		goto out;
+	}
+	ret = 0;
+out:
+	unlock_mm(mm);
+	return ret;
+}

@@ -204,19 +204,23 @@ tags:
 
 amd64tags:
 	$(Q)./buildamd64tags.sh
+run:
+	~/qemu/x86_64-softmmu/qemu-system-x86_64  -serial mon:stdio -nographic -m 16m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
 runamd64: kernel sfsimg
 	qemu-system-x86_64  -serial mon:stdio -nographic -m 512m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
 runamd64smp: kernel sfsimg
-	qemu-system-x86_64  -serial mon:stdio -nographic -m 1g -hda obj/kernel.img -smp 16 -numa node -numa node  -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
+	qemu-system-x86_64  -serial mon:stdio -nographic -m 1g -hda obj/kernel.img -smp 4 -numa node -numa node  -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
 kvmamd64: kernel sfsimg
 	qemu-kvm  -serial mon:stdio -nographic -m 64m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
 kvmamd64smp: kernel sfsimg
 	qemu-kvm  -serial mon:stdio -nographic -m 1g -hda obj/kernel.img -smp 2 -numa node -numa node  -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
 
-debug: 
-	#qemu-kvm -S -s -serial mon:stdio -hda $< -nographic &
+debug2:
+	gnome-terminal -e "qemu-system-x86_64  -serial mon:stdio -nographic -m 512m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s -S" &
 #	qemu-kvm -S -serial mon:stdio -nographic -m 1g -hda obj/kernel.img -smp 2 -numa node -numa node  -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s &
-#	sleep 1
+	sleep 1
+	gdb -q -x gdbinit.amd64.2
+debug:
 	gnome-terminal -e "gdb -q -x gdbinit.amd64"
 
 FORCE:

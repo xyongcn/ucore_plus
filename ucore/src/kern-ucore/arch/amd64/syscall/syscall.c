@@ -410,21 +410,62 @@ void syscall(void)
 static uint64_t sys_ioctl(uint64_t arg[])
 {
 	int i;
-	kprintf("syscall_ioctl with args :");
-	for (i = 0; i < 6; i++)
-		kprintf(" %x", arg[i]);
-	kprintf("\n");
 	return 0;
+}
+
+static uint64_t sys_getrlimit(uint64_t arg[])
+{
+	int res = (int)arg[0];
+	struct linux_rlimit *lim = (struct linux_rlimit *)arg[1];
+	return do_linux_ugetrlimit(res, lim);
+}
+
+static uint64_t sys_setrlimit(uint64_t arg[])
+{
+	int res = (int)arg[0];
+	struct linux_rlimit *lim = (struct linux_rlimit *)arg[1];
+	return do_linux_usetrlimit(res, lim);
+}
+
+static uint64_t __sys_linux_brk(uint64_t arg[])
+{
+	uintptr_t brk = (uintptr_t) arg[0];
+	return do_linux_brk(brk);
+}
+
+static uint64_t sys_linux_sigaction(uint64_t arg[])
+{
+	return do_sigaction((int)arg[0], (const struct sigaction *)arg[1],
+			    (struct sigaction *)arg[2]);
+}
+
+static uint64_t sys_linux_sigprocmask(uint64_t arg[])
+{
+	return do_sigprocmask((int)arg[0], (const sigset_t *)arg[1],
+			      (sigset_t *) arg[2]);
+}
+
+static uint64_t __sys_linux_fcntl(uint32_t arg[])
+{
+	return -E_INVAL;
 }
 
 uint64_t unknown(uint64_t arg[])
 {
 	panic("unknown LINUX syscall\n");
 }
-
+/*
+//this never used by user program  ??? BUT UCLIB USE IT !!!
+static uint64_t sys_linux_sigreturn(uint64_t arg[])
+{
+	return do_sigreturn();
+}
+*/
 static uint64_t(*syscalls_linux[305]) (uint64_t arg[]);
 
 #define NUM_LINUX_SYSCALLS        ((sizeof(syscalls_linux)) / (sizeof(syscalls_linux[0])))
+
+uint32_t debug = 0;
 
 void syscall_linux()
 {
@@ -433,18 +474,25 @@ void syscall_linux()
 	struct trapframe *tf = current->tf;
 	uint64_t arg[6];
 	int num = tf->tf_regs.reg_rax;
+kprintf("LINUX syscall %d  gs = 0x%x\n", num, mycpu());
 	if (num >= 0 && num < NUM_LINUX_SYSCALLS) {
 		if (syscalls_linux[num] != unknown)
 		if (syscalls_linux[num] != NULL) {
-	 kprintf("LINUX syscall %d, pid = %d, name = %s  cs 0x%x.\n", num, current->pid, current->name, tf->tf_cs);
-			arg[0] = tf->tf_regs.reg_rdi;
+	kprintf("LINUX syscall %d, pid = %d, name = %s  ARGS :", num, current->pid, current->name);
+	arg[0] = tf->tf_regs.reg_rdi;
 			arg[1] = tf->tf_regs.reg_rsi;
 			arg[2] = tf->tf_regs.reg_rdx;
 			arg[3] = tf->tf_regs.reg_r10;
 			arg[4] = tf->tf_regs.reg_r8;
 			arg[5] = tf->tf_regs.reg_r9;
+	int i;
+	for (i = 0; i < 6; i++)
+		kprintf(" %x", arg[i]);
+	kprintf("\n");
 			tf->tf_regs.reg_rax = syscalls_linux[num] (arg);
 	kprintf("syscall return %d.\n", tf->tf_regs.reg_rax);
+//if(num==12)
+//	debug = 1;
 			return;
 		}
 	}
@@ -457,20 +505,20 @@ void syscall_linux()
 static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_read] sys_read,
 	[__NR_write] sys_write,
-	[__NR_open] unknown,
-	[__NR_close] unknown,
+	[__NR_open] sys_open,
+	[__NR_close] sys_close,
 	[__NR_stat] unknown,
-	[__NR_fstat] unknown,
+	[__NR_fstat] sys_fstat,
 	[__NR_lstat] unknown,
 	[__NR_poll] unknown,
 	[__NR_lseek] unknown,
-	[__NR_mmap] unknown,
+	[__NR_mmap] sys_mmap,
 	[__NR_mprotect] unknown,
 	[__NR_munmap] unknown,
-	[__NR_brk] unknown,
-	[__NR_rt_sigaction] unknown,
-	[__NR_rt_sigprocmask] unknown,
-	[__NR_rt_sigreturn] unknown,
+	[__NR_brk] __sys_linux_brk,
+	[__NR_rt_sigaction] sys_linux_sigaction,
+	[__NR_rt_sigprocmask] sys_linux_sigprocmask,
+	[__NR_rt_sigreturn] unknown,//sys_linux_sigreturn,
 	[__NR_ioctl] sys_ioctl,
 	[__NR_pread64] unknown,
 	[__NR_pwrite64] unknown,
@@ -494,7 +542,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_getitimer] unknown,
 	[__NR_alarm] unknown,
 	[__NR_setitimer] unknown,
-	[__NR_getpid] unknown,
+	[__NR_getpid] sys_getpid,
 	[__NR_sendfile] unknown,
 	[__NR_socket] unknown,
 	[__NR_connect] unknown,
@@ -527,7 +575,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_msgsnd] unknown,
 	[__NR_msgrcv] unknown,
 	[__NR_msgctl] unknown,
-	[__NR_fcntl] unknown,
+	[__NR_fcntl] __sys_linux_fcntl,
 	[__NR_flock] unknown,
 	[__NR_fsync] unknown,
 	[__NR_fdatasync] unknown,
@@ -552,7 +600,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_lchown] unknown,
 	[__NR_umask] unknown,
 	[__NR_gettimeofday] unknown,
-	[__NR_getrlimit] unknown,
+	[__NR_getrlimit] sys_getrlimit,
 	[__NR_getrusage] unknown,
 	[__NR_sysinfo] unknown,
 	[__NR_times] unknown,
@@ -615,7 +663,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_prctl] unknown,
 	[__NR_arch_prctl] unknown,
 	[__NR_adjtimex] unknown,
-	[__NR_setrlimit] unknown,
+	[__NR_setrlimit] sys_setrlimit,
 	[__NR_chroot] unknown,
 	[__NR_sync] unknown,
 	[__NR_acct] unknown,

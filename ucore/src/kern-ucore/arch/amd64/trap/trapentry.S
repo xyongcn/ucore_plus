@@ -9,6 +9,8 @@ syscall_entry:
 	swapgs
 	call fastcall_entry
 	swapgs
+.globl syscall_exit
+syscall_exit:
 	sysretq
 
 # vectors.S sends all traps here.

@@ -49,8 +49,8 @@ void syscall_init()
 	extern void fastcall_entry();
 	writemsr(MSR_EFER, readmsr(MSR_EFER) | (1 << 0));
 	writemsr(MSR_SFMASK, FL_IF); // set EFLAGS
-	writemsr(MSR_LSTAR, syscall_entry); // set syscall entry
-	writemsr(MSR_STAR, ((uint64_t)(GD_UTEXT_32) << 48) | ((uint64_t)(GD_KTEXT) << 32 ));
+	writemsr(MSR_LSTAR, (uint64_t)syscall_entry); // set syscall entry
+	writemsr(MSR_STAR, ((uint64_t)(GD_UTEXT_32 | 3) << 48) | ((uint64_t)(GD_KTEXT) << 32 ));
 }
 
 static const char *trapname(int trapno)
@@ -185,7 +185,6 @@ static void trap_dispatch(struct trapframe *tf)
 	char c;
 	int ret;
 	int id = myid();
-
 	switch (tf->tf_trapno) {
 	case T_PGFLT:
 		if ((ret = pgfault_handler(tf)) != 0) {
@@ -253,9 +252,33 @@ static void trap_dispatch(struct trapframe *tf)
 		lapic_eoi();
 }
 
+extern uint32_t debug;
+
+void do_debug(struct trapframe *tf)
+{
+	print_trapframe(tf);
+}
+
+int c=0;
 void trap(struct trapframe *tf)
 {
+
+	//
 	// used for previous projects
+	if (debug )//|| (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER && tf->tf_ss != 0x10))
+	{
+		uint64_t gs_base = readmsr(MSR_GS_KERNBASE);
+		if(gs_base)kprintf("gs_base is 0x%x\n", gs_base);
+		kprintf("== when enter trap===\n");
+		if (gs_base)print_trapframe(tf);
+		kprintf("trapno 0x%x\n", tf->tf_trapno);
+		kprintf("cr3 is 0x%x\n", rcr3());
+		kprintf("mycpu : ");
+		kprintf("0x%x\n", mycpu());
+		if (tf->tf_trapno == T_PGFLT)
+			kprintf("PF : 0x%x\n", rcr2());
+		kprintf("=====================\n");
+	}
 	if (current == NULL) {
 		trap_dispatch(tf);
 	} else {
@@ -286,6 +309,17 @@ void trap(struct trapframe *tf)
 		if (!in_kernel || (current == idleproc && otf == NULL))
 			kern_leave();
 	}
+	if (debug)
+	{
+
+		kprintf("== when leave trap===\n");
+		kprintf("cr3 is 0x%x\n", rcr3());
+		kprintf("mycpu : ");
+		kprintf("0x%x\n", mycpu());
+		do_debug(tf);
+		kprintf("=====================\n");
+	}
+
 }
 
 int ucore_in_interrupt()
