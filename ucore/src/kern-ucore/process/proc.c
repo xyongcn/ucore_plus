@@ -1548,9 +1548,9 @@ out_unlock:
 /* poring from linux */
 int do_linux_brk(uintptr_t brk)
 {
-	uint32_t newbrk, oldbrk, retval;
+	uintptr_t newbrk, oldbrk, retval;
 	struct mm_struct *mm = current->mm;
-	uint32_t min_brk;
+	uintptr_t min_brk;
 
 	if (!mm) {
 		panic("kernel thread call sys_brk!!.\n");

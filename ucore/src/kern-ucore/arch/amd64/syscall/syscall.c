@@ -445,9 +445,18 @@ static uint64_t sys_linux_sigprocmask(uint64_t arg[])
 			      (sigset_t *) arg[2]);
 }
 
-static uint64_t __sys_linux_fcntl(uint32_t arg[])
+static uint64_t __sys_linux_fcntl(uint64_t arg[])
 {
-	return -E_INVAL;
+	return sysfile_linux_fcntl64(arg[0], arg[1], arg[2]);
+}
+
+static uint64_t sys_linux_mmap(uint64_t arg[])
+{
+	void *addr = (void *)arg[0];
+	size_t len = arg[1];
+	int fd = (int)arg[2];
+	size_t off = (size_t) arg[3];
+	return (uint64_t) sysfile_linux_mmap2(addr, len, 0, 0, fd, off);
 }
 
 uint64_t unknown(uint64_t arg[])
@@ -466,6 +475,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]);
 #define NUM_LINUX_SYSCALLS        ((sizeof(syscalls_linux)) / (sizeof(syscalls_linux[0])))
 
 uint32_t debug = 0;
+uint32_t count = 0;
 
 void syscall_linux()
 {
@@ -474,11 +484,11 @@ void syscall_linux()
 	struct trapframe *tf = current->tf;
 	uint64_t arg[6];
 	int num = tf->tf_regs.reg_rax;
-kprintf("LINUX syscall %d  gs = 0x%x\n", num, mycpu());
+//kprintf("LINUX syscall %d  gs = 0x%x\n", num, mycpu());
 	if (num >= 0 && num < NUM_LINUX_SYSCALLS) {
 		if (syscalls_linux[num] != unknown)
 		if (syscalls_linux[num] != NULL) {
-	kprintf("LINUX syscall %d, pid = %d, name = %s  ARGS :", num, current->pid, current->name);
+//	kprintf("%d : LINUX syscall %d, pid = %d, name = %s  ARGS :", ++count, num, current->pid, current->name);
 	arg[0] = tf->tf_regs.reg_rdi;
 			arg[1] = tf->tf_regs.reg_rsi;
 			arg[2] = tf->tf_regs.reg_rdx;
@@ -486,11 +496,13 @@ kprintf("LINUX syscall %d  gs = 0x%x\n", num, mycpu());
 			arg[4] = tf->tf_regs.reg_r8;
 			arg[5] = tf->tf_regs.reg_r9;
 	int i;
-	for (i = 0; i < 6; i++)
-		kprintf(" %x", arg[i]);
-	kprintf("\n");
+//	for (i = 0; i < 6; i++)		kprintf(" %x", arg[i]);	kprintf("\n");
 			tf->tf_regs.reg_rax = syscalls_linux[num] (arg);
-	kprintf("syscall return %d.\n", tf->tf_regs.reg_rax);
+	kprintf("%d : SyscallID %d, ARGS :", ++count, num);
+	for (i = 0; i < 6; i++)
+		kprintf(" %lx", arg[i]);
+//	kprintf("\n");
+	kprintf("\t= %d 0x%x.\n", tf->tf_regs.reg_rax, tf->tf_regs.reg_rax);
 //if(num==12)
 //	debug = 1;
 			return;
@@ -512,7 +524,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_lstat] unknown,
 	[__NR_poll] unknown,
 	[__NR_lseek] unknown,
-	[__NR_mmap] sys_mmap,
+	[__NR_mmap] sys_linux_mmap,
 	[__NR_mprotect] unknown,
 	[__NR_munmap] unknown,
 	[__NR_brk] __sys_linux_brk,

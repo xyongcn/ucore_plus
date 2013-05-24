@@ -1,16 +1,23 @@
 #include <memlayout.h>
 
 .text
+.code64
 
 # syscall instructor goes here 
 .globl syscall_entry
 .type syscall_entry, %function
 syscall_entry:
 	swapgs
-	call fastcall_entry
-	swapgs
+	movabs $user_rsp, %r14
+	movabs $ts, %r12
+	mov %rsp, (%r14)
+	mov 0x4(%r12), %rsp
+	int $0x83
 .globl syscall_exit
 syscall_exit:
+	movabs $user_rsp, %r14
+	mov (%r14), %rsp
+	swapgs
 	sysretq
 
 # vectors.S sends all traps here.

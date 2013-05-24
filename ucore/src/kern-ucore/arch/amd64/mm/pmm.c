@@ -143,8 +143,10 @@ uint64_t user_rip;
 uint64_t user_rsp;
 uint64_t fastcall_id;
 
-void fastcall_entry()
+void fastcall_entry() __attribute__((noreturn));
+void fastcall_entry() 
 {
+	__asm__ __volatile ("swapgs\n");
 	__asm__ __volatile (
 		"movq %%rax, %0 \n"
 		"movq %%r11, %1 \n"
@@ -172,6 +174,9 @@ void fastcall_entry()
 		:
 		: "m"(user_rflags), "m"(user_rip), "m"(user_rsp)
 		: "rax", "rdi", "rsi", "rdx", "r10", "r8", "r9", "rcx", "r11");
+	__asm__ __volatile ("swapgs\n");
+	__asm__ __volatile ("sysretq\n");
+	__asm__ __volatile ("hlt\n");
 //prrsp();
 }
 /**

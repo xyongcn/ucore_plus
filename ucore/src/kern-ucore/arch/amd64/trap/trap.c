@@ -162,6 +162,14 @@ static inline void print_pgfault(struct trapframe *tf)
 		(tf->tf_err & 1) ? "protection fault" : "no page found");
 }
 
+extern uint32_t debug;
+
+void do_debug(struct trapframe *tf)
+{
+//	print_trapframe(tf);
+}
+
+
 static int pgfault_handler(struct trapframe *tf)
 {
 	extern struct mm_struct *check_mm_struct;
@@ -177,6 +185,12 @@ static int pgfault_handler(struct trapframe *tf)
 		}
 		mm = current->mm;
 	}
+uintptr_t addr = rcr2();
+if (addr >= 0x20060000 && addr <= 0x30000000) 
+{
+	print_pgfault(tf);
+	do_debug(tf);
+}
 	return do_pgfault(mm, tf->tf_err, rcr2());
 }
 
@@ -197,6 +211,8 @@ static void trap_dispatch(struct trapframe *tf)
 					    ("handle pgfault failed in kernel mode. %e\n",
 					     ret);
 				}
+				print_pgfault(tf);
+				kprintf("pgfault_handler return %d\n", ret);
 				kprintf("killed by kernel.\n");
 				do_exit(-E_KILLED);
 			}
@@ -252,13 +268,6 @@ static void trap_dispatch(struct trapframe *tf)
 		lapic_eoi();
 }
 
-extern uint32_t debug;
-
-void do_debug(struct trapframe *tf)
-{
-	print_trapframe(tf);
-}
-
 int c=0;
 void trap(struct trapframe *tf)
 {
@@ -267,8 +276,8 @@ void trap(struct trapframe *tf)
 	// used for previous projects
 	if (debug )//|| (tf->tf_trapno == IRQ_OFFSET + IRQ_TIMER && tf->tf_ss != 0x10))
 	{
-		uint64_t gs_base = readmsr(MSR_GS_KERNBASE);
-		if(gs_base)kprintf("gs_base is 0x%x\n", gs_base);
+	uint64_t gs_base = readmsr(MSR_GS_KERNBASE);
+	if(gs_base)kprintf("WARNING : gs_base is not 0x%x\n", gs_base);
 		kprintf("== when enter trap===\n");
 		if (gs_base)print_trapframe(tf);
 		kprintf("trapno 0x%x\n", tf->tf_trapno);
