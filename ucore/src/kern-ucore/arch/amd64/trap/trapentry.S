@@ -7,16 +7,81 @@
 .globl syscall_entry
 .type syscall_entry, %function
 syscall_entry:
+    # swap in kernel GS BASE
 	swapgs
-	movabs $user_rsp, %r14
-	movabs $ts, %r12
-	mov %rsp, (%r14)
-	mov 0x4(%r12), %rsp
-	int $0x83
+
+	#backup user stack rsp on mycpu structure
+	movq %rsp, %gs:0x10
+	#switch to kernel stack
+	movq %gs:0x8, %rsp
+
+	pushq $USER_DS 	# push ss selector
+	pushq $0      	# push user rsp
+	pushq %r11 		# user rflags sotres at r11
+	pushq $USER_CS 	# push cs selector
+	pushq %rcx 		# user rip stores at rcx
+
+	pushq $0 # err code
+	pushq $0x83 # linux syscall trap id
+
+	# push registers to build a trap frame
+    # therefore make the stack look like a struct trapframe
+
+    pushq %rdi
+    pushq %rsi
+    pushq %rdx
+    pushq %rcx
+    pushq %rax
+    pushq %r8
+    pushq %r9
+    pushq %r10
+    pushq %r11
+    pushq %rbx
+    pushq %rbp
+    pushq %r12
+    pushq %r13
+    pushq %r14
+    pushq %r15
+
+    # push ds, es
+    movw %es, %rax
+    pushq %rax
+    movw %ds, %rax
+    pushq %rax
+
+    # use %rdi to pass a pointer to the trapframe as an argument to trap()
+    movq %rsp, %rdi
+
+    # call trap(tf), where tf=%rsp
+    call trap
+
 .globl syscall_exit
 syscall_exit:
-	movabs $user_rsp, %r14
-	mov (%r14), %rsp
+
+    popq %rax
+    movq %rax, %ds
+    popq %rax
+    movq %rax, %es
+
+    popq %r15
+    popq %r14
+    popq %r13
+    popq %r12
+    popq %rbp
+    popq %rbx
+    popq %r11
+    popq %r10
+    popq %r9
+    popq %r8
+    popq %rax
+    popq %rcx
+    popq %rdx
+    popq %rsi
+    popq %rdi
+
+    # restore user rsp 
+	movq %gs:0x10, %rsp
+
 	swapgs
 	sysretq
 
