@@ -42,6 +42,8 @@ static uint64_t sys_exec(uint64_t arg[])
 	return do_execve(name, argv, envp);
 }
 
+#define sys_execve sys_exec
+
 static uint64_t sys_clone(uint64_t arg[])
 {
 	struct trapframe *tf = current->tf;
@@ -450,6 +452,20 @@ static uint64_t __sys_linux_fcntl(uint64_t arg[])
 	return sysfile_linux_fcntl64(arg[0], arg[1], arg[2]);
 }
 
+static uint64_t __sys_linux_getdents(uint64_t arg[])
+{
+	int fd = (int)arg[0];
+	struct dirent *dir = (struct dirent *)arg[1];
+	uint64_t count = arg[2];
+	if (count < sizeof(struct dirent))
+		return -1;
+//	kprintf("call getdirendry %d %p %p\n", fd, dir, &count);
+	int ret = sysfile_getdirentry(fd, dir, (uint32_t *)&count);
+	if (ret < 0)
+		return -1;
+	return count;
+}
+
 static uint64_t sys_linux_mmap(uint64_t arg[])
 {
 	void *addr = (void *)arg[0];
@@ -458,6 +474,96 @@ static uint64_t sys_linux_mmap(uint64_t arg[])
 	size_t off = (size_t) arg[3];
 	return (uint64_t) sysfile_linux_mmap2(addr, len, 0, 0, fd, off);
 }
+
+static uint64_t __sys_linux_stat(uint64_t args[])
+{
+	char *fn = (char *)args[0];
+	struct linux_stat *st = (struct linux_stat *)args[1];
+	//kprintf("TODO __sys_linux_stat, %s %d\n", fn, sizeof(struct linux_stat));
+	return sysfile_linux_stat(fn, st);
+}
+
+static uint64_t __sys_linux_waitpid(uint64_t arg[])
+{
+	int pid = (int)arg[0];
+	int *store = (int *)arg[1];
+	int options = (int)arg[2];
+	void *rusage = (void *)arg[3];
+	if (options && rusage)
+		return -E_INVAL;
+	return do_linux_waitpid(pid, store);
+}
+
+static uint64_t __sys_linux_nanosleep(uint64_t arg[])
+{
+	//TODO: handle signal interrupt
+	struct linux_timespec *req = (struct linux_timespec *)arg[0];
+	struct linux_timespec *rem = (struct linux_timespec *)arg[1];
+	return do_linux_sleep(req, rem);
+}
+
+static uint64_t __sys_linux_pipe(uint64_t arg[])
+{
+	int *fd_store = (int *)arg[0];
+	return sysfile_pipe(fd_store) ? -1 : 0;
+}
+
+/*
+  Clone a task - this clones the calling program thread.
+  * This is called indirectly via a small wrapper
+  
+ asmlinkage int sys_clone(unsigned long clone_flags, unsigned long newsp,
+                          int __user *parent_tidptr, int tls_val,
+                          int __user *child_tidptr, struct pt_regs *regs)
+ */
+static uint64_t __sys_linux_clone(uint64_t arg[])
+{
+	struct trapframe *tf = current->tf;
+	uint64_t clone_flags = (uint64_t) arg[0];
+	uintptr_t stack = (uintptr_t) arg[1];
+	if (stack == 0) {
+		stack = tf->tf_rsp;
+	}
+	return do_fork(clone_flags, stack, tf);
+}
+
+static uint64_t sys_linux_sigsuspend(uint64_t arg[])
+{
+	return do_sigsuspend((sigset_t *) arg[0]);
+}
+
+static uint64_t __sys_linux_getppid(uint64_t arg[])
+{
+	struct proc_struct *parent = current->parent;
+	if (!parent)
+		return 0;
+	return parent->pid;
+}
+
+struct linux_pollfd {
+	int fd;			/* file descriptor */
+	short events;		/* requested events */
+	short revents;		/* returned events */
+};
+
+static uint64_t __sys_linux_poll(uint64_t arg[])
+{
+	//FIXME
+	struct linux_pollfd *fd = (struct linux_pollfd *)arg[0]; // can be hacked
+	int nfds = (int)arg[1];
+	int timeout = (int)arg[2];	//ms
+	fd->revents = fd->events;
+	return nfds;
+}
+
+static uint64_t sys_linux_sigkill(uint64_t arg[])
+{
+	return do_sigkill((int)arg[0], (int)arg[1]);
+}
+
+#define __sys_linux_sigkill sys_linux_sigkill
+#define __sys_linux_kill    sys_linux_sigkill
+
 
 uint64_t unknown(uint64_t arg[])
 {
@@ -498,6 +604,7 @@ void syscall_linux()
 	int i;
 //	for (i = 0; i < 6; i++)		kprintf(" %x", arg[i]);	kprintf("\n");
 			tf->tf_regs.reg_rax = syscalls_linux[num] (arg);
+#if 1
 	kprintf("%d : SyscallID %d, ARGS :", ++count, num);
 	for (i = 0; i < 6; i++)
 		kprintf(" %lx", arg[i]);
@@ -505,6 +612,7 @@ void syscall_linux()
 	kprintf("\t= %d 0x%x.\n", tf->tf_regs.reg_rax, tf->tf_regs.reg_rax);
 //if(num==12)
 //	debug = 1;
+#endif
 			return;
 		}
 	}
@@ -519,10 +627,10 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_write] sys_write,
 	[__NR_open] sys_open,
 	[__NR_close] sys_close,
-	[__NR_stat] unknown,
+	[__NR_stat] __sys_linux_stat,
 	[__NR_fstat] sys_fstat,
 	[__NR_lstat] unknown,
-	[__NR_poll] unknown,
+	[__NR_poll] __sys_linux_poll,
 	[__NR_lseek] unknown,
 	[__NR_mmap] sys_linux_mmap,
 	[__NR_mprotect] unknown,
@@ -537,7 +645,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_readv] unknown,
 	[__NR_writev] unknown,
 	[__NR_access] unknown,
-	[__NR_pipe] unknown,
+	[__NR_pipe] __sys_linux_pipe,
 	[__NR_select] unknown,
 	[__NR_sched_yield] unknown,
 	[__NR_mremap] unknown,
@@ -550,7 +658,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_dup] unknown,
 	[__NR_dup2] unknown,
 	[__NR_pause] unknown,
-	[__NR_nanosleep] unknown,
+	[__NR_nanosleep] __sys_linux_nanosleep,
 	[__NR_getitimer] unknown,
 	[__NR_alarm] unknown,
 	[__NR_setitimer] unknown,
@@ -571,13 +679,13 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_socketpair] unknown,
 	[__NR_setsockopt] unknown,
 	[__NR_getsockopt] unknown,
-	[__NR_clone] unknown,
-	[__NR_fork] unknown,
+	[__NR_clone] __sys_linux_clone,
+	[__NR_fork] sys_fork,
 	[__NR_vfork] unknown,
-	[__NR_execve] unknown,
+	[__NR_execve] sys_execve,
 	[__NR_exit] sys_exit,
-	[__NR_wait4] unknown,
-	[__NR_kill] unknown,
+	[__NR_wait4] __sys_linux_waitpid,
+	[__NR_kill] __sys_linux_kill,
 	[__NR_uname] unknown,
 	[__NR_semget] unknown,
 	[__NR_semop] unknown,
@@ -598,7 +706,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_chdir] unknown,
 	[__NR_fchdir] unknown,
 	[__NR_rename] unknown,
-	[__NR_mkdir] unknown,
+	[__NR_mkdir] sys_mkdir,
 	[__NR_rmdir] unknown,
 	[__NR_creat] unknown,
 	[__NR_link] unknown,
@@ -625,7 +733,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_geteuid] unknown,
 	[__NR_getegid] unknown,
 	[__NR_setpgid] unknown,
-	[__NR_getppid] unknown,
+	[__NR_getppid] __sys_linux_getppid,
 	[__NR_getpgrp] unknown,
 	[__NR_setsid] unknown,
 	[__NR_setreuid] unknown,
@@ -645,7 +753,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_rt_sigpending] unknown,
 	[__NR_rt_sigtimedwait] unknown,
 	[__NR_rt_sigqueueinfo] unknown,
-	[__NR_rt_sigsuspend] unknown,
+	[__NR_rt_sigsuspend] sys_linux_sigsuspend,
 	[__NR_sigaltstack] unknown,
 	[__NR_utime] unknown,
 	[__NR_mknod] unknown,

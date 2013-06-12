@@ -207,13 +207,16 @@ amd64tags:
 run:
 	~/qemu/x86_64-softmmu/qemu-system-x86_64  -serial mon:stdio -nographic -m 512m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
 runamd64: kernel sfsimg
-	qemu-system-x86_64  -serial mon:stdio -nographic -m 364m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
+	qemu-system-x86_64  -serial mon:stdio -nographic -m 564m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
 runamd64smp: kernel sfsimg
 	qemu-system-x86_64  -serial mon:stdio -nographic -m 1g -hda obj/kernel.img -smp 4 -numa node -numa node  -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
 kvmamd64: kernel sfsimg
 	qemu-kvm  -serial mon:stdio -nographic -m 364m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
 kvmamd64smp: kernel sfsimg
 	qemu-kvm  -serial mon:stdio -nographic -m 1g -hda obj/kernel.img -smp 2 -numa node -numa node  -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s 
+
+kill:
+	kill `pidof qemu-system-x86_64 qemu-kvm`
 
 debug2:
 	gnome-terminal -e "qemu-system-x86_64  -serial mon:stdio -nographic -m 512m -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2 -s -S" &

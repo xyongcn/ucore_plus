@@ -16,7 +16,7 @@ syscall_entry:
 	movq %gs:0x8, %rsp
 
 	pushq $USER_DS 	# push ss selector
-	pushq $0      	# push user rsp
+	pushq %gs:0x10 	# push user rsp
 	pushq %r11 		# user rflags sotres at r11
 	pushq $USER_CS 	# push cs selector
 	pushq %rcx 		# user rip stores at rcx
