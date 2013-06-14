@@ -604,7 +604,7 @@ void syscall_linux()
 	int i;
 //	for (i = 0; i < 6; i++)		kprintf(" %x", arg[i]);	kprintf("\n");
 			tf->tf_regs.reg_rax = syscalls_linux[num] (arg);
-#if 1
+#if 0
 	kprintf("%d : SyscallID %d, ARGS :", ++count, num);
 	for (i = 0; i < 6; i++)
 		kprintf(" %lx", arg[i]);
