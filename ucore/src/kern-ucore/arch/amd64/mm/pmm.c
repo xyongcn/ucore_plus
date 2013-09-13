@@ -129,6 +129,7 @@ void load_rsp0(uintptr_t rsp0)
 {
 	//XXX
 	mycpu()->arch_data.ts.ts_rsp0 = rsp0;
+	mycpu()->kern_rsp = rsp0;
 }
 /*
 inline void prrsp()
