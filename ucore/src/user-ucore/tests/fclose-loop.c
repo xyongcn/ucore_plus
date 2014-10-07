@@ -10,13 +10,20 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+typedef int FILE;
+#define fopen open
+#define fclose close
+
 int main(int argc, char *argv[])
 {
-	FILE* fp;
+	FILE fp;
 	fp = fopen("/dev/null", "r");
 	fclose(fp);
+	cprintf("close successful\n");
+
 	fp = fopen("/dev/zero", "r");
 	fclose(fp);
+	cprintf("close successful\n");
 	return 0;
 }
 
