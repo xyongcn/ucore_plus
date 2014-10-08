@@ -1,0 +1,4 @@
+@program	/testbin/uClibc_testcopy
+@arch		i386
+
+  - 'Test succeeded.'

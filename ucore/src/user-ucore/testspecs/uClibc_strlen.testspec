@@ -1,0 +1,4 @@
+@program	/testbin/uClibc_strlen
+@arch		i386
+
+  - 'strlen & strnlen pass.'
