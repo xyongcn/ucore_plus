@@ -94,7 +94,7 @@ int ls(const char *path)
 		" [  ?????  ]",
 	};
 	switch (getmode(stat->st_mode)) {
-	case '0':
+	case '-':
 		type = 0;
 		break;
 	case 'd':
