@@ -1,0 +1,6 @@
+@program	/testbin/64bit
+@timeout	240
+
+	'0xffffffff'
+	'val = 75bcd15'
+

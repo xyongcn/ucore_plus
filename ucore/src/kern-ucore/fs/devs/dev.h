@@ -14,6 +14,14 @@ struct file_operations;
 
 /*
  * Filesystem-namespace-accessible device.
+ * For user, device is a special file
+ * 
+ * device is a abstract structure
+ * each instance should implement such operation functions:
+ *		@ d_open
+ *		@ d_close
+ *		@ d_io
+ *		@ d_ioctl
  * d_io is for both reads and writes; the iob indicates the io buffer, write indicates direction.
  */
 #ifdef __NO_UCORE_DEVICE__
@@ -29,7 +37,7 @@ struct device {
 	   mode_t i_mode;
 	   const struct file_operations *i_fops; 
 	 */
-	void *linux_file;
+void *linux_file;
 	void *linux_dentry;
 
 	int (*d_linux_read) (struct device * dev, const char __user * buf,

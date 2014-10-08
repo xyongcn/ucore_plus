@@ -156,6 +156,12 @@ static int pgfault_handler(struct trapframe *tf)
 	return do_pgfault(mm, tf->tf_err, rcr2());
 }
 
+/* *
+ * trap_dispatch - handle traps
+ *		-- IRQ_COM1 & IRQ_KBD: standout input from serial and keyboard
+ *							   read from console then call dev_stdin_write
+ *
+ * */
 static void trap_dispatch(struct trapframe *tf)
 {
 	char c;

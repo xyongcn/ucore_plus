@@ -53,6 +53,15 @@ int sysfile_close(int fd)
 	return file_close(fd);
 }
 
+/* *
+ * sysfile_read - system file read function
+ * this function can read from normal file and from device such as console
+ * if fd represent a linux dev, it will call function linux_devfile_read
+ * if fd represent a normal file, it will call function file_read
+ * @fd		file handle
+ * @base	buffer address
+ * @len		length to be read
+ * */
 int sysfile_read(int fd, void *base, size_t len)
 {
 	int ret = 0;
