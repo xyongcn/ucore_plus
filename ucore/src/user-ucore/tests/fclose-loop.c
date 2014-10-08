@@ -13,10 +13,11 @@
 typedef int FILE;
 #define fopen open
 #define fclose close
-
+#define fread read
 int main(int argc, char *argv[])
 {
 	FILE fp;
+
 	fp = fopen("/dev/null", "r");
 	fclose(fp);
 	cprintf("close successful\n");
@@ -24,6 +25,9 @@ int main(int argc, char *argv[])
 	fp = fopen("/dev/zero", "r");
 	fclose(fp);
 	cprintf("close successful\n");
+
+	fp = 0; // stdin
+	fclose(fp);
 	return 0;
 }
 

@@ -20,5 +20,10 @@ int main(void)
 	//		 function scanf should be add some time
 	//	scanf("123456789", "%Lx", &val);
 	printf("val = %lx\n", val);
+
+	char buf[10] = "hello";
+	int i=0;
+	printf("buf: %s", buf[i]);
+	printf("\n");
 	return 0;
 }
