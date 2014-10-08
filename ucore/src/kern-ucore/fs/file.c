@@ -228,6 +228,9 @@ int file_close(int fd)
 	return 0;
 }
 
+/*
+ * file_read - read file
+ * */
 int file_read(int fd, void *base, size_t len, size_t * copied_store)
 {
 	int ret;
@@ -462,6 +465,11 @@ bool __is_linux_devfile(int fd)
 	return 0;
 }
 
+/* *
+ * linux_devfile_read - this function is used to read from device file
+ *						such as console
+ * 
+ * */
 int linux_devfile_read(int fd, void *base, size_t len, size_t * copied_store)
 {
 	int ret = -E_INVAL;

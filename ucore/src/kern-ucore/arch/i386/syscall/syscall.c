@@ -224,6 +224,12 @@ static uint32_t sys_close(uint32_t arg[])
 	return sysfile_close(fd);
 }
 
+/* *
+ * sys_read -  read file
+ * @arg[0] file handle
+ * @arg[1] buffer address
+ * @arg[2] length to be read
+ *  */
 static uint32_t sys_read(uint32_t arg[])
 {
 	int fd = (int)arg[0];

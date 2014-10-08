@@ -14,10 +14,20 @@
 
 #define STDIN_BUFSIZE               4096
 
+/* *
+ * device stdin is also a abstract device built on console
+ * console is binding with serial, cga
+ * 
+ * the physic device is now
+ * 
+ * */
 static char stdin_buffer[STDIN_BUFSIZE];
 static off_t p_rpos, p_wpos;
 static wait_queue_t __wait_queue, *wait_queue = &__wait_queue;
 
+/* *
+ * dev_stdin_write - write a Bit to stdin
+ * */
 void dev_stdin_write(char c)
 {
 	bool intr_flag;
@@ -36,6 +46,12 @@ void dev_stdin_write(char c)
 	}
 }
 
+/* *
+ * dev_stdin_read - read @len Bit to @buf from stdin
+ *		there are two flag - p_rpos & p_wpos
+ *		every read or write operation will increase them
+ *		if p_rpos >= p_wpos, current process should be wait
+ * */ 
 static int dev_stdin_read(char *buf, size_t len)
 {
 	int ret = 0;
@@ -88,6 +104,9 @@ static int stdin_close(struct device *dev)
 	return 0;
 }
 
+/* *
+ * for stdin io, write is invalidate
+ * */
 static int stdin_io(struct device *dev, struct iobuf *iob, bool write)
 {
 	if (!write) {
