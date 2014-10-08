@@ -8,6 +8,11 @@
 #include <error.h>
 #include <assert.h>
 
+/* *
+ * stdout is abstract device built on console 
+ * console is binding with serial, cga
+ * the stdout io is simple, just write a Bit to serial or cga address 
+ * */
 static int stdout_open(struct device *dev, uint32_t open_flags)
 {
 	if (open_flags != O_WRONLY) {

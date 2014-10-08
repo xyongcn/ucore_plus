@@ -15,8 +15,9 @@ int main(void)
 	printf("%p\n", ptr);
 
 	val = 123456789;
-	//	TODO ucore has no access to get input from console now
-	//		 this function should be add in some time
+	//	TODO ucore has no function scanf
+	//		 process get input only from function read(0, <buff addr>, <size>) 
+	//		 function scanf should be add some time
 	//	scanf("123456789", "%Lx", &val);
 	printf("val = %lx\n", val);
 	return 0;
