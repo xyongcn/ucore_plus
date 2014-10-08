@@ -32,4 +32,3 @@ SFS_IMAGE_SIZE=256
 # ucore test is set
 # close this function by setting var to ''
 #
-UCORE_TEST=y

@@ -1,0 +1,14 @@
+I find two test case in reference about stdio.
+
+The fist one is fclose-loop, test if file can be close. 
+.c & .testspecs file is in tolerate path
+It passed!
+
+The second one is 64bit, test the io function of ucore.
+I alloc a char array like this:
+	char buf[10] = "hello";
+Page fault happend when I visit buf[i], i from 1 to 9;
+I guess ucore does not alloc a memory for buf
+Maybe it is not a bug
+But I think ucore should implement this access to alloc
+
