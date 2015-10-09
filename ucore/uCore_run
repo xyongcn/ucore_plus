@@ -77,7 +77,8 @@ case $UCONFIG_ARCH in
                     QEMU_OPT+=" -s -S"
                 fi
             fi
-            exec emulator-arm -avd $AVD -kernel $BUILD_DIR/kernel.img$TEST_POSTFIX -no-window -qemu $QEMU_OPT
+            # correct a bug on the args
+            exec emulator-arm -avd $AVD -no-window -qemu -kernel $BUILD_DIR/kernel.img$TEST_POSTFIX $QEMU_OPT
         else
             echo What kind of board for ARM is this?
             echo Consider supporting your board in uCore_run

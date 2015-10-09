@@ -12,7 +12,7 @@ endif
 RAMDISK_OBJ := $(RAMDISK_FILE).o
 endif
 
-KERNEL_TEXT_PHY_BASE := $(shell printf "%08x\n" $$[$(UCONFIG_DRAM_START)+0x8000])
+KERNEL_TEXT_PHY_BASE := $(shell printf "%08x\n" $$(($(UCONFIG_DRAM_START)+0x8000)))
 
 KERNEL_ELF := $(KTREE_OBJ_ROOT)/kernel-$(ARCH).elf
 KERNEL_UIMAGE := $(OBJPATH_ROOT)/kernel.img
