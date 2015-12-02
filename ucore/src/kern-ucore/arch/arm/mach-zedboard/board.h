@@ -19,6 +19,6 @@
 #ifndef  MACH_BOARD_H
 #define  MACH_BOARD_H
 
-#include "board-pandaboard.h"
+#include "board-zedboard.h"
 
 #endif
