@@ -4,7 +4,9 @@
 	For ZedBoard. 
 */
 
-
+#include <types.h>
+#include <arm.h>
+#include <stdio.h>
 #include <board.h>
 
 /** **implement**
