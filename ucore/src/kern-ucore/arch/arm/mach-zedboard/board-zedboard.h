@@ -21,6 +21,8 @@
 
 // uart 0
 #define ZEDBOARD_UART0      0xe0000000
+// uart 1
+#define ZEDBOARD_UART1      0xe0001000
 
 // timer address
 #define ZEDBOARD_TIMER_BASE 0xf8f00200 
@@ -46,8 +48,8 @@
 #define SDRAM0_START UCONFIG_DRAM_START
 #define SDRAM0_SIZE  UCONFIG_DRAM_SIZE
 
-#define IO_SPACE_START PANDABOARD_IO_START
-#define IO_SPACE_SIZE  0x1000000
+#define IO_SPACE_START 0xe0000000
+#define IO_SPACE_SIZE  0x20000000
 
 //#define HAS_RAMDISK
 //#define HAS_FRAMEBUFFER
@@ -56,7 +58,7 @@
 
 #ifndef __ASSEMBLY__
 
-#define UART0_TX 		((volatile unsigned char*) PANDABOARD_UART0 + 0x00)
+#define UART0_TX 		((volatile unsigned char*) ZEDBOARD_UART0 + 0x00)
 //#define INITIAL_LOAD    ((volatile uintptr_t *) (0x1000))
 
 extern void board_init_early(void);
