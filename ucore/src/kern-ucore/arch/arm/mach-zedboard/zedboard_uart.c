@@ -1,112 +1,110 @@
-/*
- * =====================================================================================
- *
- *       Filename:  versatilepd_uart.c
- *
- *    Description:  NS16550
- *
- *        Version:  1.0
- *        Created:  03/17/2012 02:43:34 PM
- *       Revision:  none
- *       Compiler:  gcc
- *
- *         Author:  Chen Yuheng (Chen Yuheng), chyh1990@163.com
- *   Organization:  Tsinghua Unv.
- *
- * =====================================================================================
- */
+/**
+	@Author: Tianyu Chen
+	This is an attempt to get the UART support done. 
+	For ZedBoard. 
+*/
 
-#include <types.h>
-#include <arm.h>
-#include <stdio.h>
-#include <kio.h>
-#include <string.h>
-#include <sync.h>
+
 #include <board.h>
-#include <picirq.h>
-#include <pmm.h>
 
-#define UART_TX 0x00
-#define UART_RX 0x00
-#define UART_LSR 0x14
-#define UART_IER 0x04
-#define UART_IIR 0x08
-#define UART_LSR_SR_E (1<<5)
-#define UART_LSR_DR	0x01	/* Receiver data ready */
+/** **implement**
+	*************
+	serial_init()
+	serial_puts()
+	serial_putc()
+	serial_getc()
+*/
 
-#define UART_IER_RHR_IT (1<<0)
+#define ZYNQ_UART_CR_TX_EN			0x00000010 /* TX enabled */
+#define ZYNQ_UART_CR_RX_EN			0x00000004 /* RX enabled */
+#define ZYNQ_UART_CR_TXRST			0x00000002 /* TX logic reset */
+#define ZYNQ_UART_CR_RXRST			0x00000001 /* RX logic reset */
 
-static bool serial_exists = 0;
-static uint32_t uart_base = PANDABOARD_UART0;
+#define ZYNQ_UART_MR_PARITY_NONE	0x00000020  /* No parity mode */
 
-static void serial_clear()
-{
+#define BAUDRATE_CONFIG 115200
+
+struct uart_zynq {
+	u32 control;			/* 0x00 - Control Register [8:0] */
+	u32 mode;				/* 0x04 - Mode Register [10:0] */
+	u32 reserved1[4];
+	u32 baud_rate_gen;		/* 0x18 - Baud Rate Generator [15:0] */
+	u32 reserved2[4];
+	u32 channel_sts;		/* 0x2c - Channel Status [11:0] */
+	u32 tx_rx_fifo;			/* 0x30 - FIFO [15:0] or [7:0] */
+	u32 baud_rate_divider;	/* 0x34 - Baud Rate Divider [7:0] */
+};
+
+struct uart_zynq * uart_zynq_ports[2] = {
+	[0] = (struct uart_zynq *) ZEDBOARD_UART0,
+	[1] = (struct uart_zynq *) ZEDBOARD_UART1,
+};
+
+/* setup baud rate */
+static void serial_setbrg(const int port) {
+	unsigned int calc_bauderror, bdiv, bgen;
+	unsigned long calc_baud = 0;
+	unsigned long baud;
+	// setup a clock value
+	// unsigned long clock = ;
+	struct uart_zynq * regs = uart_zynq_ports[port];
+
+	/*
+	if(clock < 1000000 && BAUDRATE_CONFIG > 4800) {
+		baud = 4800;
+	} else {
+		baud = BAUDRATE_CONFIG;
+	}
+	*/
+
+	// calculate bdiv and bgen
+	// assume that uart_ref_clk is 50 mhz
+	bdiv = 6;
+	bgen = 62;
+
+	// write registers
+	// writel(bdiv, & regs -> baud_rate_divider);
+	// writel(bgen, & regs -> baud_rate_gen);
+	outw(& regs -> baud_rate_divider, bdiv);
+	outw(& regs -> baud_rate_gen, bgen);
 }
 
-static int serial_int_handler(int irq, void *data)
-{
-	extern void dev_stdin_write(char c);
-	char c = cons_getc();
-	//serial_putc(c);
-	dev_stdin_write(c);
+/* init the serial port */
+int serial_init(const int port) {
+	struct uart_zynq * regs = uart_zynq_ports[port];
+
+	if(! regs) {
+		return -1;
+	}
+
+	// rx/tx enabe and reset
+	// writel(ZYNQ_UART_CR_TX_EN | ZYNQ_UART_CR_RX_EN | ZYNQ_UART_CR_TXRST | ZYNQ_UART_CR_RXRST, & regs -> control);
+	outw(& regs -> control, ZYNQ_UART_CR_TX_EN | ZYNQ_UART_CR_RX_EN | ZYNQ_UART_CR_TXRST | ZYNQ_UART_CR_RXRST);
+	// no parity
+	// writel(ZYNQ_UART_MR_PARITY_NONE, & regs -> mode);
+	outw(& regs -> mode, ZYNQ_UART_MR_PARITY_NONE);
+
+	uart_zynq_serial_setbrg(port);
+
 	return 0;
 }
 
-void serial_init_early()
-{
-}
+/* put char */
+static void uart_putc(const char c, const int port) {
+	struct uart_zynq * regs = uart_zynq_ports[port];
 
-void serial_init(uint32_t base, uint32_t irq)
-{
-	if (serial_exists)
-		return;
-	serial_exists = 1;
-
-	void *newbase = __ucore_ioremap(base, PGSIZE, 0);
-	uart_base = (uint32_t) newbase;
-
-	outw(uart_base + UART_IER, UART_IER_RHR_IT);
-	register_irq(irq, serial_int_handler, NULL);
-	pic_enable(irq);
-
-}
-
-static void serial_putc_sub(int c)
-{
-	//if(serial_exists)
-	while ((inw(uart_base + UART_LSR) & UART_LSR_SR_E) == 0) ;
-	if (c == '\n')
-		outw(uart_base + UART_TX, '\r');
-	outw(uart_base + UART_TX, c & 0xff);
-}
-
-/* serial_putc - print character to serial port */
-void serial_putc(int c)
-{
-	if (c != '\b') {
-		serial_putc_sub(c);
-	} else {
-		serial_putc_sub('\b');
-		serial_putc_sub(' ');
-		serial_putc_sub('\b');
+	if(c == '\n') {
+		// writel('\r', & regs -> tx_rx_fifo);
+		outw(& regs -> tx_rx_fifo, '\r');
 	}
+
+	// writel(c, & regs -> tx_rx_fifo);
+	outw(& regs -> tx_rx_fifo, c);
 }
 
-/* serial_proc_data - get data from serial port */
-int serial_proc_data(void)
-{
-	//kprintf("%08x\n", inw(PANDABOARD_UART0+PL011_UARTFR));
-	if ((inw(uart_base + UART_LSR) & UART_LSR_DR) == 0) {
-		return -1;
+/* put string via serial port */
+void uart_puts(const char * s, const int port) {
+	while(* s) {
+		uart_putc(* s ++, port);
 	}
-	int c = inw(uart_base + UART_RX);
-	if (c == 127) {
-		c = '\b';
-	}
-	return c;
-}
-
-int serial_check()
-{
-	return serial_exists;
 }
