@@ -24,17 +24,27 @@
 
 static const char *message = "Initializing ZEDBOARD...\n";
 
+/*
 static void put_string(const char *str)
 {
 	while (*str)
 		serial_putc(*str++);
 }
+*/
 
 #define EXT_CLK 38400000
 
 void board_init_early()
 {
-	put_string(message);
+	// put_string(message);
+	gpio_init();
+	gpio_test();
+
+	serial_init(1);
+
+	int i;
+	for(i = 0; i < 10; i ++)
+		serial_putc('O');
 
 	// pic_init_early();	// init interrupt controller
 }

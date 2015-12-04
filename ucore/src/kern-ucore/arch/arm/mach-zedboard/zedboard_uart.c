@@ -27,14 +27,14 @@
 #define BAUDRATE_CONFIG 115200
 
 struct uart_zynq {
-	u32 control;			/* 0x00 - Control Register [8:0] */
-	u32 mode;				/* 0x04 - Mode Register [10:0] */
-	u32 reserved1[4];
-	u32 baud_rate_gen;		/* 0x18 - Baud Rate Generator [15:0] */
-	u32 reserved2[4];
-	u32 channel_sts;		/* 0x2c - Channel Status [11:0] */
-	u32 tx_rx_fifo;			/* 0x30 - FIFO [15:0] or [7:0] */
-	u32 baud_rate_divider;	/* 0x34 - Baud Rate Divider [7:0] */
+	uint32_t control;			/* 0x00 - Control Register [8:0] */
+	uint32_t mode;				/* 0x04 - Mode Register [10:0] */
+	uint32_t reserved1[4];
+	uint32_t baud_rate_gen;		/* 0x18 - Baud Rate Generator [15:0] */
+	uint32_t reserved2[4];
+	uint32_t channel_sts;		/* 0x2c - Channel Status [11:0] */
+	uint32_t tx_rx_fifo;			/* 0x30 - FIFO [15:0] or [7:0] */
+	uint32_t baud_rate_divider;	/* 0x34 - Baud Rate Divider [7:0] */
 };
 
 struct uart_zynq * uart_zynq_ports[2] = {
@@ -67,8 +67,8 @@ static void serial_setbrg(const int port) {
 	// write registers
 	// writel(bdiv, & regs -> baud_rate_divider);
 	// writel(bgen, & regs -> baud_rate_gen);
-	outw(& regs -> baud_rate_divider, bdiv);
-	outw(& regs -> baud_rate_gen, bgen);
+	outw((uint32_t) & regs -> baud_rate_divider, bdiv);
+	outw((uint32_t) & regs -> baud_rate_gen, bgen);
 }
 
 /* init the serial port */
@@ -81,32 +81,47 @@ int serial_init(const int port) {
 
 	// rx/tx enabe and reset
 	// writel(ZYNQ_UART_CR_TX_EN | ZYNQ_UART_CR_RX_EN | ZYNQ_UART_CR_TXRST | ZYNQ_UART_CR_RXRST, & regs -> control);
-	outw(& regs -> control, ZYNQ_UART_CR_TX_EN | ZYNQ_UART_CR_RX_EN | ZYNQ_UART_CR_TXRST | ZYNQ_UART_CR_RXRST);
+	outw((uint32_t) & regs -> control, ZYNQ_UART_CR_TX_EN | ZYNQ_UART_CR_RX_EN | ZYNQ_UART_CR_TXRST | ZYNQ_UART_CR_RXRST);
 	// no parity
 	// writel(ZYNQ_UART_MR_PARITY_NONE, & regs -> mode);
-	outw(& regs -> mode, ZYNQ_UART_MR_PARITY_NONE);
+	outw((uint32_t) & regs -> mode, ZYNQ_UART_MR_PARITY_NONE);
 
-	uart_zynq_serial_setbrg(port);
+	serial_setbrg(port);
 
 	return 0;
 }
 
 /* put char */
-static void uart_putc(const char c, const int port) {
+void serial_putc(int c) {
+	const int port = 1;
 	struct uart_zynq * regs = uart_zynq_ports[port];
 
 	if(c == '\n') {
 		// writel('\r', & regs -> tx_rx_fifo);
-		outw(& regs -> tx_rx_fifo, '\r');
+		outw((uint32_t) & regs -> tx_rx_fifo, '\r');
 	}
 
 	// writel(c, & regs -> tx_rx_fifo);
-	outw(& regs -> tx_rx_fifo, c);
+	outw((uint32_t) & regs -> tx_rx_fifo, c);
 }
 
 /* put string via serial port */
-void uart_puts(const char * s, const int port) {
+/*
+void serial_puts(const char * s, const int port) {
 	while(* s) {
-		uart_putc(* s ++, port);
+		serial_putc(* s ++, port);
 	}
+}
+*/
+
+int serial_check() {
+	return 0;
+}
+
+int serial_proc_data() {
+	return 0;
+}
+
+void serial_clear() {
+
 }
