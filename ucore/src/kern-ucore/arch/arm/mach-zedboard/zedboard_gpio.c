@@ -1,6 +1,16 @@
 /*
  * zedboard_gpio.c
  *
+ * Provides an interface to control a LED indicator light.
+ *
+ * Usage:
+ *
+ * - Call `gpio_init()` first.
+ * - Call `gpio_write(0, val)` to set the light state indicated by the 8th bit
+ *   from right of `val` ((val >> 7) & 1), 1 for on and 0 for off.
+ *
+ * Note: It is currently unable to GET the light state.
+ *
  *  Created on: 2015-12-1
  *      Author: dstray
  */
@@ -58,7 +68,89 @@ uint32_t gpio_read(uint32_t bank)
 	return inw(ZEDBOARD_GPIO + DATA_RO(bank));
 }
 
+/*
+ * blink 3 times.
+ */
 void gpio_test()
 {
-	gpio_write(0, 0x0F0FFFFF);
+	//gpio_write(0, 0x0F0FFFFF);
+	uint32_t val = ~0x0;
+	int i;
+	for (i = 0; i<6; i++) {
+		gpio_write(0, val);
+		int j;
+		// 1 000 000  --> 0.2s
+		for (j = 0; j<2000000; j++);
+		val = ~val;
+	}
+}
+
+
+// Functions below are for test purposes
+
+// Show binary numbers using the only controllable LED indicator light...
+#define TICK 400000  // 0.08s per tick
+/*
+ * Notations:
+ * ('+': light on, '-': light off)
+ * ++++---- START (long flash)
+ * +------- 0 (flash once)
+ * +-+----- 1 (flash twice)
+ * -------- END (long interval)
+ * -------- SEP (identical to END)
+ */
+
+/*
+ * Set the light on/off for `length` ticks
+ */
+void gpio_test_set(uint32_t val, int length)
+{
+	if (val) {
+		val = ~0;
+	}
+	gpio_write(0, val);
+	int i;
+	for (i = 0; i<TICK*length; i++);
+}
+/*
+ * Show the lowest `bits` bits of `val` as a binary sequence.
+ */
+static void gpio_test_uint_in(uint32_t val, int bits) {
+	int i;
+	for (i = bits-1; i>=0; i--) {
+		if (val & (1 << i)) {
+			gpio_test_set(1, 1);
+			gpio_test_set(0, 1);
+			gpio_test_set(1, 1);
+			gpio_test_set(0, 5);
+		} else {
+			gpio_test_set(1, 1);
+			gpio_test_set(0, 7);
+		}
+	}
+}
+/*
+ * Show an 8-bit integer,
+ * with a preceding START symbol and a succeeding END symbol.
+ */
+void gpio_test_uint8(uint32_t val)
+{
+	gpio_test_set(1, 4);
+	gpio_test_set(0, 4);
+	gpio_test_uint_in(val, 8);
+	gpio_test_set(0, 8);
+}
+/*
+ * Show a 32-bit integer, with START and END.
+ * Grouped by every 8 bits, each separated by a SEP symbol.
+ */
+void gpio_test_uint32(uint32_t val)
+{
+	gpio_test_set(1, 4);
+	gpio_test_set(0, 4);
+	int i;
+	for (i = 8*3; i>=0; i-=8) {
+		gpio_test_uint_in(val >> i, 8);
+		gpio_test_set(0, 8);
+	}
 }

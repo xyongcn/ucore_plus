@@ -37,10 +37,30 @@ struct uart_zynq {
 	uint32_t baud_rate_divider;	/* 0x34 - Baud Rate Divider [7:0] */
 };
 
-struct uart_zynq * uart_zynq_ports[2] = {
+/*
+ * This global array does NOT work.
+ * Possibly because memory mapping is not complete at very early time.
+ */
+/*const struct uart_zynq * uart_zynq_ports[2] = {
 	[0] = (struct uart_zynq *) ZEDBOARD_UART0,
 	[1] = (struct uart_zynq *) ZEDBOARD_UART1,
-};
+};*/
+
+static inline struct uart_zynq * uart_zynq_ports(int port)
+	__attribute__ ((always_inline));
+
+static inline struct uart_zynq * uart_zynq_ports(int port)
+{
+	switch (port) {
+		case 0:
+			return (struct uart_zynq *) ZEDBOARD_UART0;
+		case 1:
+			return (struct uart_zynq *) ZEDBOARD_UART1;
+		default:
+			// TODO a better default behavior
+			return (struct uart_zynq *) ZEDBOARD_UART1;
+	}
+}
 
 /* setup baud rate */
 static void serial_setbrg(const int port) {
@@ -49,7 +69,7 @@ static void serial_setbrg(const int port) {
 	unsigned long baud;
 	// setup a clock value
 	// unsigned long clock = ;
-	struct uart_zynq * regs = uart_zynq_ports[port];
+	struct uart_zynq * regs = uart_zynq_ports(port);
 
 	/*
 	if(clock < 1000000 && BAUDRATE_CONFIG > 4800) {
@@ -73,7 +93,7 @@ static void serial_setbrg(const int port) {
 
 /* init the serial port */
 int serial_init(const int port) {
-	struct uart_zynq * regs = uart_zynq_ports[port];
+	struct uart_zynq * regs = uart_zynq_ports(port);
 
 	if(! regs) {
 		return -1;
@@ -94,7 +114,7 @@ int serial_init(const int port) {
 /* put char */
 void serial_putc(int c) {
 	const int port = 1;
-	struct uart_zynq * regs = uart_zynq_ports[port];
+	struct uart_zynq * regs = uart_zynq_ports(port);
 
 	if(c == '\n') {
 		// writel('\r', & regs -> tx_rx_fifo);
@@ -106,13 +126,11 @@ void serial_putc(int c) {
 }
 
 /* put string via serial port */
-/*
-void serial_puts(const char * s, const int port) {
+void serial_puts(const char * s) {
 	while(* s) {
-		serial_putc(* s ++, port);
+		serial_putc(* s ++);
 	}
 }
-*/
 
 int serial_check() {
 	return 0;
