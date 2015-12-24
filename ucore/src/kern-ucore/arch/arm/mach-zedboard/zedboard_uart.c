@@ -28,6 +28,8 @@
 
 #define BAUDRATE_CONFIG 115200
 
+#define SERIAL_EXISTS 0
+
 struct uart_zynq {
 	uint32_t control;			/* 0x00 - Control Register [8:0] */
 	uint32_t mode;				/* 0x04 - Mode Register [10:0] */
@@ -123,14 +125,25 @@ void serial_puts(const char * s) {
 	}
 }
 
-int serial_check() {
-	return 0;
+static int serial_test(const int port) {
+	struct uart_zynq * regs = uart_zynq_ports(port);
+
+	return (inw((uint32_t) & regs -> channel_sts) & ZYNQ_UART_SR_RXEMPTY) == 0;
 }
 
-int serial_proc_data() {
-	return 0;
+int serial_proc_data(void) {
+	const int port = 1;
+
+	struct uart_zynq * regs = uart_zynq_ports(port);
+
+	while(! serial_test(port)) { }
+	return inw((uint32_t) & regs -> tx_rx_fifo);
 }
 
 void serial_clear() {
 	return;
+}
+
+int serial_check() {
+	return SERIAL_EXISTS;
 }
