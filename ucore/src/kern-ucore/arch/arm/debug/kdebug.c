@@ -221,21 +221,13 @@ void print_kerninfo(void)
 	extern char etext[], edata[], end[], kern_init[];
 	// TODO
 	// currently only with delays do these messages show up normally
-	int i;
-	for (i = 0; i<5000000; i++);
 	kprintf("Special kernel symbols:\n");
-	for (i = 0; i<5000000; i++);
 	kprintf("  entry  0x%08x (phys)\n", kern_init);
-	for (i = 0; i<5000000; i++);
 	kprintf("  etext  0x%08x (phys)\n", etext);
-	for (i = 0; i<5000000; i++);
 	kprintf("  edata  0x%08x (phys)\n", edata);
-	for (i = 0; i<5000000; i++);
 	kprintf("  end    0x%08x (phys)\n", end);
-	for (i = 0; i<5000000; i++);
 	kprintf("Kernel executable memory footprint: %dKB\n",
 		(end - kern_init + 1023) / 1024);
-	for (i = 0; i<5000000; i++);
 }
 
 /* *

@@ -1,7 +1,6 @@
 /**
-	@Author: Tianyu Chen
-	This is an attempt to get the UART support done. 
-	For ZedBoard. 
+	@Author: Tianyu Chen, Dstray Lee
+	UART support for Zedboard
 */
 
 #include <types.h>
@@ -16,6 +15,9 @@
 	serial_putc()
 	serial_getc()
 */
+
+#define ZYNQ_UART_SR_TXFULL		0x00000010		/* TX FIFO full */
+#define ZYNQ_UART_SR_RXEMPTY	0x00000002		/* RX FIFO empty */
 
 #define ZYNQ_UART_CR_TX_EN			0x00000010 /* TX enabled */
 #define ZYNQ_UART_CR_RX_EN			0x00000004 /* RX enabled */
@@ -67,17 +69,7 @@ static void serial_setbrg(const int port) {
 	unsigned int calc_bauderror, bdiv, bgen;
 	unsigned long calc_baud = 0;
 	unsigned long baud;
-	// setup a clock value
-	// unsigned long clock = ;
 	struct uart_zynq * regs = uart_zynq_ports(port);
-
-	/*
-	if(clock < 1000000 && BAUDRATE_CONFIG > 4800) {
-		baud = 4800;
-	} else {
-		baud = BAUDRATE_CONFIG;
-	}
-	*/
 
 	// calculate bdiv and bgen
 	// assume that uart_ref_clk is 50 mhz
@@ -85,8 +77,6 @@ static void serial_setbrg(const int port) {
 	bgen = 62;
 
 	// write registers
-	// writel(bdiv, & regs -> baud_rate_divider);
-	// writel(bgen, & regs -> baud_rate_gen);
 	outw((uint32_t) & regs -> baud_rate_divider, bdiv);
 	outw((uint32_t) & regs -> baud_rate_gen, bgen);
 }
@@ -116,12 +106,13 @@ void serial_putc(int c) {
 	const int port = 1;
 	struct uart_zynq * regs = uart_zynq_ports(port);
 
+	while((inw((uint32_t) & regs -> channel_sts) & ZYNQ_UART_SR_TXFULL) != 0) { }
+
 	if(c == '\n') {
-		// writel('\r', & regs -> tx_rx_fifo);
 		outw((uint32_t) & regs -> tx_rx_fifo, '\r');
+		while((inw((uint32_t) & regs -> channel_sts) & ZYNQ_UART_SR_TXFULL) != 0) { }
 	}
 
-	// writel(c, & regs -> tx_rx_fifo);
 	outw((uint32_t) & regs -> tx_rx_fifo, c);
 }
 
@@ -141,5 +132,5 @@ int serial_proc_data() {
 }
 
 void serial_clear() {
-
+	return;
 }
