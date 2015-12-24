@@ -41,11 +41,6 @@ void board_init_early()
 	gpio_test();
 
 	serial_init(1);
-
-	int i;
-	for(i = 0; i < 10; i ++)
-		serial_putc('O');
-
 	// pic_init_early();	// init interrupt controller
 }
 
