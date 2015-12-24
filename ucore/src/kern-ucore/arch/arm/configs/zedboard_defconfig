@@ -2,7 +2,7 @@
 # Toolchain setup
 #
 # TODO determine a proper prefix
-CROSS_COMPILE="arm-linux-androideabi-"
+CROSS_COMPILE="arm-eabi-"
 ADDITIONAL_CFLAGS="-g -ggdb"
 ADDITIONAL_LDFLAGS=""
 
