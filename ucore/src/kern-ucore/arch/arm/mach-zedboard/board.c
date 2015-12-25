@@ -40,7 +40,7 @@ void board_init_early()
 	gpio_init();
 	gpio_test();
 
-	serial_init(1);
+	serial_init(1, PER_IRQ_BASE_NONE_SPI + ZEDBOARD_UART1_IRQ);
 	// pic_init_early();	// init interrupt controller
 }
 

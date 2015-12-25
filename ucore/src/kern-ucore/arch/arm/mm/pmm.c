@@ -178,7 +178,7 @@ static void page_init(void)
 
 	// put page structure table at the end of kernel
 	pages = (struct Page *)ROUNDUP((void *)end, PGSIZE);
-	//kprintf("maxpa: 0x%08x  npage: 0x%08x  pages: 0x%08x  end: 0x%08x\n", maxpa, npage, pages, end);
+	kprintf("maxpa: 0x%08x  npage: 0x%08x  pages: 0x%08x  end: 0x%08x sizeof(struct Page): 0x%08x\n", maxpa, npage, pages, end, sizeof(struct Page));
 
 	for (i = 0; i < npage; i++) {	// trick to not consider non existing pages
 		SetPageReserved(pages + i);

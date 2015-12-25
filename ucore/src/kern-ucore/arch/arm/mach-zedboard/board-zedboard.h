@@ -40,6 +40,7 @@
 #define PER_IRQ_BASE_NONE_SPI     32
 #define PER_IRQ_BASE_SPI          16
 #define ZEDBOARD_UART0_IRQ        27 // should plus 32 as this is none-spi
+#define ZEDBOARD_UART1_IRQ        50 // should plus 32 
 #define GLOBAL_TIMER_IRQ          11 // should plus 16 as this spi
 
 // extern macro

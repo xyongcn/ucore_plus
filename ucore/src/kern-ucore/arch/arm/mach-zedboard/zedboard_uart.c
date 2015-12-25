@@ -1,12 +1,18 @@
 /**
 	@Author: Tianyu Chen, Dstray Lee
 	UART support for Zedboard
+	Tsinghua Univ. 
 */
 
 #include <types.h>
 #include <arm.h>
 #include <stdio.h>
+#include <kio.h>
+#include <string.h>
+#include <sync.h>
 #include <board.h>
+#include <picirq.h>
+#include <pmm.h>
 
 /** **implement**
 	*************
@@ -28,7 +34,7 @@
 
 #define BAUDRATE_CONFIG 115200
 
-#define SERIAL_EXISTS 0
+static bool serial_exists = 0;
 
 struct uart_zynq {
 	uint32_t control;			/* 0x00 - Control Register [8:0] */
@@ -40,15 +46,6 @@ struct uart_zynq {
 	uint32_t tx_rx_fifo;			/* 0x30 - FIFO [15:0] or [7:0] */
 	uint32_t baud_rate_divider;	/* 0x34 - Baud Rate Divider [7:0] */
 };
-
-/*
- * This global array does NOT work.
- * Possibly because memory mapping is not complete at very early time.
- */
-/*const struct uart_zynq * uart_zynq_ports[2] = {
-	[0] = (struct uart_zynq *) ZEDBOARD_UART0,
-	[1] = (struct uart_zynq *) ZEDBOARD_UART1,
-};*/
 
 static inline struct uart_zynq * uart_zynq_ports(int port)
 	__attribute__ ((always_inline));
@@ -64,6 +61,16 @@ static inline struct uart_zynq * uart_zynq_ports(int port)
 			// TODO a better default behavior
 			return (struct uart_zynq *) ZEDBOARD_UART1;
 	}
+}
+
+void serial_putc(int c);
+
+static int serial_int_handler(int irq, void * data) {\
+	extern void dev_stdin_write(char c);
+	char c = cons_getc();
+	serial_putc(c);
+	dev_stdin_write(c);
+	return 0;
 }
 
 /* setup baud rate */
@@ -84,7 +91,12 @@ static void serial_setbrg(const int port) {
 }
 
 /* init the serial port */
-int serial_init(const int port) {
+int serial_init(const int port, uint32_t irq) {
+	if(serial_exists) {
+		return -1;
+	}
+	serial_exists = 1;
+
 	struct uart_zynq * regs = uart_zynq_ports(port);
 
 	if(! regs) {
@@ -92,13 +104,14 @@ int serial_init(const int port) {
 	}
 
 	// rx/tx enabe and reset
-	// writel(ZYNQ_UART_CR_TX_EN | ZYNQ_UART_CR_RX_EN | ZYNQ_UART_CR_TXRST | ZYNQ_UART_CR_RXRST, & regs -> control);
 	outw((uint32_t) & regs -> control, ZYNQ_UART_CR_TX_EN | ZYNQ_UART_CR_RX_EN | ZYNQ_UART_CR_TXRST | ZYNQ_UART_CR_RXRST);
 	// no parity
-	// writel(ZYNQ_UART_MR_PARITY_NONE, & regs -> mode);
 	outw((uint32_t) & regs -> mode, ZYNQ_UART_MR_PARITY_NONE);
 
 	serial_setbrg(port);
+
+	// register_irq(irq, serial_int_handler, NULL);
+	// pic_enable(irq);
 
 	return 0;
 }
@@ -136,8 +149,12 @@ int serial_proc_data(void) {
 
 	struct uart_zynq * regs = uart_zynq_ports(port);
 
-	while(! serial_test(port)) { }
-	return inw((uint32_t) & regs -> tx_rx_fifo);
+	while(! serial_test(port)) {
+		return -1;
+	}
+
+	uint32_t ret = inw((uint32_t) & regs -> tx_rx_fifo);
+	return ret;
 }
 
 void serial_clear() {
@@ -145,5 +162,5 @@ void serial_clear() {
 }
 
 int serial_check() {
-	return SERIAL_EXISTS;
+	return serial_exists;
 }
