@@ -21,16 +21,17 @@ ARM_BOARD_ZEDBOARD=y
 HAVE_RAMDISK=y
 RAMDISK_FILE="sfs.img"
 DRAM_START=0x00000000
-DRAM_SIZE=0x20000000
+DRAM_SIZE=0x8000000
 # HAVE_BOOTLOADER is not set
 # FPU_ENABLE is not set
 
 #
 # NUMA Support
 #
-NR_CPUS=1
-NR_NUMA_NODES=1
-NR_MEMS_PER_NODE=1
+# Tianyu: turned NUMA off for now!
+# NR_CPUS=1
+# NR_NUMA_NODES=1
+# NR_MEMS_PER_NODE=1
 # ENABLE_IPI is not set
 
 #
@@ -53,15 +54,17 @@ SCHEDULER_MLFQ=y
 HAVE_SFS=y
 SFS_IMAGE_SIZE=4
 SFS_MINIMAL_CONTENT=y
-HAVE_YAFFS2=y
-HAVE_YAFFS2_RAMDISK=y
+# Tianyu: turned off yaffs and fat for now!
+# HAVE_YAFFS2=y
+# HAVE_YAFFS2_RAMDISK=y
 # HAVE_FATFS is not set
 
 #
 # Linux Device Driver Environment
 #
+# Tianyu: turned off DDE for now!
 # HAVE_LINUX_DDE_BASE is not set
-DDE_EXAMPLE_CHRDEV=y
+# DDE_EXAMPLE_CHRDEV=y
 # DDE_MMC_SUPPORT is not set
 
 #
