@@ -1,20 +1,7 @@
-/*
- * =====================================================================================
- *
- *       Filename:  clock.c
- *
- *    Description:  SP804 support, versatilepb
- *
- *        Version:  1.0
- *        Created:  03/25/2012 08:39:30 PM
- *       Revision:  none
- *       Compiler:  gcc
- *
- *         Author:  Chen Yuheng (Chen Yuheng), chyh1990@163.com
- *   Organization:  Tsinghua Unv.
- *
- * =====================================================================================
- */
+/**
+	@Author: Tianyu Chen
+	Tsinghua Univ. 2016
+*/
 
 #include <arm.h>
 #include <board.h>
@@ -48,9 +35,7 @@ static int clock_int_handler(int irq, void *data)
 	return 0;
 }
 
-void clock_init_arm(uint32_t base, int irq)
-{
-	//TODO
+void clock_init_arm(uint32_t base, int irq) {
 	timer_base = base;
 	outw(timer_base + TIMER_LOAD, LOAD_VALUE);
 	outw(timer_base + TIMER_CONTROL, TIMER_CONTROL_VAL);

@@ -24,13 +24,12 @@
 // uart 1
 #define ZEDBOARD_UART1      0xe0001000
 
-// timer address
-#define ZEDBOARD_TIMER_BASE 0xf8f00200 
-
+// application processing unit base
+#define ZEDBOARD_APU_BASE	0xf8f00000
 // gic controller address
-#define ZEDBOARD_GIC_BASE   0xf8f01000 
-
-// no mpu in zynq 7000
+#define ZEDBOARD_GIC_BASE   (ZEDBOARD_APU_BASE + 0x1000)
+// global timer address
+#define ZEDBOARD_TIMER0_BASE (ZEDBOARD_APU_BASE + 0x0200)
 
 #ifndef __io_address
 #define __io_address(x) (x)
@@ -41,7 +40,7 @@
 #define PER_IRQ_BASE_SPI          16
 #define ZEDBOARD_UART0_IRQ        27 // should plus 32 as this is none-spi
 #define ZEDBOARD_UART1_IRQ        50 // should plus 32 
-#define GLOBAL_TIMER_IRQ          11 // should plus 16 as this spi
+#define GLOBAL_TIMER0_IRQ         11 // should plus 16 as this spi
 
 // extern macro
 

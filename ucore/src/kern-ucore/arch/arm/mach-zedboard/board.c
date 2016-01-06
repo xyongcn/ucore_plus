@@ -41,19 +41,17 @@ void board_init_early()
 	gpio_test();
 
 	serial_init(1, PER_IRQ_BASE_NONE_SPI + ZEDBOARD_UART1_IRQ);
-	// pic_init_early();	// init interrupt controller
+	// Tianyu: we place pic init here
+	pic_init2(ZEDBOARD_APU_BASE);
+	kprintf("Tianyu: picirq inited! \n");
+	// Tianyu: we place clock init here
+	clock_init_arm(ZEDBOARD_TIMER0_BASE, GLOBAL_TIMER0_IRQ + PER_IRQ_BASE_SPI);
+	kprintf("Tianyu: clock inited! \n");
 }
 
 void board_init()
 {
-/*
-	uint32_t mpu_base =
-	    (uint32_t) __ucore_ioremap(CORTEX_A9_MPU_INSTANCE_BASE, 2 * PGSIZE,
-				       0);
-	pic_init2(mpu_base + 0x100, mpu_base + 0x1000);
-	serial_init(ZEDBOARD_UART0, PER_IRQ_BASE + PANDABOARD_UART3_IRQ);
-	clock_init_arm(mpu_base + 0x600, PRIVATE_TIMER0_IRQ);
-*/
+	return;
 }
 
 /* no nand */
