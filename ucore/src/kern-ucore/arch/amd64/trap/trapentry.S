@@ -3,7 +3,7 @@
 .text
 .code64
 
-# syscall instructor goes here 
+# syscall instructor goes here
 .globl syscall_entry
 .type syscall_entry, %function
 syscall_entry:
@@ -44,9 +44,9 @@ syscall_entry:
     pushq %r15
 
     # push ds, es
-    movw %es, %rax
+    movq %es, %rax
     pushq %rax
-    movw %ds, %rax
+    movq %ds, %rax
     pushq %rax
 
     # use %rdi to pass a pointer to the trapframe as an argument to trap()
@@ -79,7 +79,7 @@ syscall_exit:
     popq %rsi
     popq %rdi
 
-    # restore user rsp 
+    # restore user rsp
 	movq %gs:0x10, %rsp
 
 	swapgs
@@ -107,9 +107,9 @@ __alltraps:
     pushq %r15
 
     # push ds, es
-    movw %es, %rax
+    movq %es, %rax
     pushq %rax
-    movw %ds, %rax
+    movq %ds, %rax
     pushq %rax
 
     # swap in kernel GS BASE if we come from user space
