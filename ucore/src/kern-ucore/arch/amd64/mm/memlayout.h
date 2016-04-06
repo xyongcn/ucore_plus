@@ -8,8 +8,12 @@
 #define SEG_KDATA   2
 //#define SEG_KPLS    3
 #define SEG_UTEXT_32   3
-#define SEG_UTEXT   4
-#define SEG_UDATA   5
+
+//TODO: SGE_UDATA and SEG_UTEXT are swapped so that uClibc works.
+//But this is concluded by diff 2 versions and I don't completely know
+//what I am doing.
+#define SEG_UDATA   4
+#define SEG_UTEXT   5
 //#define SEG_TLS1    6
 //#define SEG_TLS2    7
 #define SEG_TSS     6
