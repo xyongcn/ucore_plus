@@ -43,6 +43,11 @@ struct cpu {
 	__padout__;
 	//percpu
 	struct cpu *cpu;  //mysellf
+
+// rsp quick reference for syscall_entry
+	uint64_t kern_rsp; // load rsp easily in assembly language
+	uint64_t user_rsp; // store user rsp when syscall enters
+
 	void *percpu_base;           // Per-CPU memory region base
 
 	struct proc_struct *__current;

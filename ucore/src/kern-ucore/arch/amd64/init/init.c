@@ -114,6 +114,8 @@ int kern_init(uint64_t mbmagic, uint64_t mbmem)
 	idt_init();		// init interrupt descriptor table
 	pic_init();		// init interrupt controller
 
+	syscall_init(); // init fast syscall using SYSCALL op
+
 //	acpi_conf_init();
 
 

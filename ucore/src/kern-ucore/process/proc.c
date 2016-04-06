@@ -1548,9 +1548,9 @@ out_unlock:
 /* poring from linux */
 int do_linux_brk(uintptr_t brk)
 {
-	uint32_t newbrk, oldbrk, retval;
+	uintptr_t newbrk, oldbrk, retval;
 	struct mm_struct *mm = current->mm;
-	uint32_t min_brk;
+	uintptr_t min_brk;
 
 	if (!mm) {
 		panic("kernel thread call sys_brk!!.\n");
@@ -2137,6 +2137,41 @@ int do_linux_ugetrlimit(int res, struct linux_rlimit *__user __limit)
 	if (!copy_to_user(mm, __limit, &limit, sizeof(struct linux_rlimit))) {
 		ret = -E_INVAL;
 	}
+	unlock_mm(mm);
+	return ret;
+}
+
+int do_linux_usetrlimit(int res, const struct linux_rlimit *__user __limit)
+{
+	int ret = 0;
+	struct mm_struct *mm = current->mm;
+	lock_mm(mm);
+	if (!user_mem_check(mm, __limit, sizeof(struct linux_rlimit), 0))
+	{
+		ret = -E_FAULT;
+		goto out;
+	}
+	struct linux_rlimit limit;
+	switch (res) {
+	case RLIMIT_STACK:
+		limit.rlim_cur = USTACKSIZE;
+		limit.rlim_max = USTACKSIZE;
+		break;
+	default:
+		return -E_INVAL;
+	}
+	if (__limit->rlim_cur > limit.rlim_max)
+	{
+		ret = -E_INVAL;
+		goto out;
+	}
+	if (__limit->rlim_max > limit.rlim_max)
+	{
+		ret = -E_PERM;
+		goto out;
+	}
+	ret = 0;
+out:
 	unlock_mm(mm);
 	return ret;
 }

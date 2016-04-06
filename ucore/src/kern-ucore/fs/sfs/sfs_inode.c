@@ -263,6 +263,7 @@ sfs_bmap_get_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, uint32_t index,
 	}
 
 out:
+//kprintf("SFS : %d %d\n", ino, sfs_block_inuse(sfs, ino));
 	assert(ino == 0 || sfs_block_inuse(sfs, ino));
 	*ino_store = ino;
 	return 0;
