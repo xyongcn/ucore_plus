@@ -76,7 +76,7 @@ __FBSDID("$FreeBSD$");
 #include "freebsd_compat/sys/stat.h"
 #include "freebsd_compat/sys/unistd.h"
 //#include <sys/filedesc.h>
-//#include <sys/file.h>
+#include "freebsd_compat/sys/file.h"
 #include "freebsd_compat/sys/fcntl.h"
 #include "freebsd_compat/sys/dirent.h"
 #include "freebsd_compat/sys/bio.h"

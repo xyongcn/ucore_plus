@@ -6,6 +6,8 @@
 #include "timespec.h"
 #include "bufobj.h"
 #include "stat.h"
+#include "dirent.h"
+#include "file.h"
 #include "../vm/vm_page.h"
 
 struct cdev;
@@ -314,6 +316,10 @@ static void cache_purge(struct vnode *vp) {
 static void cache_purge_negative(struct vnode *vp) {
 }
 
+static int vnode_create_vobject(struct vnode *vp, off_t size, struct thread *td) {
+  return 0;
+}
+
 static void vnode_destroy_vobject(struct vnode *vp) {
 }
 
@@ -327,6 +333,60 @@ static int VOP_UNLOCK(struct vnode *vp, int flags) {
 }
 
 static int VOP_ISLOCKED(struct vnode *vp) {
+  return 0;
+}
+
+static int vop_stdfsync(struct vop_fsync_args *fsync_args) {
+  return 0;
+}
+
+static void assert_vop_elocked(struct vnode *vp, const char *str) {
+}
+static void assert_vop_locked(struct vnode *vp, const char *str) {
+}
+
+static int vinvalbuf(struct vnode *vp, int save, int slpflag, int slptimeo) {
+  return 0;
+}
+
+#define ASSERT_VOP_ELOCKED(vp, str)     assert_vop_elocked((vp), (str))
+#define ASSERT_VOP_LOCKED(vp, str)      assert_vop_locked((vp), (str))
+
+static int vrecycle(struct vnode *vp) {
+  return 0;
+}
+
+static int vget(struct vnode *vp, int lockflag, struct thread *td) {
+  return 0;
+}
+
+static int vflush(struct mount *mp, int rootrefs, int flags, struct thread *td) {
+  return 0;
+}
+
+static void cache_enter(struct vnode *dvp, struct vnode *vp, struct componentname *cnp) {
+}
+
+static int cache_lookup(struct vnode *dvp, struct vnode **vpp,
+struct componentname *cnp, struct timespec *tsp, int *ticksp) {
+  return 0;
+}
+
+static int getnewvnode(const char *tag, struct mount *mp, struct vop_vector *vops, struct vnode **vpp) {
+  return 0;
+}
+
+//vnode_pager.h
+
+static void vnode_pager_setsize(struct vnode *vp, vm_ooffset_t nsize) {
+}
+
+static int vtruncbuf(struct vnode *vp, struct ucred *cred, off_t length,
+int blksize) {
+  return 0;
+}
+
+static int insmntque(struct vnode *vp, struct mount *mp) {
   return 0;
 }
 

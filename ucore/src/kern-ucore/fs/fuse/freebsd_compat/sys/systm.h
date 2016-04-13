@@ -7,18 +7,12 @@
 #include "atomic.h"
 
 #ifndef PAGE_SIZE
-#define PAGE_SIZE 4096
+
+#define PAGE_SHIFT		12
+#define PAGE_SIZE		(1UL << PAGE_SHIFT)
+#define PAGE_MASK		(~(PAGE_SIZE-1))
+
 #endif
-
-#ifndef PAGE_SHIFT
-#define PAGE_SHIFT 12
-#endif
-
-typedef uint32_t Fnv32_t;
-typedef uint64_t Fnv64_t;
-
-#define FNV1_32_INIT ((Fnv32_t) 33554467UL)
-#define FNV1_64_INIT ((Fnv64_t) 0xcbf29ce484222325ULL)
 
 #define hz 1000000
 
@@ -38,6 +32,10 @@ static void wakeup_one(void *chan) {
 }
 
 static int msleep(void* chan, struct mtx* mtx, int pri, char* wmesg, int timo) {
+  return 0;
+}
+
+static int tsleep(void *ident, int priority, const char *wmesg, sbintime_t sbt) {
   return 0;
 }
 

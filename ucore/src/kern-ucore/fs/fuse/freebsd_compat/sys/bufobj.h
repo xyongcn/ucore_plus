@@ -136,4 +136,26 @@ static struct buf *getpbuf(int *pfreecnt) {
 static void relpbuf(struct buf *bp, int *pfreecnt) {
 }
 
+static void bufdone(struct buf *bp) {
+}
+
+static void brelse(struct buf *bp) {
+}
+
+static int bwrite(struct buf *bp) {
+  return 0;
+}
+
+static void bdirty(struct buf *bp) {
+}
+
+static struct buf *getblk(struct vnode *vp, daddr_t blkno, int size, int slpflag, int slptimeo,
+int flags) {
+  return NULL;
+}
+
+static int allocbuf(struct buf *bp, int size) {
+  return 0;
+}
+
 #endif

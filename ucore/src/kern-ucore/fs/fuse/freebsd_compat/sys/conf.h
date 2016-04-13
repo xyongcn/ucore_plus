@@ -66,4 +66,10 @@ int _perms, const char *_fmt, ...) {
 static void destroy_dev(struct cdev *_dev) {
 }
 
+static void dev_ref(struct cdev *dev) {
+}
+
+static void dev_rel(struct cdev *dev) {
+}
+
 #endif

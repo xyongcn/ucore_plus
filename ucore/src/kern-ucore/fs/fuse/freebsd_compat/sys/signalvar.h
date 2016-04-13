@@ -75,4 +75,19 @@ typedef struct sigqueue {
 #define SIGDELSET(set, signo)                                           \
         ((set).__bits[_SIG_WORD(signo)] &= ~_SIG_BIT(signo))
 
+static __inline int
+__sigisempty(sigset_t *set)
+{
+        int i;
+
+        for (i = 0; i < _SIG_WORDS; i++) {
+                if (set->__bits[i])
+                        return (0);
+        }
+        return (1);
+}
+
+#define SIGISEMPTY(set)         (__sigisempty(&(set)))
+#define SIGNOTEMPTY(set)        (!__sigisempty(&(set)))
+
 #endif

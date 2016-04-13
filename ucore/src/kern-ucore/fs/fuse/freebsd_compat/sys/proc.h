@@ -15,6 +15,7 @@ struct file;
 struct proc {
   pid_t	p_pid;
   sigqueue_t	p_sigqueue;	/* (c) Sigs not delivered to a td. */
+  struct mtx p_mtx;
   #define p_siglist	p_sigqueue.sq_signals
 };
 
@@ -30,5 +31,12 @@ struct thread {
 static struct thread* __curthread() {
 
 }
+
+/* Lock and unlock a process. */
+#define PROC_LOCK(p)    mtx_lock(&(p)->p_mtx)
+#define PROC_TRYLOCK(p) mtx_trylock(&(p)->p_mtx)
+#define PROC_UNLOCK(p)  mtx_unlock(&(p)->p_mtx)
+#define PROC_LOCKED(p)  mtx_owned(&(p)->p_mtx)
+#define PROC_LOCK_ASSERT(p, type)       mtx_assert(&(p)->p_mtx, (type))
 
 #endif

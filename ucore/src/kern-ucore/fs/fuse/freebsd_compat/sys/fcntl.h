@@ -22,4 +22,9 @@
 #define O_RDWR          0x0002          /* open for reading and writing */
 #define O_ACCMODE       0x0003          /* mask for above modes */
 
+#define O_DIRECTORY     0x00020000      /* Fail if not directory */
+#define O_EXEC          0x00040000      /* Open for execute only */
+
+#define OFLAGS(fflags)  ((fflags) & O_EXEC ? (fflags) : (fflags) - 1)
+
 #endif

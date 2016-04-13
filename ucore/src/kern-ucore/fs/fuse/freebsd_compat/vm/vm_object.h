@@ -116,4 +116,8 @@ typedef struct vm_object {
 
 #define IDX_TO_OFF(idx) (((vm_ooffset_t)(idx)) << PAGE_SHIFT)
 
+static bool vm_object_page_clean(vm_object_t object, vm_ooffset_t start, vm_ooffset_t end, int flags) {
+  return 0;
+}
+
 #endif

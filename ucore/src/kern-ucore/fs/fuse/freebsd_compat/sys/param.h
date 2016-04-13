@@ -51,8 +51,53 @@
 #define MAXBCACHEBUF    MAXBSIZE /* must be a power of 2 >= MAXBSIZE */
 #endif
 
+/* clicks to bytes */
+#ifndef ctob
+#define ctob(x) ((x)<<PAGE_SHIFT)
+#endif
+
+/* bytes to clicks */
+#ifndef btoc
+#define btoc(x) (((vm_offset_t)(x)+PAGE_MASK)>>PAGE_SHIFT)
+#endif
+
 /* Macros for min/max. */
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
+
+#define round_page(x)   ((((unsigned long)(x)) + PAGE_MASK) & ~(PAGE_MASK))
+
+//TODO: This error code doesn't exist in linux and is made up.
+#define E_NAMETOOLONG 531
+
+//from copystr.c
+/*
+ * Emulate copyinstr.
+ */
+static int
+copystr(kfaddr, kdaddr, len, done)
+        const void *kfaddr;
+        void *kdaddr;
+        size_t len;
+        size_t *done;
+{
+        const u_char *kfp = kfaddr;
+        u_char *kdp = kdaddr;
+        size_t l;
+        int rv;
+
+        rv = E_NAMETOOLONG;
+        for (l = 0; len-- > 0; l++) {
+                if (!(*kdp++ = *kfp++)) {
+                        l++;
+                        rv = 0;
+                        break;
+                }
+        }
+        if (done != NULL) {
+                *done = l;
+        }
+        return rv;
+}
 
 #endif

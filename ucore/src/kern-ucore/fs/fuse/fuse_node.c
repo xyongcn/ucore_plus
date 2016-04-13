@@ -75,7 +75,7 @@ __FBSDID("$FreeBSD$");
 #include "freebsd_compat/sys/mount.h"
 #include "freebsd_compat/sys/sysctl.h"
 #include "freebsd_compat/sys/fcntl.h"
-//include <sys/fnv_hash.h>
+#include "freebsd_compat/sys/fnv_hash.h"
 #include "freebsd_compat/sys/priv.h"
 //#include <security/mac/mac_framework.h>
 #include "freebsd_compat/vm/vm.h"

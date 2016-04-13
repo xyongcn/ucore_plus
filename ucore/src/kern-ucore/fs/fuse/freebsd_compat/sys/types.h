@@ -12,12 +12,14 @@ typedef int64_t daddr_t;
 typedef uint64_t u_int64_t;
 typedef uint64_t vm_offset_t;
 typedef uint64_t vm_pindex_t;
+typedef int64_t sbintime_t;
 
 typedef char *          caddr_t;        /* core address */
 typedef const char *    c_caddr_t;      /* core address, pointer to const */
 
 //TODO: for x64 only!
 typedef int64_t register_t;
+typedef uint64_t uregister_t;
 typedef int64_t vm_ooffset_t;
 
 #ifndef pid_t

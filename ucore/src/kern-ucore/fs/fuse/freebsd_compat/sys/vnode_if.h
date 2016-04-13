@@ -233,10 +233,17 @@ struct vop_access_args {
 	struct thread *a_td;
 };
 
-extern struct vnodeop_desc vop_access_desc;
+//extern struct vnodeop_desc vop_access_desc;
 
-int VOP_ACCESS_AP(struct vop_access_args *);
-int VOP_ACCESS_APV(struct vop_vector *vop, struct vop_access_args *);
+static struct vnodeop_desc vop_access_desc;
+
+static int VOP_ACCESS_AP(struct vop_access_args *args) {
+  return 0;
+}
+
+static int VOP_ACCESS_APV(struct vop_vector *vop, struct vop_access_args *args) {
+  return 0;
+}
 
 static __inline int VOP_ACCESS(
 	struct vnode *vp,
@@ -290,10 +297,16 @@ struct vop_getattr_args {
 	struct ucred *a_cred;
 };
 
-extern struct vnodeop_desc vop_getattr_desc;
+//extern struct vnodeop_desc vop_getattr_desc;
+static struct vnodeop_desc vop_getattr_desc;
 
-int VOP_GETATTR_AP(struct vop_getattr_args *);
-int VOP_GETATTR_APV(struct vop_vector *vop, struct vop_getattr_args *);
+static int VOP_GETATTR_AP(struct vop_getattr_args *args) {
+  return 0;
+}
+
+static int VOP_GETATTR_APV(struct vop_vector *vop, struct vop_getattr_args *args) {
+  return 0;
+}
 
 static __inline int VOP_GETATTR(
 	struct vnode *vp,

@@ -3,6 +3,8 @@
 
 #include "module.h"
 
+struct buf;
+
 /*
  * Version numbers.
  */
@@ -92,7 +94,7 @@ struct statfs {
 };
 
 struct mount {
-//	struct mtx	mnt_mtx;		/* mount structure interlock */
+	struct mtx	mnt_mtx;		/* mount structure interlock */
 //	int		mnt_gen;		/* struct mount generation */
 //#define	mnt_startzero	mnt_list
 //	TAILQ_ENTRY(mount) mnt_list;		/* (m) mount list */
@@ -256,6 +258,29 @@ static char *vfs_getopts(struct vfsoptlist *opts, const char *name, int *error) 
   return NULL;
 }
 
+static int vfs_scanopt(struct vfsoptlist *opts, const char *name, const char *fmt, ...) {
+  return 0;
+}
+
+static void vfs_getnewfsid(struct mount *m) {
+}
+
+typedef int vfs_hash_cmp_t(struct vnode *vp, void *arg);
+static int vfs_hash_get(const struct mount *mp, u_int hash, int flags, struct thread *td,
+struct vnode **vpp, vfs_hash_cmp_t *fn, void *arg) {
+  return 0;
+}
+static int vfs_hash_insert(struct vnode *vp, u_int hash, int flags, struct thread *td,
+struct vnode **vpp, vfs_hash_cmp_t *fn, void *arg) {
+  return 0;
+}
+
+static void vfs_busy_pages(struct buf *bp, int clear_modify) {
+}
+
+static void vfs_bio_set_valid(struct buf *bp, int base, int size) {
+}
+
 typedef int vfs_unmount_t(struct mount *mp, int mntflags);
 typedef int vfs_root_t(struct mount *mp, int flags, struct vnode **vpp);
 typedef int vfs_statfs_t(struct mount *mp, struct statfs *sbp);
@@ -267,5 +292,9 @@ struct vfsops {
         vfs_root_t              *vfs_root;
         vfs_statfs_t            *vfs_statfs;
 };
+
+#define MNT_ILOCK(mp)   mtx_lock(&(mp)->mnt_mtx)
+#define MNT_ITRYLOCK(mp) mtx_trylock(&(mp)->mnt_mtx)
+#define MNT_IUNLOCK(mp) mtx_unlock(&(mp)->mnt_mtx)
 
 #endif

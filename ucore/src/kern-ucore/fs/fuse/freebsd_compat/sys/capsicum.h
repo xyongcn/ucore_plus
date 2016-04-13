@@ -1,6 +1,8 @@
 #ifndef	_FREEBSD_COMPAT_CAPSICUM_H_
 #define	_FREEBSD_COMPAT_CAPSICUM_H_
 
+#define CAPRIGHT(idx, bit)      ((1ULL << (57 + (idx))) | (bit))
+
 /*
  * Possible rights on capabilities.
  *
@@ -28,5 +30,11 @@
 #define CAP_SEEK                (CAP_SEEK_TELL | 0x0000000000000008ULL)
 /* Allows for aio_read(2), pread(2), preadv(2). */
 #define CAP_PREAD               (CAP_SEEK | CAP_READ)
+
+#define cap_rights_init(...)                                            \
+        __cap_rights_init(CAP_RIGHTS_VERSION, __VA_ARGS__, 0ULL)
+static cap_rights_t *__cap_rights_init(int version, cap_rights_t *rights, ...) {
+  return NULL;
+}
 
 #endif

@@ -37,6 +37,10 @@
 #define PRIV_VFS_UNMOUNT        343     /* Can unmount(). */
 #define PRIV_VFS_STAT           344     /* Override vnode MAC stat perm. */
 
+static int priv_check(struct thread *td, int priv) {
+  return 0;
+}
+
 static int priv_check_cred(struct ucred *cred, int priv, int flags) {
   return 0;
 }

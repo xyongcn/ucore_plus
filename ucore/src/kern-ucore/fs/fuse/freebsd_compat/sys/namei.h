@@ -1,6 +1,8 @@
 #ifndef _FREEBSD_COMPAT_NAMEI_H_
 #define	_FREEBSD_COMPAT_NAMEI_H_
 
+#include "uio.h"
+
 struct thread;
 struct ucred;
 struct vnode;
@@ -128,5 +130,18 @@ struct nameidata {
 #define NDF_NO_STARTDIR_RELE    0x00000010
 #define NDF_NO_FREE_PNBUF       0x00000020
 #define NDF_ONLY_PNBUF          (~NDF_NO_FREE_PNBUF)
+
+static void NDINIT(struct nameidata *ndp, u_long op, u_long flags,
+enum uio_seg segflg, const char *namep, int dirfd) {
+
+}
+
+static void NDFREE(struct nameidata *ndp, const u_int flags) {
+
+}
+
+static int namei(struct nameidata *ndp) {
+  return 0;
+}
 
 #endif

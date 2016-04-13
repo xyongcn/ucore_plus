@@ -1,6 +1,8 @@
 #ifndef _FREEBSD_COMPAT_LOCK_H_
 #define	_FREEBSD_COMPAT_LOCK_H_
 
+#include "mutex.h"
+
 /*
  * Lock request types:
  *   LK_SHARED - get one of many possible shared locks. If a process
@@ -65,5 +67,10 @@
                                     * unlock passed mutex after getting
                                     * lk_interlock
                                     */
+
+//lockmgr.h
+static __inline int lockmgr(struct lock *lk, unsigned int flags, struct mtx *ilk) {
+  return 0;
+}
 
 #endif
