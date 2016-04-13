@@ -17,7 +17,7 @@
 
 static const char *const error_string[MAXERROR + 1] = {
 	[0] NULL,
-	[E_UNSPECIFIED] "unspecified error",
+	[E_NOSYS] "invalid system call number",
 	[E_BAD_PROC] "bad process",
 	[E_INVAL] "invalid parameter",
 	[E_NO_MEM] "out of memory",
