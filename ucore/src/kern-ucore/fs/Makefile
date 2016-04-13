@@ -1,4 +1,4 @@
-dirs-y := devs pipe vfs swap
+dirs-y := devs pipe vfs swap fuse
 dirs-$(UCONFIG_HAVE_SFS) += sfs
 dirs-$(UCONFIG_HAVE_YAFFS2) += yaffs2_direct
 

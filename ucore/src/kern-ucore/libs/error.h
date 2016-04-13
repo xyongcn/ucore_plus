@@ -68,7 +68,9 @@
 #define E_UNIMP   35
 #define E_PANIC   36
 #define E_KILLED  37
-#define E_UNSPECIFIED  38
+//#define E_UNSPECIFIED  38
+//TODO: E_UNSPECIFIED seems never used, and linux standard description is ENOSYS
+#define E_NOSYS  38
 #define E_SWAP_FAULT   39
 
 #define E_NO_MEM E_NOMEM
@@ -86,5 +88,83 @@
 
 /* the maximum allowed */
 #define MAXERROR            39
+
+#define E_BFONT          59      /* Bad font file format */
+#define E_NOSTR          60      /* Device not a stream */
+#define E_NODATA         61      /* No data available */
+#define E_TIME           62      /* Timer expired */
+#define E_NOSR           63      /* Out of streams resources */
+#define E_NONET          64      /* Machine is not on the network */
+#define E_NOPKG          65      /* Package not installed */
+#define E_REMOTE         66      /* Object is remote */
+#define E_NOLINK         67      /* Link has been severed */
+#define E_ADV            68      /* Advertise error */
+#define E_SRMNT          69      /* Srmount error */
+#define E_COMM           70      /* Communication error on send */
+#define E_PROTO          71      /* Protocol error */
+#define E_MULTIHOP       72      /* Multihop attempted */
+#define E_DOTDOT         73      /* RFS specific error */
+#define E_BADMSG         74      /* Not a data message */
+#define E_OVERFLOW       75      /* Value too large for defined data type */
+#define E_NOTUNIQ        76      /* Name not unique on network */
+#define E_BADFD          77      /* File descriptor in bad state */
+#define E_REMCHG         78      /* Remote address changed */
+#define E_LIBACC         79      /* Can not access a needed shared library */
+#define E_LIBBAD         80      /* Accessing a corrupted shared library */
+#define E_LIBSCN         81      /* .lib section in a.out corrupted */
+#define E_LIBMAX         82      /* Attempting to link in too many shared libraries */
+#define E_LIBEXEC        83      /* Cannot exec a shared library directly */
+#define E_ILSEQ          84      /* Illegal byte sequence */
+#define E_RESTART        85      /* Interrupted system call should be restarted */
+#define E_STRPIPE        86      /* Streams pipe error */
+#define E_USERS          87      /* Too many users */
+#define E_NOTSOCK        88      /* Socket operation on non-socket */
+#define E_DESTADDRREQ    89      /* Destination address required */
+#define E_MSGSIZE        90      /* Message too long */
+#define E_PROTOTYPE      91      /* Protocol wrong type for socket */
+#define E_NOPROTOOPT     92      /* Protocol not available */
+#define E_PROTONOSUPPORT 93      /* Protocol not supported */
+#define E_SOCKTNOSUPPORT 94      /* Socket type not supported */
+#define E_OPNOTSUPP      95      /* Operation not supported on transport endpoint */
+#define E_PFNOSUPPORT    96      /* Protocol family not supported */
+#define E_AFNOSUPPORT    97      /* Address family not supported by protocol */
+#define E_ADDRINUSE      98      /* Address already in use */
+#define E_ADDRNOTAVAIL   99      /* Cannot assign requested address */
+#define E_NETDOWN        100     /* Network is down */
+#define E_NETUNREACH     101     /* Network is unreachable */
+#define E_NETRESET       102     /* Network dropped connection because of reset */
+#define E_CONNABORTED    103     /* Software caused connection abort */
+#define E_CONNRESET      104     /* Connection reset by peer */
+#define E_NOBUFS         105     /* No buffer space available */
+#define E_ISCONN         106     /* Transport endpoint is already connected */
+#define E_NOTCONN        107     /* Transport endpoint is not connected */
+#define E_SHUTDOWN       108     /* Cannot send after transport endpoint shutdown */
+#define E_TOOMANYREFS    109     /* Too many references: cannot splice */
+#define E_TIMEDOUT       110     /* Connection timed out */
+#define E_CONNREFUSED    111     /* Connection refused */
+#define E_HOSTDOWN       112     /* Host is down */
+#define E_HOSTUNREACH    113     /* No route to host */
+#define E_ALREADY        114     /* Operation already in progress */
+#define E_INPROGRESS     115     /* Operation now in progress */
+#define E_STALE          116     /* Stale file handle */
+#define E_UCLEAN         117     /* Structure needs cleaning */
+#define E_NOTNAM         118     /* Not a XENIX named type file */
+#define E_NAVAIL         119     /* No XENIX semaphores available */
+#define E_ISNAM          120     /* Is a named type file */
+#define E_REMOTEIO       121     /* Remote I/O error */
+#define E_DQUOT          122     /* Quota exceeded */
+#define E_NOMEDIUM       123     /* No medium found */
+#define E_MEDIUMTYPE     124     /* Wrong medium type */
+#define E_CANCELED       125     /* Operation Canceled */
+#define E_NOKEY          126     /* Required key not available */
+#define E_KEYEXPIRED     127     /* Key has expired */
+#define E_KEYREVOKED     128     /* Key has been revoked */
+#define E_KEYREJECTED    129     /* Key was rejected by service */
+
+/* for robust mutexes */
+#define E_OWNERDEAD      130     /* Owner died */
+#define E_NOTRECOVERABLE 131     /* State not recoverable */
+#define E_RFKILL         132     /* Operation not possible due to RF-kill */
+#define E_HWPOISON       133     /* Memory page has hardware error */
 
 #endif /* !__LIBS_ERROR_H__ */
