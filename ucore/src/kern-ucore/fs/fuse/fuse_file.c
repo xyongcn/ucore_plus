@@ -53,26 +53,26 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
+#include "freebsd_compat/sys/cdefs.h"
 __FBSDID("$FreeBSD$");
 
-#include <sys/types.h>
-#include <sys/module.h>
-#include <sys/systm.h>
-#include <sys/errno.h>
-#include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/conf.h>
-#include <sys/uio.h>
-#include <sys/malloc.h>
-#include <sys/queue.h>
-#include <sys/lock.h>
-#include <sys/sx.h>
-#include <sys/mutex.h>
-#include <sys/proc.h>
-#include <sys/mount.h>
-#include <sys/vnode.h>
-#include <sys/sysctl.h>
+#include "freebsd_compat/sys/types.h"
+//#include <sys/module.h>
+#include "freebsd_compat/sys/systm.h"
+#include <error.h>
+#include "freebsd_compat/sys/param.h"
+//#include <sys/kernel.h>
+#include "freebsd_compat/sys/conf.h"
+#include "freebsd_compat/sys/uio.h"
+#include "freebsd_compat/sys/malloc.h"
+#include "freebsd_compat/sys/queue.h"
+//#include <sys/lock.h>
+#include "freebsd_compat/sys/sx.h"
+#include "freebsd_compat/sys/mutex.h"
+#include "freebsd_compat/sys/proc.h"
+#include "freebsd_compat/sys/mount.h"
+#include "freebsd_compat/sys/vnode.h"
+#include "freebsd_compat/sys/sysctl.h"
 
 #include "fuse.h"
 #include "fuse_file.h"
@@ -133,7 +133,7 @@ fuse_filehandle_open(struct vnode *vp,
 
 	if ((err = fdisp_wait_answ(&fdi))) {
 		debug_printf("OUCH ... daemon didn't give fh (err = %d)\n", err);
-		if (err == ENOENT) {
+		if (err == E_NOENT) {
 			fuse_internal_vnode_disappear(vp);
 		}
 		goto out;
@@ -215,7 +215,7 @@ fuse_filehandle_get(struct vnode *vp, fufh_type_t fufh_type,
 
 	fufh = &(fvdat->fufh[fufh_type]);
 	if (!FUFH_IS_VALID(fufh))
-		return EBADF;
+		return E_BADF;
 	if (fufhp != NULL)
 		*fufhp = fufh;
 	return 0;

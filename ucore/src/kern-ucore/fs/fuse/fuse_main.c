@@ -53,24 +53,25 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
+#include "freebsd_compat/sys/cdefs.h"
 __FBSDID("$FreeBSD$");
 
-#include <sys/types.h>
-#include <sys/module.h>
-#include <sys/systm.h>
-#include <sys/errno.h>
-#include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/conf.h>
-#include <sys/mutex.h>
-#include <sys/proc.h>
-#include <sys/mount.h>
-#include <sys/vnode.h>
-#include <sys/stat.h>
-#include <sys/file.h>
-#include <sys/buf.h>
-#include <sys/sysctl.h>
+#include "freebsd_compat/sys/types.h"
+#include "freebsd_compat/sys/module.h"
+#include "freebsd_compat/sys/systm.h"
+#include <error.h>
+#include "freebsd_compat/sys/param.h"
+//#include <sys/kernel.h>
+#include "freebsd_compat/sys/conf.h"
+#include "freebsd_compat/sys/mutex.h"
+#include "freebsd_compat/sys/proc.h"
+#include "freebsd_compat/sys/mount.h"
+#include "freebsd_compat/sys/vnode.h"
+#include "freebsd_compat/sys/stat.h"
+//#include <sys/file.h>
+//#include <sys/buf.h>
+#include "freebsd_compat/sys/sysctl.h"
+#include "freebsd_compat/sys/eventhandler.h" // Added after
 
 #include "fuse.h"
 
@@ -144,7 +145,7 @@ fuse_loader(struct module *m, int what, void *arg)
 		fuse_bringdown(eh_tag);
 		break;
 	default:
-		return (EINVAL);
+		return (E_INVAL);
 	}
 
 	return (err);

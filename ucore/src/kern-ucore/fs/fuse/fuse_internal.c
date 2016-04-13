@@ -53,36 +53,36 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
+#include "freebsd_compat/sys/cdefs.h"
 __FBSDID("$FreeBSD$");
 
-#include <sys/types.h>
-#include <sys/module.h>
-#include <sys/systm.h>
-#include <sys/errno.h>
-#include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/conf.h>
-#include <sys/uio.h>
-#include <sys/malloc.h>
-#include <sys/queue.h>
-#include <sys/lock.h>
-#include <sys/mutex.h>
-#include <sys/sx.h>
-#include <sys/proc.h>
-#include <sys/mount.h>
-#include <sys/vnode.h>
-#include <sys/namei.h>
-#include <sys/stat.h>
-#include <sys/unistd.h>
-#include <sys/filedesc.h>
-#include <sys/file.h>
-#include <sys/fcntl.h>
-#include <sys/dirent.h>
-#include <sys/bio.h>
-#include <sys/buf.h>
-#include <sys/sysctl.h>
-#include <sys/priv.h>
+#include "freebsd_compat/sys/types.h"
+//#include <sys/module.h>
+#include "freebsd_compat/sys/systm.h"
+#include <error.h>
+#include "freebsd_compat/sys/param.h"
+//#include <sys/kernel.h>
+#include "freebsd_compat/sys/conf.h"
+#include "freebsd_compat/sys/uio.h"
+#include "freebsd_compat/sys/malloc.h"
+#include "freebsd_compat/sys/queue.h"
+//#include <sys/lock.h>
+#include "freebsd_compat/sys/mutex.h"
+#include "freebsd_compat/sys/sx.h"
+#include "freebsd_compat/sys/proc.h"
+#include "freebsd_compat/sys/mount.h"
+#include "freebsd_compat/sys/vnode.h"
+#include "freebsd_compat/sys/namei.h"
+#include "freebsd_compat/sys/stat.h"
+#include "freebsd_compat/sys/unistd.h"
+/*#include <sys/filedesc.h>
+#include <sys/file.h>*/
+#include "freebsd_compat/sys/fcntl.h"
+#include "freebsd_compat/sys/dirent.h"
+#include "freebsd_compat/sys/bio.h"
+//#include <sys/buf.h>
+#include "freebsd_compat/sys/sysctl.h"
+#include "freebsd_compat/sys/priv.h"
 
 #include "fuse.h"
 #include "fuse_file.h"
@@ -134,7 +134,7 @@ fuse_internal_access(struct vnode *vp,
 	dataflags = data->dataflags;
 
 	if ((mode & VWRITE) && vfs_isrdonly(mp)) {
-		return EACCES;
+		return E_ACCES;
 	}
 	/* Unless explicitly permitted, deny everyone except the fs owner. */
 	    if (vnode_isvroot(vp) && !(facp->facc_flags & FACCESS_NOCHECKSPY)) {
@@ -143,7 +143,7 @@ fuse_internal_access(struct vnode *vp,
 			    cred);
 
 			if (denied) {
-				return EPERM;
+				return E_PERM;
 			}
 		}
 		facp->facc_flags |= FACCESS_NOCHECKSPY;
@@ -195,7 +195,7 @@ fuse_internal_access(struct vnode *vp,
 	err = fdisp_wait_answ(&fdi);
 	fdisp_destroy(&fdi);
 
-	if (err == ENOSYS) {
+	if (err == E_NOSYS) {
 		fsess_set_notimpl(mp, FUSE_ACCESS);
 		err = 0;
 	}
@@ -209,7 +209,7 @@ fuse_internal_fsync_callback(struct fuse_ticket *tick, struct uio *uio)
 {
 	fuse_trace_printf_func();
 
-	if (tick->tk_aw_ohead.error == ENOSYS) {
+	if (tick->tk_aw_ohead.error == E_NOSYS) {
 		fsess_set_notimpl(tick->tk_data->mp, fticket_opcode(tick));
 	}
 	return 0;
@@ -334,7 +334,7 @@ fuse_internal_readdir_processdata(struct uio *uio,
 #endif
 
 		if (!fudge->namelen || fudge->namelen > MAXNAMLEN) {
-			err = EINVAL;
+			err = E_INVAL;
 			break;
 		}
 		bytesavail = GENERIC_DIRSIZ((struct pseudo_dirent *)
@@ -352,7 +352,7 @@ fuse_internal_readdir_processdata(struct uio *uio,
 		de->d_reclen = bytesavail;
 		de->d_type = fudge->type;
 		de->d_namlen = fudge->namelen;
-		memcpy((char *)cookediov->base + sizeof(struct dirent) - 
+		memcpy((char *)cookediov->base + sizeof(struct dirent) -
 		       MAXNAMLEN - 1,
 		       (char *)buf + FUSE_NAME_OFFSET, fudge->namelen);
 		((char *)cookediov->base)[bytesavail] = '\0';
@@ -584,7 +584,7 @@ fuse_internal_init_callback(struct fuse_ticket *tick, struct uio *uio)
 	/* XXX: Do we want to check anything further besides this? */
 	if (fiio->major < 7) {
 		debug_printf("userpace version too low\n");
-		err = EPROTONOSUPPORT;
+		err = E_PROTONOSUPPORT;
 		goto out;
 	}
 	data->fuse_libabi_major = fiio->major;
@@ -594,7 +594,7 @@ fuse_internal_init_callback(struct fuse_ticket *tick, struct uio *uio)
 		if (fticket_resp(tick)->len == sizeof(struct fuse_init_out)) {
 			data->max_write = fiio->max_write;
 		} else {
-			err = EINVAL;
+			err = E_INVAL;
 		}
 	} else {
 		/* Old fix values */

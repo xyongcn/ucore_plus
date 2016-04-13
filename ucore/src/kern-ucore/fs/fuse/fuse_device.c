@@ -53,29 +53,29 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
+#include "freebsd_compat/sys/cdefs.h"
 __FBSDID("$FreeBSD$");
 
-#include <sys/types.h>
-#include <sys/module.h>
-#include <sys/systm.h>
-#include <sys/errno.h>
-#include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/conf.h>
-#include <sys/uio.h>
-#include <sys/malloc.h>
-#include <sys/queue.h>
-#include <sys/lock.h>
-#include <sys/sx.h>
-#include <sys/mutex.h>
-#include <sys/proc.h>
-#include <sys/mount.h>
-#include <sys/stat.h>
-#include <sys/fcntl.h>
-#include <sys/sysctl.h>
-#include <sys/poll.h>
-#include <sys/selinfo.h>
+#include "freebsd_compat/sys/types.h"
+//#include <sys/module.h>
+#include "freebsd_compat/sys/systm.h"
+#include <error.h>
+#include "freebsd_compat/sys/param.h"
+//#include <sys/kernel.h>
+#include "freebsd_compat/sys/conf.h"
+#include "freebsd_compat/sys/uio.h"
+#include "freebsd_compat/sys/malloc.h"
+#include "freebsd_compat/sys/queue.h"
+//#include <sys/lock.h>
+#include "freebsd_compat/sys/sx.h"
+#include "freebsd_compat/sys/mutex.h"
+#include "freebsd_compat/sys/proc.h"
+#include "freebsd_compat/sys/mount.h"
+#include "freebsd_compat/sys/stat.h"
+#include "freebsd_compat/sys/fcntl.h"
+//#include "freebsd_compat/sys/sysctl.h"
+#include "freebsd_compat/sys/poll.h"
+#include "freebsd_compat/sys/selinfo.h"
 
 #include "fuse.h"
 #include "fuse_ipc.h"
@@ -159,7 +159,7 @@ fuse_device_close(struct cdev *dev, int fflag, int devtype, struct thread *td)
 	while ((tick = fuse_aw_pop(data))) {
 		fuse_lck_mtx_lock(tick->tk_aw_mtx);
 		fticket_set_answered(tick);
-		tick->tk_aw_errno = ENOTCONN;
+		tick->tk_aw_errno = E_NOTCONN;
 		wakeup(tick);
 		fuse_lck_mtx_unlock(tick->tk_aw_mtx);
 		FUSE_ASSERT_AW_DONE(tick);
@@ -223,19 +223,19 @@ again:
 	if (fdata_get_dead(data)) {
 		FS_DEBUG2G("we know early on that reader should be kicked so we don't wait for news\n");
 		fuse_lck_mtx_unlock(data->ms_mtx);
-		return (ENODEV);
+		return (E_NODEV);
 	}
 	if (!(tick = fuse_ms_pop(data))) {
 		/* check if we may block */
 		if (ioflag & O_NONBLOCK) {
 			/* get outa here soon */
 			fuse_lck_mtx_unlock(data->ms_mtx);
-			return (EAGAIN);
+			return (E_AGAIN);
 		} else {
 			err = msleep(data, &data->ms_mtx, PCATCH, "fu_msg", 0);
 			if (err != 0) {
 				fuse_lck_mtx_unlock(data->ms_mtx);
-				return (fdata_get_dead(data) ? ENODEV : err);
+				return (fdata_get_dead(data) ? E_NODEV : err);
 			}
 			tick = fuse_ms_pop(data);
 		}
@@ -263,7 +263,7 @@ again:
 			FUSE_ASSERT_MS_DONE(tick);
 			fuse_ticket_drop(tick);
 		}
-		return (ENODEV);	/* This should make the daemon get off
+		return (E_NODEV);	/* This should make the daemon get off
 					 * of us */
 	}
 	FS_DEBUG("message got on thread #%d\n", uio->uio_td->td_tid);
@@ -292,7 +292,7 @@ again:
 		 * with us? (There is no much use of a partial read here...)
 		 */
 		/*
-		 * XXX note that in such cases Linux FUSE throws EIO at the
+		 * XXX note that in such cases Linux FUSE throws E_IO at the
 		 * syscall invoker and stands back to the message queue. The
 		 * rationale should be made clear (and possibly adopt that
 		 * behaviour). Keeping the current scheme at least makes
@@ -301,7 +301,7 @@ again:
 		if (uio->uio_resid < buflen[i]) {
 			fdata_set_dead(data);
 			FS_DEBUG2G("daemon is stupid, kick it off...\n");
-			err = ENODEV;
+			err = E_NODEV;
 			break;
 		}
 		err = uiomove(buf[i], buflen[i], uio);
@@ -324,11 +324,11 @@ fuse_ohead_audit(struct fuse_out_header *ohead, struct uio *uio)
 
 	if (uio->uio_resid + sizeof(struct fuse_out_header) != ohead->len) {
 		FS_DEBUG("Format error: body size differs from size claimed by header\n");
-		return (EINVAL);
+		return (E_INVAL);
 	}
 	if (uio->uio_resid && ohead->error) {
 		FS_DEBUG("Format error: non zero error but message had a body\n");
-		return (EINVAL);
+		return (E_INVAL);
 	}
 	/* Sanitize the linuxism of negative errnos */
 	ohead->error = -(ohead->error);
@@ -361,7 +361,7 @@ fuse_device_write(struct cdev *dev, struct uio *uio, int ioflag)
 	if (uio->uio_resid < sizeof(struct fuse_out_header)) {
 		FS_DEBUG("got less than a header!\n");
 		fdata_set_dead(data);
-		return (EINVAL);
+		return (E_INVAL);
 	}
 	if ((err = uiomove(&ohead, sizeof(struct fuse_out_header), uio)) != 0)
 		return (err);
@@ -420,7 +420,7 @@ fuse_device_write(struct cdev *dev, struct uio *uio, int ioflag)
 	} else {
 		/* no callback at all! */
 		FS_DEBUG("erhm, no handler for this response\n");
-		err = EINVAL;
+		err = E_INVAL;
 	}
 
 	return (err);
@@ -433,7 +433,7 @@ fuse_device_init(void)
 	fuse_dev = make_dev(&fuse_device_cdevsw, 0, UID_ROOT, GID_OPERATOR,
 	    S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP, "fuse");
 	if (fuse_dev == NULL)
-		return (ENOMEM);
+		return (E_NOMEM);
 	return (0);
 }
 

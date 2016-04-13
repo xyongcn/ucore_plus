@@ -1,11 +1,11 @@
 /*
  * Copyright (c) 2007-2009 Google Inc. and Amit Singh
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
- * 
+ *
  * * Redistributions of source code must retain the above copyright
  *   notice, this list of conditions and the following disclaimer.
  * * Redistributions in binary form must reproduce the above
@@ -15,7 +15,7 @@
  * * Neither the name of Google Inc. nor the names of its
  *   contributors may be used to endorse or promote products derived from
  *   this software without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
  * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR
@@ -27,10 +27,10 @@
  * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
  * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- * 
+ *
  * Copyright (C) 2005 Csaba Henk.
  * All rights reserved.
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
  * are met:
@@ -39,7 +39,7 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -58,10 +58,10 @@
 #ifndef _FUSE_INTERNAL_H_
 #define _FUSE_INTERNAL_H_
 
-#include <sys/types.h>
-#include <sys/uio.h>
-#include <sys/stat.h>
-#include <sys/vnode.h>
+#include "freebsd_compat/sys/types.h"
+#include "freebsd_compat/sys/uio.h"
+#include "freebsd_compat/sys/stat.h"
+#include "freebsd_compat/sys/vnode.h"
 
 #include "fuse_ipc.h"
 #include "fuse_node.h"
@@ -186,7 +186,7 @@ fuse_match_cred(struct ucred *basecred, struct ucred *usercred)
 	    basecred->cr_groups[0] == usercred->cr_svgid)
 		return 0;
 
-	return EPERM;
+	return E_PERM;
 }
 
 int
@@ -304,20 +304,20 @@ fuse_internal_checkentry(struct fuse_entry_out *feo, enum vtype vtyp)
 
     if (vtyp != IFTOVT(feo->attr.mode)) {
         DEBUGX(FUSE_DEBUG_INTERNAL,
-            "EINVAL -- %x != %x\n", vtyp, IFTOVT(feo->attr.mode));
-        return EINVAL;
+            "E_INVAL -- %x != %x\n", vtyp, IFTOVT(feo->attr.mode));
+        return E_INVAL;
     }
 
     if (feo->nodeid == FUSE_NULL_ID) {
         DEBUGX(FUSE_DEBUG_INTERNAL,
-            "EINVAL -- feo->nodeid is NULL\n");
-        return EINVAL;
+            "E_INVAL -- feo->nodeid is NULL\n");
+        return E_INVAL;
     }
 
     if (feo->nodeid == FUSE_ROOT_ID) {
         DEBUGX(FUSE_DEBUG_INTERNAL,
-            "EINVAL -- feo->nodeid is FUSE_ROOT_ID\n");
-        return EINVAL;
+            "E_INVAL -- feo->nodeid is FUSE_ROOT_ID\n");
+        return E_INVAL;
     }
 
     return 0;

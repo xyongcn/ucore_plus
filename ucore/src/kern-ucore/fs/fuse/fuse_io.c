@@ -53,41 +53,41 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
+#include "freebsd_compat/sys/cdefs.h"
 __FBSDID("$FreeBSD$");
 
-#include <sys/types.h>
-#include <sys/module.h>
-#include <sys/systm.h>
-#include <sys/errno.h>
-#include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/conf.h>
-#include <sys/uio.h>
-#include <sys/malloc.h>
-#include <sys/queue.h>
-#include <sys/lock.h>
-#include <sys/sx.h>
-#include <sys/mutex.h>
-#include <sys/rwlock.h>
-#include <sys/proc.h>
-#include <sys/mount.h>
-#include <sys/vnode.h>
-#include <sys/stat.h>
-#include <sys/unistd.h>
-#include <sys/filedesc.h>
-#include <sys/file.h>
-#include <sys/fcntl.h>
-#include <sys/bio.h>
-#include <sys/buf.h>
-#include <sys/sysctl.h>
+#include "freebsd_compat/sys/types.h"
+//#include <sys/module.h>
+#include "freebsd_compat/sys/systm.h"
+#include <error.h>
+#include "freebsd_compat/sys/param.h"
+//#include <sys/kernel.h>
+#include "freebsd_compat/sys/conf.h"
+#include "freebsd_compat/sys/uio.h"
+#include "freebsd_compat/sys/malloc.h"
+#include "freebsd_compat/sys/queue.h"
+//#include <sys/lock.h>
+#include "freebsd_compat/sys/sx.h"
+#include "freebsd_compat/sys/mutex.h"
+#include "freebsd_compat/sys/rwlock.h"
+#include "freebsd_compat/sys/proc.h"
+#include "freebsd_compat/sys/mount.h"
+#include "freebsd_compat/sys/vnode.h"
+#include "freebsd_compat/sys/stat.h"
+#include "freebsd_compat/sys/unistd.h"
+//#include <sys/filedesc.h>
+//#include <sys/file.h>
+#include "freebsd_compat/sys/fcntl.h"
+#include "freebsd_compat/sys/bio.h"
+//#include <sys/buf.h>
+#include "freebsd_compat/sys/sysctl.h"
 
-#include <vm/vm.h>
+/*#include "freebsd_compat/vm/vm.h"
 #include <vm/vm_extern.h>
-#include <vm/pmap.h>
-#include <vm/vm_map.h>
-#include <vm/vm_page.h>
-#include <vm/vm_object.h>
+#include "freebsd_compat/vm/pmap.h"
+#include <vm/vm_map.h>*/
+#include "freebsd_compat/vm/vm_page.h"
+#include "freebsd_compat/vm/vm_object.h"
 
 #include "fuse.h"
 #include "fuse_file.h"
@@ -100,16 +100,16 @@ __FBSDID("$FreeBSD$");
 #include "fuse_debug.h"
 
 
-static int 
+static int
 fuse_read_directbackend(struct vnode *vp, struct uio *uio,
     struct ucred *cred, struct fuse_filehandle *fufh);
-static int 
+static int
 fuse_read_biobackend(struct vnode *vp, struct uio *uio,
     struct ucred *cred, struct fuse_filehandle *fufh);
-static int 
+static int
 fuse_write_directbackend(struct vnode *vp, struct uio *uio,
     struct ucred *cred, struct fuse_filehandle *fufh);
-static int 
+static int
 fuse_write_biobackend(struct vnode *vp, struct uio *uio,
     struct ucred *cred, struct fuse_filehandle *fufh, int ioflag);
 
@@ -147,7 +147,7 @@ fuse_io_dispatch(struct vnode *vp, struct uio *uio, int ioflag,
 			    (uintmax_t)VTOILLU(vp), (uintmax_t)fufh->fh_id);
 			err = fuse_read_directbackend(vp, uio, cred, fufh);
 		} else {
-			FS_DEBUG("buffered read of vnode %ju\n", 
+			FS_DEBUG("buffered read of vnode %ju\n",
 			      (uintmax_t)VTOILLU(vp));
 			err = fuse_read_biobackend(vp, uio, cred, fufh);
 		}
@@ -158,7 +158,7 @@ fuse_io_dispatch(struct vnode *vp, struct uio *uio, int ioflag,
 			    (uintmax_t)VTOILLU(vp), (uintmax_t)fufh->fh_id);
 			err = fuse_write_directbackend(vp, uio, cred, fufh);
 		} else {
-			FS_DEBUG("buffered write of vnode %ju\n", 
+			FS_DEBUG("buffered write of vnode %ju\n",
 			      (uintmax_t)VTOILLU(vp));
 			err = fuse_write_biobackend(vp, uio, cred, fufh, ioflag);
 		}
@@ -188,14 +188,14 @@ fuse_read_biobackend(struct vnode *vp, struct uio *uio,
 	if (uio->uio_resid == 0)
 		return (0);
 	if (uio->uio_offset < 0)
-		return (EINVAL);
+		return (E_INVAL);
 
 	bcount = MIN(MAXBSIZE, biosize);
 	filesize = VTOFUD(vp)->filesize;
 
 	do {
 		if (fuse_isdeadfs(vp)) {
-			err = ENXIO;
+			err = E_NXIO;
 			break;
 		}
 		lbn = uio->uio_offset / biosize;
@@ -294,7 +294,7 @@ fuse_read_directbackend(struct vnode *vp, struct uio *uio,
 		    fuse_get_mpdata(vp->v_mount)->max_read);
 
 		FS_DEBUG2G("fri->fh %ju, fri->offset %ju, fri->size %ju\n",
-			(uintmax_t)fri->fh, (uintmax_t)fri->offset, 
+			(uintmax_t)fri->fh, (uintmax_t)fri->offset,
 			(uintmax_t)fri->size);
 
 		if ((err = fdisp_wait_answ(&fdi)))
@@ -302,7 +302,7 @@ fuse_read_directbackend(struct vnode *vp, struct uio *uio,
 
 		FS_DEBUG2G("complete: got iosize=%d, requested fri.size=%zd; "
 			"resid=%zd offset=%ju\n",
-			fri->size, fdi.iosize, uio->uio_resid, 
+			fri->size, fdi.iosize, uio->uio_resid,
 			(uintmax_t)uio->uio_offset);
 
 		if ((err = uiomove(fdi.answ, MIN(fri->size, fdi.iosize), uio)))
@@ -353,7 +353,7 @@ fuse_write_directbackend(struct vnode *vp, struct uio *uio,
 
 		diff = chunksize - ((struct fuse_write_out *)fdi.answ)->size;
 		if (diff < 0) {
-			err = EINVAL;
+			err = E_INVAL;
 			break;
 		}
 		uio->uio_resid += diff;
@@ -383,9 +383,9 @@ fuse_write_biobackend(struct vnode *vp, struct uio *uio,
 	FS_DEBUG("resid=%zx offset=%jx fsize=%jx\n",
 	    uio->uio_resid, uio->uio_offset, fvdat->filesize);
 	if (vp->v_type != VREG)
-		return (EIO);
+		return (E_IO);
 	if (uio->uio_offset < 0)
-		return (EINVAL);
+		return (E_INVAL);
 	if (uio->uio_resid == 0)
 		return (0);
 	if (ioflag & IO_APPEND)
@@ -401,7 +401,7 @@ fuse_write_biobackend(struct vnode *vp, struct uio *uio,
          */
 	do {
 		if (fuse_isdeadfs(vp)) {
-			err = ENXIO;
+			err = E_NXIO;
 			break;
 		}
 		lbn = uio->uio_offset / biosize;
@@ -409,7 +409,7 @@ fuse_write_biobackend(struct vnode *vp, struct uio *uio,
 		n = MIN((unsigned)(biosize - on), uio->uio_resid);
 
 		FS_DEBUG2G("lbn %ju, on %d, n %d, uio offset %ju, uio resid %zd\n",
-			(uintmax_t)lbn, on, n, 
+			(uintmax_t)lbn, on, n,
 			(uintmax_t)uio->uio_offset, uio->uio_resid);
 
 again:
@@ -431,7 +431,7 @@ again:
 			if (bp != NULL) {
 				long save;
 
-				err = fuse_vnode_setsize(vp, cred, 
+				err = fuse_vnode_setsize(vp, cred,
 							 uio->uio_offset + n);
 				if (err) {
 					brelse(bp);
@@ -452,13 +452,13 @@ again:
 				if ((off_t)(lbn + 1) * biosize < fvdat->filesize)
 					bcount = biosize;
 				else
-					bcount = fvdat->filesize - 
+					bcount = fvdat->filesize -
 					  (off_t)lbn *biosize;
 			}
 			FS_DEBUG("getting block from OS, bcount %d\n", bcount);
 			bp = getblk(vp, lbn, bcount, PCATCH, 0, 0);
 			if (bp && uio->uio_offset + n > fvdat->filesize) {
-				err = fuse_vnode_setsize(vp, cred, 
+				err = fuse_vnode_setsize(vp, cred,
 							 uio->uio_offset + n);
 				if (err) {
 					brelse(bp);
@@ -652,7 +652,7 @@ fuse_io_strategy(struct vnode *vp, struct buf *bp)
 		error = fuse_read_directbackend(vp, uiop, cred, fufh);
 
 		if ((!error && uiop->uio_resid) ||
-		    (fsess_opt_brokenio(vnode_mount(vp)) && error == EIO &&
+		    (fsess_opt_brokenio(vnode_mount(vp)) && error == E_IO &&
 		    uiop->uio_offset < fvdat->filesize && fvdat->filesize > 0 &&
 		    uiop->uio_offset >= fvdat->cached_attrs.va_size)) {
 			/*
@@ -668,7 +668,7 @@ fuse_io_strategy(struct vnode *vp, struct buf *bp)
 
 			if (error != 0) {
 				printf("FUSE: Fix broken io: offset %ju, "
-				       " resid %zd, file size %ju/%ju\n", 
+				       " resid %zd, file size %ju/%ju\n",
 				       (uintmax_t)uiop->uio_offset,
 				    uiop->uio_resid, fvdat->filesize,
 				    fvdat->cached_attrs.va_size);
@@ -692,9 +692,9 @@ fuse_io_strategy(struct vnode *vp, struct buf *bp)
 		/*
 	         * Setup for actual write
 	         */
-		if ((off_t)bp->b_blkno * biosize + bp->b_dirtyend > 
+		if ((off_t)bp->b_blkno * biosize + bp->b_dirtyend >
 		    fvdat->filesize)
-			bp->b_dirtyend = fvdat->filesize - 
+			bp->b_dirtyend = fvdat->filesize -
 				(off_t)bp->b_blkno * biosize;
 
 		if (bp->b_dirtyend > bp->b_dirtyoff) {
@@ -707,7 +707,7 @@ fuse_io_strategy(struct vnode *vp, struct buf *bp)
 
 			error = fuse_write_directbackend(vp, uiop, cred, fufh);
 
-			if (error == EINTR || error == ETIMEDOUT
+			if (error == EINTR || error == E_TIMEDOUT
 			    || (!error && (bp->b_flags & B_NEEDCOMMIT))) {
 
 				bp->b_flags &= ~(B_INVAL | B_NOCACHE);
@@ -715,7 +715,7 @@ fuse_io_strategy(struct vnode *vp, struct buf *bp)
 					bdirty(bp);
 					bp->b_flags &= ~B_DONE;
 				}
-				if ((error == EINTR || error == ETIMEDOUT) &&
+				if ((error == EINTR || error == E_TIMEDOUT) &&
 				    (bp->b_flags & B_ASYNC) == 0)
 					bp->b_flags |= B_EINTR;
 			} else {
@@ -768,7 +768,7 @@ fuse_io_invalbuf(struct vnode *vp, struct thread *td)
 		struct proc *p = td->td_proc;
 
 		if (vp->v_mount->mnt_kern_flag & MNTK_UNMOUNTF)
-			return EIO;
+			return E_IO;
 		fvdat->flag |= FN_FLUSHWANT;
 		tsleep(&fvdat->flag, PRIBIO + 2, "fusevinv", 2 * hz);
 		error = 0;

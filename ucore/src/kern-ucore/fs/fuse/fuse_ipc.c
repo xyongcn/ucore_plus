@@ -53,29 +53,29 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
+#include "freebsd_compat/sys/cdefs.h"
 __FBSDID("$FreeBSD$");
 
-#include <sys/types.h>
-#include <sys/module.h>
-#include <sys/systm.h>
-#include <sys/errno.h>
-#include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/conf.h>
-#include <sys/uio.h>
-#include <sys/malloc.h>
-#include <sys/queue.h>
-#include <sys/lock.h>
-#include <sys/sx.h>
-#include <sys/mutex.h>
-#include <sys/proc.h>
-#include <sys/mount.h>
-#include <sys/vnode.h>
-#include <sys/signalvar.h>
-#include <sys/syscallsubr.h>
-#include <sys/sysctl.h>
-#include <vm/uma.h>
+#include "freebsd_compat/sys/types.h"
+/*#include <sys/module.h>*/
+#include "freebsd_compat/sys/systm.h"
+#include <error.h>
+#include "freebsd_compat/sys/param.h"
+//#include <sys/kernel.h>
+#include "freebsd_compat/sys/conf.h"
+#include "freebsd_compat/sys/uio.h"
+#include "freebsd_compat/sys/malloc.h"
+#include "freebsd_compat/sys/queue.h"
+//#include <sys/lock.h>
+#include "freebsd_compat/sys/sx.h"
+#include "freebsd_compat/sys/mutex.h"
+#include "freebsd_compat/sys/proc.h"
+#include "freebsd_compat/sys/mount.h"
+#include "freebsd_compat/sys/vnode.h"
+#include "freebsd_compat/sys/signalvar.h"
+#include "freebsd_compat/sys/syscallsubr.h"
+#include "freebsd_compat/sys/sysctl.h"
+#include "freebsd_compat/vm/uma.h"
 
 #include "fuse.h"
 #include "fuse_node.h"
@@ -89,12 +89,12 @@ static struct fuse_ticket *fticket_alloc(struct fuse_data *data);
 static void fticket_refresh(struct fuse_ticket *ftick);
 static void fticket_destroy(struct fuse_ticket *ftick);
 static int fticket_wait_answer(struct fuse_ticket *ftick);
-static __inline__ int 
+static __inline__ int
 fticket_aw_pull_uio(struct fuse_ticket *ftick,
     struct uio *uio);
 
 static int fuse_body_audit(struct fuse_ticket *ftick, size_t blen);
-static __inline__ void 
+static __inline__ void
 fuse_setup_ihead(struct fuse_in_header *ihead,
     struct fuse_ticket *ftick,
     uint64_t nid,
@@ -325,7 +325,7 @@ fticket_wait_answer(struct fuse_ticket *ftick)
 	data = ftick->tk_data;
 
 	if (fdata_get_dead(data)) {
-		err = ENOTCONN;
+		err = E_NOTCONN;
 		fticket_set_answered(ftick);
 		goto out;
 	}
@@ -333,19 +333,19 @@ fticket_wait_answer(struct fuse_ticket *ftick)
 	err = msleep(ftick, &ftick->tk_aw_mtx, PCATCH, "fu_ans",
 	    data->daemon_timeout * hz);
 	fuse_restore_sigs(&tset);
-	if (err == EAGAIN) {		/* same as EWOULDBLOCK */
+	if (err == E_AGAIN) {		/* same as EWOULDBLOCK */
 #ifdef XXXIP				/* die conditionally */
 		if (!fdata_get_dead(data)) {
 			fdata_set_dead(data);
 		}
 #endif
-		err = ETIMEDOUT;
+		err = E_TIMEDOUT;
 		fticket_set_answered(ftick);
 	}
 out:
 	if (!(err || fticket_answered(ftick))) {
 		debug_printf("FUSE: requester was woken up but still no answer");
-		err = ENXIO;
+		err = E_NXIO;
 	}
 	fuse_lck_mtx_unlock(ftick->tk_aw_mtx);
 
@@ -369,7 +369,7 @@ fticket_aw_pull_uio(struct fuse_ticket *ftick, struct uio *uio)
 			if (err) {
 				debug_printf("FUSE: FT_A_FIOV: error is %d"
 					     " (%p, %zd, %p)\n",
-					     err, fticket_resp(ftick)->base, 
+					     err, fticket_resp(ftick)->base,
 					     len, uio);
 			}
 			break;
@@ -511,7 +511,7 @@ fuse_ticket_drop(struct fuse_ticket *ftick)
 void
 fuse_insert_callback(struct fuse_ticket *ftick, fuse_handler_t * handler)
 {
-	debug_printf("ftick=%p, handler=%p data=%p\n", ftick, ftick->tk_data, 
+	debug_printf("ftick=%p, handler=%p data=%p\n", ftick, ftick->tk_data,
 		     handler);
 
 	if (fdata_get_dead(ftick->tk_data)) {
@@ -556,7 +556,7 @@ fuse_body_audit(struct fuse_ticket *ftick, size_t blen)
 
 	switch (opcode) {
 	case FUSE_LOOKUP:
-		err = (blen == sizeof(struct fuse_entry_out)) ? 0 : EINVAL;
+		err = (blen == sizeof(struct fuse_entry_out)) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_FORGET:
@@ -564,75 +564,75 @@ fuse_body_audit(struct fuse_ticket *ftick, size_t blen)
 		break;
 
 	case FUSE_GETATTR:
-		err = (blen == sizeof(struct fuse_attr_out)) ? 0 : EINVAL;
+		err = (blen == sizeof(struct fuse_attr_out)) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_SETATTR:
-		err = (blen == sizeof(struct fuse_attr_out)) ? 0 : EINVAL;
+		err = (blen == sizeof(struct fuse_attr_out)) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_READLINK:
-		err = (PAGE_SIZE >= blen) ? 0 : EINVAL;
+		err = (PAGE_SIZE >= blen) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_SYMLINK:
-		err = (blen == sizeof(struct fuse_entry_out)) ? 0 : EINVAL;
+		err = (blen == sizeof(struct fuse_entry_out)) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_MKNOD:
-		err = (blen == sizeof(struct fuse_entry_out)) ? 0 : EINVAL;
+		err = (blen == sizeof(struct fuse_entry_out)) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_MKDIR:
-		err = (blen == sizeof(struct fuse_entry_out)) ? 0 : EINVAL;
+		err = (blen == sizeof(struct fuse_entry_out)) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_UNLINK:
-		err = (blen == 0) ? 0 : EINVAL;
+		err = (blen == 0) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_RMDIR:
-		err = (blen == 0) ? 0 : EINVAL;
+		err = (blen == 0) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_RENAME:
-		err = (blen == 0) ? 0 : EINVAL;
+		err = (blen == 0) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_LINK:
-		err = (blen == sizeof(struct fuse_entry_out)) ? 0 : EINVAL;
+		err = (blen == sizeof(struct fuse_entry_out)) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_OPEN:
-		err = (blen == sizeof(struct fuse_open_out)) ? 0 : EINVAL;
+		err = (blen == sizeof(struct fuse_open_out)) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_READ:
 		err = (((struct fuse_read_in *)(
 		    (char *)ftick->tk_ms_fiov.base +
 		    sizeof(struct fuse_in_header)
-		    ))->size >= blen) ? 0 : EINVAL;
+		    ))->size >= blen) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_WRITE:
-		err = (blen == sizeof(struct fuse_write_out)) ? 0 : EINVAL;
+		err = (blen == sizeof(struct fuse_write_out)) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_STATFS:
 		if (fuse_libabi_geq(ftick->tk_data, 7, 4)) {
-			err = (blen == sizeof(struct fuse_statfs_out)) ? 
-			  0 : EINVAL;
+			err = (blen == sizeof(struct fuse_statfs_out)) ?
+			  0 : E_INVAL;
 		} else {
-			err = (blen == FUSE_COMPAT_STATFS_SIZE) ? 0 : EINVAL;
+			err = (blen == FUSE_COMPAT_STATFS_SIZE) ? 0 : E_INVAL;
 		}
 		break;
 
 	case FUSE_RELEASE:
-		err = (blen == 0) ? 0 : EINVAL;
+		err = (blen == 0) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_FSYNC:
-		err = (blen == 0) ? 0 : EINVAL;
+		err = (blen == 0) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_SETXATTR:
@@ -656,34 +656,34 @@ fuse_body_audit(struct fuse_ticket *ftick, size_t blen)
 		break;
 
 	case FUSE_FLUSH:
-		err = (blen == 0) ? 0 : EINVAL;
+		err = (blen == 0) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_INIT:
 		if (blen == sizeof(struct fuse_init_out) || blen == 8) {
 			err = 0;
 		} else {
-			err = EINVAL;
+			err = E_INVAL;
 		}
 		break;
 
 	case FUSE_OPENDIR:
-		err = (blen == sizeof(struct fuse_open_out)) ? 0 : EINVAL;
+		err = (blen == sizeof(struct fuse_open_out)) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_READDIR:
 		err = (((struct fuse_read_in *)(
 		    (char *)ftick->tk_ms_fiov.base +
 		    sizeof(struct fuse_in_header)
-		    ))->size >= blen) ? 0 : EINVAL;
+		    ))->size >= blen) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_RELEASEDIR:
-		err = (blen == 0) ? 0 : EINVAL;
+		err = (blen == 0) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_FSYNCDIR:
-		err = (blen == 0) ? 0 : EINVAL;
+		err = (blen == 0) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_GETLK:
@@ -699,16 +699,16 @@ fuse_body_audit(struct fuse_ticket *ftick, size_t blen)
 		break;
 
 	case FUSE_ACCESS:
-		err = (blen == 0) ? 0 : EINVAL;
+		err = (blen == 0) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_CREATE:
 		err = (blen == sizeof(struct fuse_entry_out) +
-		    sizeof(struct fuse_open_out)) ? 0 : EINVAL;
+		    sizeof(struct fuse_open_out)) ? 0 : E_INVAL;
 		break;
 
 	case FUSE_DESTROY:
-		err = (blen == 0) ? 0 : EINVAL;
+		err = (blen == 0) ? 0 : E_INVAL;
 		break;
 
 	default:
@@ -856,9 +856,9 @@ fdisp_wait_answ(struct fuse_dispatcher *fdip)
 	debug_printf("IPC: not interrupted, err = %d\n", err);
 
 	if (fdip->tick->tk_aw_errno) {
-		debug_printf("IPC: explicit EIO-ing, tk_aw_errno = %d\n",
+		debug_printf("IPC: explicit E_IO-ing, tk_aw_errno = %d\n",
 		    fdip->tick->tk_aw_errno);
-		err = EIO;
+		err = E_IO;
 		goto out;
 	}
 	if ((err = fdip->tick->tk_aw_ohead.error)) {

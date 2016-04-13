@@ -53,30 +53,30 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
+/*#include "freebsd_compat/sys/cdefs.h"
 __FBSDID("$FreeBSD$");
 
-#include <sys/types.h>
+#include "freebsd_compat/sys/types.h"
 #include <sys/module.h>
-#include <sys/systm.h>
-#include <sys/errno.h>
-#include <sys/param.h>
+#include "freebsd_compat/sys/systm.h"*/
+#include <error.h>
+/*#include "freebsd_compat/sys/param.h"
 #include <sys/kernel.h>
 #include <sys/capsicum.h>
-#include <sys/conf.h>
+#include "freebsd_compat/sys/conf.h"
 #include <sys/filedesc.h>
-#include <sys/uio.h>
-#include <sys/malloc.h>
-#include <sys/queue.h>
-#include <sys/lock.h>
-#include <sys/sx.h>
-#include <sys/mutex.h>
-#include <sys/proc.h>
-#include <sys/vnode.h>
-#include <sys/namei.h>
-#include <sys/mount.h>
-#include <sys/sysctl.h>
-#include <sys/fcntl.h>
+#include "freebsd_compat/sys/uio.h"
+#include "freebsd_compat/sys/malloc.h"*/
+#include "freebsd_compat/sys/queue.h"
+/*#include <sys/lock.h>
+#include "freebsd_compat/sys/sx.h"
+#include "freebsd_compat/sys/mutex.h"
+#include "freebsd_compat/sys/proc.h"
+#include "freebsd_compat/sys/vnode.h"
+#include "freebsd_compat/sys/namei.h"
+#include "freebsd_compat/sys/mount.h"
+#include "freebsd_compat/sys/sysctl.h"
+#include "freebsd_compat/sys/fcntl.h"*/
 
 #include "fuse.h"
 #include "fuse_param.h"
@@ -84,7 +84,7 @@ __FBSDID("$FreeBSD$");
 #include "fuse_ipc.h"
 #include "fuse_internal.h"
 
-#include <sys/priv.h>
+#include "freebsd_compat/sys/priv.h"
 #include <security/mac/mac_framework.h>
 
 #define FUSE_DEBUG_MODULE VFSOPS
@@ -148,7 +148,7 @@ fuse_getdevice(const char *fspec, struct thread *td, struct cdev **fdevp)
 
 	if (devvp->v_type != VCHR) {
 		vrele(devvp);
-		return ENXIO;
+		return E_NXIO;
 	}
 	fdev = devvp->v_rdev;
 	dev_ref(fdev);
@@ -189,7 +189,7 @@ fuse_getdevice(const char *fspec, struct thread *td, struct cdev **fdevp)
 	if (!fdev->si_devsw ||
 	    strcmp("fuse", fdev->si_devsw->d_name)) {
 		dev_rel(fdev);
-		return ENXIO;
+		return E_NXIO;
 	}
 	*fdevp = fdev;
 
@@ -243,7 +243,7 @@ fuse_vfsop_mount(struct mount *mp)
 	opts = mp->mnt_optnew;
 
 	if (!opts)
-		return EINVAL;
+		return E_INVAL;
 
 	/* `fspath' contains the mount point (eg. /mnt/fuse/sshfs); REQUIRED */
 	if (!vfs_getopts(opts, "fspath", &err))
@@ -256,7 +256,7 @@ fuse_vfsop_mount(struct mount *mp)
 
 	/* `fd' contains the filedescriptor for this session; REQUIRED */
 	if (vfs_scanopt(opts, "fd", "%d", &fd) != 1)
-		return EINVAL;
+		return E_INVAL;
 
 	err = fuse_getdevice(fspec, td, &fdev);
 	if (err != 0)
@@ -304,13 +304,13 @@ fuse_vfsop_mount(struct mount *mp)
 	if (err != 0 || data == NULL || data->mp != NULL) {
 		FS_DEBUG("invalid or not opened device: data=%p data.mp=%p\n",
 		    data, data != NULL ? data->mp : NULL);
-		err = ENXIO;
+		err = E_NXIO;
 		FUSE_UNLOCK();
 		goto out;
 	}
 	if (fdata_get_dead(data)) {
 		FS_DEBUG("device is dead during mount: data=%p\n", data);
-		err = ENOTCONN;
+		err = E_NOTCONN;
 		FUSE_UNLOCK();
 		goto out;
 	}
@@ -489,7 +489,7 @@ fuse_vfsop_statfs(struct mount *mp, struct statfs *sbp)
 	err = fdisp_wait_answ(&fdi);
 	if (err) {
 		fdisp_destroy(&fdi);
-		if (err == ENOTCONN) {
+		if (err == E_NOTCONN) {
 			/*
 	                 * We want to seem a legitimate fs even if the daemon
 	                 * is stiff dead... (so that, eg., we can still do path
@@ -511,11 +511,11 @@ fuse_vfsop_statfs(struct mount *mp, struct statfs *sbp)
 
 	FS_DEBUG("fuse_statfs_out -- blocks: %llu, bfree: %llu, bavail: %llu, "
 	      "fil	es: %llu, ffree: %llu, bsize: %i, namelen: %i\n",
-	      (unsigned long long)fsfo->st.blocks, 
+	      (unsigned long long)fsfo->st.blocks,
 	      (unsigned long long)fsfo->st.bfree,
-	      (unsigned long long)fsfo->st.bavail, 
+	      (unsigned long long)fsfo->st.bavail,
 	      (unsigned long long)fsfo->st.files,
-	      (unsigned long long)fsfo->st.ffree, fsfo->st.bsize, 
+	      (unsigned long long)fsfo->st.ffree, fsfo->st.bsize,
 	      fsfo->st.namelen);
 
 	fdisp_destroy(&fdi);

@@ -53,33 +53,33 @@
  * SUCH DAMAGE.
  */
 
-#include <sys/cdefs.h>
+#include "freebsd_compat/sys/cdefs.h"
 __FBSDID("$FreeBSD$");
 
-#include <sys/types.h>
-#include <sys/module.h>
-#include <sys/systm.h>
-#include <sys/errno.h>
-#include <sys/param.h>
-#include <sys/kernel.h>
-#include <sys/conf.h>
-#include <sys/uio.h>
-#include <sys/malloc.h>
-#include <sys/queue.h>
-#include <sys/lock.h>
-#include <sys/sx.h>
-#include <sys/mutex.h>
-#include <sys/proc.h>
-#include <sys/vnode.h>
-#include <sys/namei.h>
-#include <sys/mount.h>
-#include <sys/sysctl.h>
-#include <sys/fcntl.h>
-#include <sys/fnv_hash.h>
-#include <sys/priv.h>
-#include <security/mac/mac_framework.h>
-#include <vm/vm.h>
-#include <vm/vm_extern.h>
+#include "freebsd_compat/sys/types.h"
+//#include <sys/module.h>
+#include "freebsd_compat/sys/systm.h"
+#include <error.h>
+#include "freebsd_compat/sys/param.h"
+//#include <sys/kernel.h>
+#include "freebsd_compat/sys/conf.h"
+#include "freebsd_compat/sys/uio.h"
+#include "freebsd_compat/sys/malloc.h"
+#include "freebsd_compat/sys/queue.h"
+#include "freebsd_compat/sys/lock.h"
+#include "freebsd_compat/sys/sx.h"
+#include "freebsd_compat/sys/mutex.h"
+#include "freebsd_compat/sys/proc.h"
+#include "freebsd_compat/sys/vnode.h"
+#include "freebsd_compat/sys/namei.h"
+#include "freebsd_compat/sys/mount.h"
+#include "freebsd_compat/sys/sysctl.h"
+#include "freebsd_compat/sys/fcntl.h"
+//include <sys/fnv_hash.h>
+#include "freebsd_compat/sys/priv.h"
+//#include <security/mac/mac_framework.h>
+#include "freebsd_compat/vm/vm.h"
+//#include <vm/vm_extern.h>
 
 #include "fuse.h"
 #include "fuse_node.h"
@@ -183,7 +183,7 @@ fuse_vnode_alloc(struct mount *mp,
 	FS_DEBUG("been asked for vno #%ju\n", (uintmax_t)nodeid);
 
 	if (vtyp == VNON) {
-		return EINVAL;
+		return E_INVAL;
 	}
 	*vpp = NULL;
 	err = vfs_hash_get(mp, fuse_vnode_hash(nodeid), LK_EXCLUSIVE, td, vpp,
@@ -315,13 +315,13 @@ fuse_vnode_savesize(struct vnode *vp, struct ucred *cred)
 	ASSERT_VOP_ELOCKED(vp, "fuse_io_extend");
 
 	if (fuse_isdeadfs(vp)) {
-		return EBADF;
+		return E_BADF;
 	}
 	if (vnode_vtype(vp) == VDIR) {
-		return EISDIR;
+		return E_ISDIR;
 	}
 	if (vfs_isrdonly(vnode_mount(vp))) {
-		return EROFS;
+		return E_ROFS;
 	}
 	if (cred == NULL) {
 		cred = td->td_ucred;
