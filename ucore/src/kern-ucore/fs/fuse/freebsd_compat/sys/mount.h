@@ -242,6 +242,20 @@ static int vfs_rel(struct mount *m) {
   return 0;
 }
 
+struct vfsoptlist;
+
+static int vfs_flagopt(struct vfsoptlist *opts, const char *name, uint64_t *w, uint64_t val) {
+  return 0;
+}
+
+static int vfs_getopt(struct vfsoptlist *opts, const char *name, void **buf, int *len) {
+  return 0;
+}
+
+static char *vfs_getopts(struct vfsoptlist *opts, const char *name, int *error) {
+  return NULL;
+}
+
 typedef int vfs_unmount_t(struct mount *mp, int mntflags);
 typedef int vfs_root_t(struct mount *mp, int flags, struct vnode **vpp);
 typedef int vfs_statfs_t(struct mount *mp, struct statfs *sbp);
