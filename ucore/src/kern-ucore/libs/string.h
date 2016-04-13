@@ -9,6 +9,7 @@ size_t strnlen(const char *s, size_t len);
 char *strcpy(char *dst, const char *src);
 char *strncpy(char *dst, const char *src, size_t len);
 char *strcat(char *dst, const char *src);
+size_t strlcat(char *dst, const char *src, size_t siz);
 char *strdup(const char *src);
 char *stradd(const char *src1, const char *src2);
 
