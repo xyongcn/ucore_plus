@@ -40,4 +40,29 @@ typedef	unsigned long	u_long;
 typedef uint16_t uid_t;
 typedef uint16_t gid_t;
 
+//From caprights.h
+/*
+ * The top two bits in the first element of the cr_rights[] array contain
+ * total number of elements in the array - 2. This means if those two bits are
+ * equal to 0, we have 2 array elements.
+ * The top two bits in all remaining array elements should be 0.
+ * The next five bits contain array index. Only one bit is used and bit position
+ * in this five-bits range defines array index. This means there can be at most
+ * five array elements.
+ */
+#define CAP_RIGHTS_VERSION_00   0
+/*
+#define CAP_RIGHTS_VERSION_01   1
+#define CAP_RIGHTS_VERSION_02   2
+#define CAP_RIGHTS_VERSION_03   3
+*/
+#define CAP_RIGHTS_VERSION      CAP_RIGHTS_VERSION_00
+struct cap_rights {
+        uint64_t        cr_rights[CAP_RIGHTS_VERSION + 2];
+};
+#ifndef _CAP_RIGHTS_T_DECLARED
+#define _CAP_RIGHTS_T_DECLARED
+typedef struct cap_rights       cap_rights_t;
+#endif
+
 #endif

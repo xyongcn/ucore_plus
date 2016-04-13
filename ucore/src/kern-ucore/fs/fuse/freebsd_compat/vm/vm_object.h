@@ -105,6 +105,10 @@ typedef struct vm_object {
 	//vm_ooffset_t charge;
 } *vm_object_t;
 
+#define OBJPC_SYNC      0x1                     /* sync I/O */
+#define OBJPC_INVAL     0x2                     /* invalidate */
+#define OBJPC_NOSYNC    0x4                     /* skip if PG_NOSYNC */
+
 #define VM_OBJECT_WLOCK(object)                                         \
         rw_wlock(&(object)->lock)
 #define VM_OBJECT_WUNLOCK(object)                                       \

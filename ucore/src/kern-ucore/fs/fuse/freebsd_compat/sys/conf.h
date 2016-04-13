@@ -35,6 +35,7 @@ typedef void d_priv_dtor_t(void *data);
 
 struct cdev {
   char si_name[SPECNAMELEN + 1];
+  struct cdevsw *si_devsw;
 };
 
 struct cdevsw {

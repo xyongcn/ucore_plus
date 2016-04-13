@@ -1,6 +1,41 @@
 #ifndef	_FREEBSD_COMPAT_BUFOBJ_H_
 #define	_FREEBSD_COMPAT_BUFOBJ_H_
 
+struct ucred;
+
+#define B_AGE           0x00000001      /* Move to age queue when I/O done. */
+#define B_NEEDCOMMIT    0x00000002      /* Append-write in progress. */
+#define B_ASYNC         0x00000004      /* Start I/O, do not wait. */
+#define B_DIRECT        0x00000008      /* direct I/O flag (pls free vmio) */
+#define B_DEFERRED      0x00000010      /* Skipped over for cleaning */
+#define B_CACHE         0x00000020      /* Bread found us in the cache. */
+#define B_VALIDSUSPWRT  0x00000040      /* Valid write during suspension. */
+#define B_DELWRI        0x00000080      /* Delay I/O until buffer reused. */
+#define B_PERSISTENT    0x00000100      /* Perm. ref'ed while EXT2FS mounted. */
+#define B_DONE          0x00000200      /* I/O completed. */
+#define B_EINTR         0x00000400      /* I/O was interrupted */
+#define B_NOREUSE       0x00000800      /* Contents not reused once released. */
+#define B_00001000      0x00001000      /* Available flag. */
+#define B_INVAL         0x00002000      /* Does not contain valid info. */
+#define B_BARRIER       0x00004000      /* Write this and all preceeding first. */
+#define B_NOCACHE       0x00008000      /* Do not cache block after use. */
+#define B_MALLOC        0x00010000      /* malloced b_data */
+#define B_CLUSTEROK     0x00020000      /* Pagein op, so swap() can count it. */
+#define B_00040000      0x00040000      /* Available flag. */
+#define B_00080000      0x00080000      /* Available flag. */
+#define B_00100000      0x00100000      /* Available flag. */
+#define B_DIRTY         0x00200000      /* Needs writing later (in EXT2FS). */
+#define B_RELBUF        0x00400000      /* Release VMIO buffer. */
+#define B_FS_FLAG1      0x00800000      /* Available flag for FS use. */
+#define B_NOCOPY        0x01000000      /* Don't copy-on-write this buf. */
+#define B_INFREECNT     0x02000000      /* buf is counted in numfreebufs */
+#define B_PAGING        0x04000000      /* volatile paging I/O -- bypass VMIO */
+#define B_MANAGED       0x08000000      /* Managed by FS. */
+#define B_RAM           0x10000000      /* Read ahead mark (flag) */
+#define B_VMIO          0x20000000      /* VMIO flag */
+#define B_CLUSTER       0x40000000      /* pagein op, so swap() can count it */
+#define B_REMFREE       0x80000000      /* Delayed bremfree */
+
 //buf.h
 static int nswbuf = 10;                 /* Number of swap I/O buffer headers. */
 
@@ -27,33 +62,33 @@ static int nswbuf = 10;                 /* Number of swap I/O buffer headers. */
  */
 struct buf {
         //struct bufobj   *b_bufobj;
-        //long            b_bcount;
+        long            b_bcount;
         //void            *b_caller1;
         caddr_t         b_data;
         int             b_error;
         uint8_t         b_iocmd;
         uint8_t         b_ioflags;
         //off_t           b_iooffset;
-        //long            b_resid;
+        long            b_resid;
         //void    (*b_iodone)(struct buf *);
-        //daddr_t b_blkno;                /* Underlying physical block number. */
+        daddr_t b_blkno;                /* Underlying physical block number. */
         //off_t   b_offset;               /* Offset into file. */
         //TAILQ_ENTRY(buf) b_bobufs;      /* (V) Buffer's associated vnode. */
         //uint32_t        b_vflags;       /* (V) BV_* flags */
         //unsigned short b_qindex;        /* (Q) buffer queue index */
-        //uint32_t        b_flags;        /* B_* flags. */
+        uint32_t        b_flags;        /* B_* flags. */
         //b_xflags_t b_xflags;            /* extra flags */
         //struct lock b_lock;             /* Buffer lock */
         //long    b_bufsize;              /* Allocated buffer size. */
         //int     b_runningbufspace;      /* when I/O is running, pipelining */
         //int     b_kvasize;              /* size of kva for buffer */
-        //int     b_dirtyoff;             /* Offset in buffer of dirty region. */
-        //int     b_dirtyend;             /* Offset of end of dirty region. */
+        int     b_dirtyoff;             /* Offset in buffer of dirty region. */
+        int     b_dirtyend;             /* Offset of end of dirty region. */
         //caddr_t b_kvabase;              /* base kva for buffer */
         //daddr_t b_lblkno;               /* Logical block number. */
         //struct  vnode *b_vp;            /* Device vnode. */
-        //struct  ucred *b_rcred;         /* Read credentials reference. */
-        //struct  ucred *b_wcred;         /* Write credentials reference. */
+        struct  ucred *b_rcred;         /* Read credentials reference. */
+        struct  ucred *b_wcred;         /* Write credentials reference. */
         //union {
         //        TAILQ_ENTRY(buf) b_freelist; /* (Q) */
         //        struct {

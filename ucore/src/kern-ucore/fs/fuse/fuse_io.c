@@ -222,7 +222,7 @@ fuse_read_biobackend(struct vnode *vp, struct uio *uio,
 		bp = getblk(vp, lbn, bcount, PCATCH, 0, 0);
 
 		if (!bp)
-			return (EINTR);
+			return (E_INTR);
 
 		/*
 	         * If B_CACHE is not set, we must issue the read.  If this
@@ -468,7 +468,7 @@ again:
 		}
 
 		if (!bp) {
-			err = EINTR;
+			err = E_INTR;
 			break;
 		}
 		/*
@@ -551,8 +551,8 @@ again:
 	                 * if its actually written out.)
 	                 */
 			bwrite(bp);
-			if (bp->b_error == EINTR) {
-				err = EINTR;
+			if (bp->b_error == E_INTR) {
+				err = E_INTR;
 				break;
 			}
 			goto again;
@@ -707,7 +707,7 @@ fuse_io_strategy(struct vnode *vp, struct buf *bp)
 
 			error = fuse_write_directbackend(vp, uiop, cred, fufh);
 
-			if (error == EINTR || error == E_TIMEDOUT
+			if (error == E_INTR || error == E_TIMEDOUT
 			    || (!error && (bp->b_flags & B_NEEDCOMMIT))) {
 
 				bp->b_flags &= ~(B_INVAL | B_NOCACHE);
@@ -715,7 +715,7 @@ fuse_io_strategy(struct vnode *vp, struct buf *bp)
 					bdirty(bp);
 					bp->b_flags &= ~B_DONE;
 				}
-				if ((error == EINTR || error == E_TIMEDOUT) &&
+				if ((error == E_INTR || error == E_TIMEDOUT) &&
 				    (bp->b_flags & B_ASYNC) == 0)
 					bp->b_flags |= B_EINTR;
 			} else {
@@ -776,11 +776,11 @@ fuse_io_invalbuf(struct vnode *vp, struct thread *td)
 			PROC_LOCK(p);
 			if (SIGNOTEMPTY(p->p_siglist) ||
 			    SIGNOTEMPTY(td->td_siglist))
-				error = EINTR;
+				error = E_INTR;
 			PROC_UNLOCK(p);
 		}
-		if (error == EINTR)
-			return EINTR;
+		if (error == E_INTR)
+			return E_INTR;
 	}
 	fvdat->flag |= FN_FLUSHINPROG;
 
@@ -791,13 +791,13 @@ fuse_io_invalbuf(struct vnode *vp, struct thread *td)
 	}
 	error = vinvalbuf(vp, V_SAVE, PCATCH, 0);
 	while (error) {
-		if (error == ERESTART || error == EINTR) {
+		if (error == E_RESTART || error == E_INTR) {
 			fvdat->flag &= ~FN_FLUSHINPROG;
 			if (fvdat->flag & FN_FLUSHWANT) {
 				fvdat->flag &= ~FN_FLUSHWANT;
 				wakeup(&fvdat->flag);
 			}
-			return EINTR;
+			return E_INTR;
 		}
 		error = vinvalbuf(vp, V_SAVE, PCATCH, 0);
 	}

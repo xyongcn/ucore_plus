@@ -5,6 +5,7 @@
 #define SYSCTL_DECL(x)
 #define SYSCTL_NODE(a, b, c, d, e, f)
 #define SYSCTL_INT(a, b, c, d, e, f, g)
+#define SYSCTL_UINT(a, b, c, d, e, f, g)
 #define SYSCTL_LONG(a, b, c, d, e, f, g)
 #define SYSCTL_ULONG(a, b, c, d, e, f, g)
 #define SYSCTL_STRING(a, b, c, d, e, f, g)

@@ -1,6 +1,7 @@
 #ifndef _FREEBSD_COMPAT_SIGNALVAR_H_
 #define	_FREEBSD_COMPAT_SIGNALVAR_H_
 
+#include "signalvar.h"
 #include "types.h"
 
 #define _SIG_WORDS      4
@@ -15,6 +16,14 @@ typedef struct __sigset {
 } __sigset_t;
 
 typedef __sigset_t sigset_t;
+
+typedef struct sigqueue {
+	sigset_t	sq_signals;	/* All pending signals. */
+	//sigset_t	sq_kill;	/* Legacy depth 1 queue. */
+	//TAILQ_HEAD(, ksiginfo)	sq_list;/* Queued signal info. */
+	//struct proc	*sq_proc;
+	//int		sq_flags;
+} sigqueue_t;
 
 #define SIG_BLOCK       1       /* block specified signal set */
 #define SIG_UNBLOCK     2       /* unblock specified signal set */

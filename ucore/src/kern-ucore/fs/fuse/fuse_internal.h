@@ -62,6 +62,7 @@
 #include "freebsd_compat/sys/uio.h"
 #include "freebsd_compat/sys/stat.h"
 #include "freebsd_compat/sys/vnode.h"
+#include "freebsd_compat/sys/systm.h" //Added after
 
 #include "fuse_ipc.h"
 #include "fuse_node.h"

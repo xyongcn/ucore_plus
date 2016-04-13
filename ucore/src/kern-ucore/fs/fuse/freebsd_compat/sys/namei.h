@@ -3,6 +3,7 @@
 
 struct thread;
 struct ucred;
+struct vnode;
 
 struct componentname {
 	/*
@@ -20,6 +21,47 @@ struct componentname {
 	char	*cn_nameptr;	/* pointer to looked up name */
 	long	cn_namelen;	/* length of looked up component */
 	//long	cn_consume;	/* chars to consume in lookup() */
+};
+
+/*
+ * Encapsulation of namei parameters.
+ */
+struct nameidata {
+        /*
+         * Arguments to namei/lookup.
+         */
+        //const   char *ni_dirp;          /* pathname pointer */
+        //enum    uio_seg ni_segflg;      /* location of pathname */
+        //cap_rights_t ni_rightsneeded;   /* rights required to look up vnode */
+        /*
+         * Arguments to lookup.
+         */
+        //struct  vnode *ni_startdir;     /* starting directory */
+        //struct  vnode *ni_rootdir;      /* logical root directory */
+        //struct  vnode *ni_topdir;       /* logical top directory */
+        //int     ni_dirfd;               /* starting directory for *at functions */
+        //int     ni_strictrelative;      /* relative lookup only; no '..' */
+        /*
+         * Results: returned from namei
+         */
+        //struct filecaps ni_filecaps;    /* rights the *at base has */
+        /*
+         * Results: returned from/manipulated by lookup
+         */
+        struct  vnode *ni_vp;           /* vnode of result */
+        //struct  vnode *ni_dvp;          /* vnode of intermediate directory */
+        /*
+         * Shared between namei and lookup/commit routines.
+         */
+        //size_t  ni_pathlen;             /* remaining chars in path */
+        //char    *ni_next;               /* next location in pathname */
+        //u_int   ni_loopcnt;             /* count of symlinks encountered */
+        /*
+         * Lookup parameters: this structure describes the subset of
+         * information from the nameidata structure that is passed
+         * through the VOP interface.
+         */
+        //struct componentname ni_cnd;
 };
 
 /*
@@ -76,5 +118,15 @@ struct componentname {
 #define TRAILINGSLASH   0x10000000 /* path ended in a slash */
 #define NOCAPCHECK      0x20000000 /* do not perform capability checks */
 #define PARAMASK        0x3ffffe00 /* mask of parameter descriptors */
+
+#define NDF_NO_DVP_RELE         0x00000001
+#define NDF_NO_DVP_UNLOCK       0x00000002
+#define NDF_NO_DVP_PUT          0x00000003
+#define NDF_NO_VP_RELE          0x00000004
+#define NDF_NO_VP_UNLOCK        0x00000008
+#define NDF_NO_VP_PUT           0x0000000c
+#define NDF_NO_STARTDIR_RELE    0x00000010
+#define NDF_NO_FREE_PNBUF       0x00000020
+#define NDF_ONLY_PNBUF          (~NDF_NO_FREE_PNBUF)
 
 #endif

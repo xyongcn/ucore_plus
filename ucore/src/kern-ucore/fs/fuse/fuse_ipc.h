@@ -60,6 +60,7 @@
 
 #include "freebsd_compat/sys/param.h"
 #include "freebsd_compat/sys/selinfo.h" // Added after
+#include "freebsd_compat/sys/sx.h" // Added after
 #include "freebsd_compat/sys/refcount.h"
 
 struct fuse_iov {

@@ -8,6 +8,8 @@
 #include "stat.h"
 #include "../vm/vm_page.h"
 
+struct cdev;
+
 //TODO: This error code doesn't exist in linux and is made up.
 #define E_JUSTRETURN 530
 
@@ -42,6 +44,15 @@
 
 #define IO_SEQMAX       0x7F            /* seq heuristic max value */
 #define IO_SEQSHIFT     16              /* seq heuristic in upper 16 bits */
+
+/*
+ * Flags to various vnode functions.
+ */
+#define SKIPSYSTEM      0x0001          /* vflush: skip vnodes marked VSYSTEM */
+#define FORCECLOSE      0x0002          /* vflush: force file closure */
+#define WRITECLOSE      0x0004          /* vflush: only close writable files */
+#define DOCLOSE         0x0008          /* vclean: close active files */
+#define V_SAVE          0x0001          /* vinvalbuf: sync file first */
 
 //acl.h
 typedef int	acl_type_t;
@@ -138,7 +149,7 @@ struct vnode {
 	union {
 		struct mount	*vu_mount;	/* v ptr to mountpoint (VDIR) */
 	//	struct socket	*vu_socket;	/* v unix domain net (VSOCK) */
-	//	struct cdev	*vu_cdev; 	/* v device (VCHR, VBLK) */
+		struct cdev	*vu_cdev; 	/* v device (VCHR, VBLK) */
 	//	struct fifoinfo	*vu_fifoinfo;	/* v fifo (VFIFO) */
 	} v_un;
 

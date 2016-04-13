@@ -53,22 +53,22 @@
  * SUCH DAMAGE.
  */
 
-/*#include "freebsd_compat/sys/cdefs.h"
+#include "freebsd_compat/sys/cdefs.h"
 __FBSDID("$FreeBSD$");
 
 #include "freebsd_compat/sys/types.h"
-#include <sys/module.h>
-#include "freebsd_compat/sys/systm.h"*/
+//#include <sys/module.h>
+#include "freebsd_compat/sys/systm.h"
 #include <error.h>
-/*#include "freebsd_compat/sys/param.h"
-#include <sys/kernel.h>
-#include <sys/capsicum.h>
+#include "freebsd_compat/sys/param.h"
+///#include <sys/kernel.h>
+#include "freebsd_compat/sys/capsicum.h"
 #include "freebsd_compat/sys/conf.h"
-#include <sys/filedesc.h>
+//#include <sys/filedesc.h>
 #include "freebsd_compat/sys/uio.h"
-#include "freebsd_compat/sys/malloc.h"*/
+#include "freebsd_compat/sys/malloc.h"
 #include "freebsd_compat/sys/queue.h"
-/*#include <sys/lock.h>
+//#include <sys/lock.h>
 #include "freebsd_compat/sys/sx.h"
 #include "freebsd_compat/sys/mutex.h"
 #include "freebsd_compat/sys/proc.h"
@@ -76,7 +76,7 @@ __FBSDID("$FreeBSD$");
 #include "freebsd_compat/sys/namei.h"
 #include "freebsd_compat/sys/mount.h"
 #include "freebsd_compat/sys/sysctl.h"
-#include "freebsd_compat/sys/fcntl.h"*/
+#include "freebsd_compat/sys/fcntl.h"
 
 #include "fuse.h"
 #include "fuse_param.h"
@@ -85,7 +85,7 @@ __FBSDID("$FreeBSD$");
 #include "fuse_internal.h"
 
 #include "freebsd_compat/sys/priv.h"
-#include <security/mac/mac_framework.h>
+//#include <security/mac/mac_framework.h>
 
 #define FUSE_DEBUG_MODULE VFSOPS
 #include "fuse_debug.h"
@@ -233,7 +233,7 @@ fuse_vfsop_mount(struct mount *mp)
 	fuse_trace_printf_vfsop();
 
 	if (mp->mnt_flag & MNT_UPDATE)
-		return EOPNOTSUPP;
+		return E_OPNOTSUPP;
 
 	MNT_ILOCK(mp);
 	mp->mnt_flag |= MNT_SYNCHRONOUS;

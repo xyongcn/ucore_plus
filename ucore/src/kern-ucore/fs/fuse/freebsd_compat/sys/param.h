@@ -46,4 +46,9 @@
 #define CMASK   022             /* default file mask: S_IWGRP|S_IWOTH */
 #define NODEV   (dev_t)(-1)     /* non-existent device */
 
+#define MAXBSIZE        65536   /* must be power of 2 */
+#ifndef MAXBCACHEBUF
+#define MAXBCACHEBUF    MAXBSIZE /* must be a power of 2 >= MAXBSIZE */
+#endif
+
 #endif
