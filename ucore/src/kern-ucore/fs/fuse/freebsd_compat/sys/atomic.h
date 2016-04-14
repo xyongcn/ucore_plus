@@ -69,9 +69,9 @@ static inline void atomic_add_long(volatile long *p, int v) {
 static inline unsigned long atomic_fetchadd_long(volatile unsigned long *p, unsigned long v) {
   kprintf("TODO! FreeBSD-compat: atomic_fetchadd_long doesn't guarantee atomic "
   "assembly-level operation!");
-  unsigned long ret = p;
+  unsigned long ret = *p;
   (*p) += v;
-  return p;
+  return ret;
 }
 
 #endif
