@@ -151,6 +151,11 @@ fuse_loader(struct module *m, int what, void *arg)
 	return (err);
 }
 
+void dev_init_fuse()
+{
+  fuse_loader(NULL, MOD_LOAD, NULL);
+}
+
 /* Registering the module */
 
 static moduledata_t fuse_moddata = {
