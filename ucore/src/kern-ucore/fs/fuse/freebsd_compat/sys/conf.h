@@ -1,12 +1,14 @@
 #ifndef _FREEBSD_COMPAT_CONF_H_
 #define	_FREEBSD_COMPAT_CONF_H_
 
+#include <assert.h>
 #include <dev.h>
 #include <string.h>
 #include <vfs.h>
 #include <inode.h>
 #include "proc.h"
 #include "ucred.h"
+#include "uio.h"
 
 #define D_VERSION_00    0x20011966
 #define D_VERSION_01    0x17032005      /* Add d_uid,gid,mode & kind */
@@ -90,7 +92,8 @@ static int ucore_char_device_close(struct device *dev);
 static int ucore_char_device_io(struct device *dev, struct iobuf *iob, bool write);
 static int ucore_char_device_ioctl(struct device *dev, int op, void *data);
 static struct cdev _freebsd_char_device = {
-  .si_devsw = NULL
+  .si_devsw = NULL,
+  .ucore_device = NULL
 };
 static struct cdev* freebsd_char_device = &_freebsd_char_device;
 
@@ -124,12 +127,36 @@ static int ucore_char_device_close(struct device *dev)
 
 static int ucore_char_device_io(struct device *dev, struct iobuf *iob, bool write)
 {
+  kprintf("TODO! FreeBSD-compat: ucore_char_device_io is passing "
+  "0 as flags to si_devsw->d_write/d_close, and the iobuf -> uio convertion "
+  "may be not perfect.\r\n");
+  assert(dev == freebsd_char_device->ucore_device);
+  struct iovec freebsd_iovec = {
+    .iov_base = iob->io_base,
+    .iov_len = iob->io_len
+  };
+  struct uio freebsd_uio = {
+    .uio_iov = &freebsd_iovec,
+    .uio_iovcnt = 1,
+    .uio_offset = iob->io_offset,
+    .uio_resid = iob->io_resid,
+    .uio_segflg = UIO_SYSSPACE,
+    .uio_rw = write ? UIO_WRITE : UIO_READ,
+    .uio_td = &freebsd_stub_thread
+  };
+  if(write) {
+    freebsd_char_device->si_devsw->d_write(freebsd_char_device, &freebsd_uio, 0);
+  }
+  else {
+    freebsd_char_device->si_devsw->d_read(freebsd_char_device, &freebsd_uio, 0);
+  }
   return 0;
 }
 
 static int ucore_char_device_ioctl(struct device *dev, int op, void *data)
 {
-  return 0;
+  kprintf("TODO! FreeBSD-compat: ucore_char_device_ioctl not supported.\r\n");
+  return -E_INVAL;
 }
 
 static struct cdev *make_dev(struct cdevsw *_devsw, int _unit, uid_t _uid, gid_t _gid,
