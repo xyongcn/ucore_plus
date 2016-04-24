@@ -12,6 +12,8 @@ struct inode;			// abstract structure for an on-disk file (inode.h)
 struct device;			// abstract structure for a device (dev.h)
 struct iobuf;			// kernel or userspace I/O buffer (iobuf.h)
 
+extern struct inode* root_inode;
+
 /*
  * Abstract filesystem. (Or device accessible as a file.)
  *
@@ -24,7 +26,7 @@ struct iobuf;			// kernel or userspace I/O buffer (iobuf.h)
  *      fs_get_root   - Return root inode of filesystem.
  *      fs_unmount    - Attempt unmount of filesystem.
  *      fs_cleanup    - Cleanup of filesystem.???
- *      
+ *
  *
  * fs_get_root should increment the refcount of the inode returned.
  * It should not ever return NULL.
@@ -104,7 +106,7 @@ void vfs_cleanup(void);
 void vfs_devlist_init(void);
 
 /*
- * VFS layer low-level operations. 
+ * VFS layer low-level operations.
  * See inode.h for direct operations on inodes.
  * See fs.h for direct operations on filesystems/devices.
  *
@@ -124,7 +126,7 @@ const char *vfs_get_devname(struct fs *fs);
  * VFS layer high-level operations on pathnames
  * Because namei may destroy pathnames, these all may too.
  *
- *    vfs_open         - Open or create a file. FLAGS/MODE per the syscall. 
+ *    vfs_open         - Open or create a file. FLAGS/MODE per the syscall.
  *    vfs_close  - Close a inode opened with vfs_open. Does not fail.
  *                 (See vfspath.c for a discussion of why.)
  *    vfs_link         - Create a hard link to a file.
@@ -170,7 +172,7 @@ int vfs_lookup_parent(char *path, struct inode **node_store, char **endp);
  *                    name or volume name for the filesystem (such as
  *                    "lhd0:") but need not have the trailing colon.
  *
- *    vfs_get_bootfs - return the inode of the bootfs filesystem. 
+ *    vfs_get_bootfs - return the inode of the bootfs filesystem.
  *
  *    vfs_add_fs     - Add a hardwired filesystem to the VFS named device
  *                    list. It will be accessible as "devname:". This is
@@ -190,7 +192,7 @@ int vfs_lookup_parent(char *path, struct inode **node_store, char **endp);
  *                    "lhd0" to vfs_mount.
  *
  *    vfs_mount      - Attempt to mount a filesystem on a device. The
- *                    device named by DEVNAME will be looked up and 
+ *                    device named by DEVNAME will be looked up and
  *                    passed, along with DATA, to the supplied function
  *                    MOUNTFUNC, which should create a struct fs and
  *                    return it in RESULT.

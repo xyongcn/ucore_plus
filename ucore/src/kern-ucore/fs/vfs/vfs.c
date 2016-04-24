@@ -7,6 +7,8 @@
 #include <sem.h>
 #include <error.h>
 
+struct inode* root_inode = NULL;
+
 static semaphore_t bootfs_sem;
 static struct inode *bootfs_node = NULL;
 

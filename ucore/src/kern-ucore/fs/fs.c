@@ -13,8 +13,20 @@ void fs_init(void)
 {
 	vfs_init();
 	dev_init();
+  devfs_init();
 	pipe_init();
 	sfs_init();
+  int ret;
+  if ((ret = sfs_mount("disk0")) != 0) {
+    panic("failed: sfs: sfs_mount: %e.\n", ret);
+  }
+  vfs_add_dev("dev", NULL, 1);
+  if ((ret = devfs_mount("dev")) != 0) {
+    panic("failed: devfs: devfs_mount: %e.\n", ret);
+  }
+  //TODO: vfs: need to find out why vfs_add_fs didn't work.
+  //vfs_add_fs("dev", devfs_getfs());
+  vfs_get_root("disk0", &root_inode);
 }
 
 void fs_cleanup(void)
