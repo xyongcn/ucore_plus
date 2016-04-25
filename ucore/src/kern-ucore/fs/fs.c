@@ -12,8 +12,8 @@
 void fs_init(void)
 {
 	vfs_init();
-	dev_init();
   devfs_init();
+	dev_init();
 	pipe_init();
 	sfs_init();
   int ret;

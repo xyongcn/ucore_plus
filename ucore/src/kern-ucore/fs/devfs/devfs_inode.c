@@ -3,6 +3,9 @@
 #include <error.h>
 #include <stat.h>
 #include <iobuf.h>
+#include <stddef.h>
+
+#include "devfs.h"
 
 static int devfs_opendir(struct inode *node, uint32_t open_flags)
 {
@@ -17,11 +20,6 @@ static int devfs_opendir(struct inode *node, uint32_t open_flags)
 	if (open_flags & O_APPEND) {
 		return -E_ISDIR;
 	}
-	return 0;
-}
-
-static int devfs_openfile(struct inode *node, uint32_t open_flags)
-{
 	return 0;
 }
 
@@ -70,10 +68,20 @@ static int devfs_getdirentry(struct inode *node, struct iobuf *iob)
       strcpy(file_name, "..");
       break;
     default:
-      return -E_NOENT;
+      slot -= 2;
+      for(list_entry_t* i = list_next(&devfs_device_list);; i = list_next(i)) {
+        if(i == &devfs_device_list) {
+          return -E_NOENT;
+        }
+        if(slot == 0) {
+          struct devfs_device* device = container_of(i, struct devfs_device, list_entry);
+          strcpy(file_name, device->name);
+          break;
+        }
+        slot--;
+      }
   }
   ret = iobuf_move(iob, file_name, DIR_ENTRY_MAX_LENGTH, 1, NULL);
-	//TODO:
 	return 0;
 }
 
@@ -84,10 +92,24 @@ static int devfs_reclaim(struct inode *node)
 
 static int devfs_lookup(struct inode *node, char *path, struct inode **node_store)
 {
-  //TODO: need to implement real device lookup.
-  vop_ref_inc(node);
-  (*node_store) = node;
-  return 0;
+  /*
+   * TODO: I don't really understand why I have to use vop_ref_inc in devfs_lookup
+   * But this seems to be the only way to get rid of the assertion failure.
+   */
+  if(strcmp(path, ".") == 0 || strcmp(path, "..") == 0) {
+    vop_ref_inc(node);
+    (*node_store) = node;
+    return 0;
+  }
+  for(list_entry_t* i = list_next(&devfs_device_list); i != &devfs_device_list; i = list_next(i)) {
+    struct devfs_device* device = container_of(i, struct devfs_device, list_entry);
+    if(strcmp(device->name, path) == 0) {
+      vop_ref_inc(device->inode);
+      (*node_store) = device->inode;
+      return 0;
+    }
+  }
+  return -E_NOENT;
 }
 
 static int devfs_gettype(struct inode *node, uint32_t * type_store)

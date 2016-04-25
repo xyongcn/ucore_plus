@@ -15,6 +15,7 @@
 #include <error.h>
 #include <assert.h>
 #include <kio.h>
+#include <devfs/devfs.h>
 
 /*
  * Structure for a single named device.
@@ -266,6 +267,7 @@ int vfs_add_fs(const char *devname, struct fs *fs)
  */
 int vfs_add_dev(const char *devname, struct inode *devnode, bool mountable)
 {
+  devfs_register_device(devname, devnode, mountable);
 	return vfs_do_add(devname, devnode, NULL, mountable);
 }
 
