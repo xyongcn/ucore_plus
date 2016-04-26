@@ -8,6 +8,47 @@
 #include <error.h>
 #include <assert.h>
 
+void vfs_simplify_path(char* path) {
+  int write_pos = 0;
+  int last_slash_pos = 0;
+  int current_pos = 1;
+  for(;;) {
+    char c = path[current_pos];
+    if(c == '/' || c == '\0') {
+      if(current_pos - last_slash_pos == 1) {
+      }
+      else if(current_pos - last_slash_pos == 2 &&
+      path[last_slash_pos + 1] == '.') {
+      }
+      else if(current_pos - last_slash_pos == 3 &&
+      path[last_slash_pos + 1] == '.' &&
+      path[last_slash_pos + 2] == '.') {
+        if(write_pos != 0) {
+          do {
+              write_pos--;
+          }
+          while(path[write_pos] != '/');
+        }
+      }
+      else {
+        if(write_pos < last_slash_pos) {
+          write_pos++;
+          for(int i = last_slash_pos + 1; i <= current_pos; i++, write_pos++) {
+             path[write_pos] = path[i];
+          }
+          write_pos--;
+        }
+        else write_pos = current_pos;
+      }
+      last_slash_pos = current_pos;
+    }
+    current_pos++;
+    if(c == '\0')break;
+  }
+  if(write_pos > 0) path[write_pos] = '\0';
+  else path[1] = '\0';
+}
+
 static struct inode *get_cwd_nolock(void)
 {
 	return current->fs_struct->pwd;
@@ -30,7 +71,7 @@ static void unlock_cfs(void)
 
 /*
  * Get current directory as a inode.
- * 
+ *
  * We do not synchronize current->fs_struct->pwd, because it belongs exclusively
  * to its own process(or threads) with the holding lock.
  */
@@ -82,8 +123,35 @@ out:
  */
 int vfs_chdir(char *path)
 {
-	int ret;
-	struct inode *node;
+  int ret;
+  struct inode *node;
+  //Firstly, get current working directory inode
+  if (vfs_get_curdir(&node) == 0) {
+    //Then get the full path of the working directory.
+    static char full_path_buffer[1024];
+    if(path[0] != '/') {
+      struct iobuf full_path_iob;
+      iobuf_init(&full_path_iob, full_path_buffer, 1024, 0);
+      vop_namefile(node, &full_path_iob);
+      strcat(full_path_buffer, path);
+    }
+    else {
+      strcpy(full_path_buffer, path);
+    }
+    //TODO: Security issue: this may lead to buffer overflow.
+    vfs_simplify_path(full_path_buffer);
+    //kprintf("Full path:%s\r\n", full_path_buffer);
+    //TODO: This hard-encoding needs to be removed.
+    if(memcmp(full_path_buffer, "/dev", 5) == 0 ||
+    memcmp(full_path_buffer, "/dev/", 5) == 0) {
+      if ((ret = vfs_lookup("dev:", &node)) == 0) {
+        ret = vfs_set_curdir(node);
+        vop_ref_dec(node);
+      }
+      return ret;
+    }
+  }
+  //Try to lookup from current inode
 	if ((ret = vfs_lookup(path, &node)) == 0) {
 		ret = vfs_set_curdir(node);
 		vop_ref_dec(node);

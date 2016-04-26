@@ -15,6 +15,7 @@
  */
 static int get_device(char *path, char **subpath, struct inode **node_store)
 {
+  //TODO: Consider mountpoint.
 	int i, slash = -1, colon = -1;
 	/*
 	 * Locate the first colon or slash.

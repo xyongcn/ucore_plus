@@ -160,6 +160,7 @@ int vfs_getcwd(struct iobuf *iob);
  *
  * Both of these may destroy the path passed in.
  */
+void vfs_simplify_path(char* path);
 int vfs_lookup(char *path, struct inode **node_store);
 int vfs_lookup_parent(char *path, struct inode **node_store, char **endp);
 
