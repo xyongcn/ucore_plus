@@ -15,86 +15,48 @@
  */
 static int get_device(char *path, char **subpath, struct inode **node_store)
 {
-  //TODO: Consider mountpoint.
-	int i, slash = -1, colon = -1;
-	/*
-	 * Locate the first colon or slash.
-	 */
-	for (i = 0; path[i] != '\0'; i++) {
-		if (path[i] == ':') {
-			colon = i;
-			break;
-		}
-		if (path[i] == '/') {
-			slash = i;
-			break;
-		}
-	}
+  int ret;
 
-  static char full_path_buffer[1024];
-  vfs_expand_path(path, full_path_buffer, 1024);
+  //Get the inode and fs of current directory.
+  struct inode* current_dir_node;
+  ret = vfs_get_curdir(&current_dir_node);
+  if(ret != 0) return ret;
+  struct fs* current_dir_fs = vop_fs(current_dir_node);
 
-	if (colon < 0 && slash != 0) {
-		/* *
-		 * No colon before a slash, so no device name specified, and the slash isn't leading
-		 * or is also absent, so this is a relative path or just a bare filename. Start from
-		 * the current directory, and use the whole thing as the subpath.
-		 * */
-    if(memcmp(full_path_buffer, "/dev/", 5) == 0) {
-      //TODO: Security issue: this may lead to buffer overflow.
-      strcpy(path, full_path_buffer + 5);
+  //Get the path and fs we are changing into.
+  //TODO: This may lead to incorrect behavious when call get_device twice.
+  static char full_path[1024];
+  vfs_expand_path(path, full_path, 1024);
+  char* new_path;
+  struct fs* new_path_fs;
+  vfs_mount_parse_full_path(full_path, &new_path, &new_path_fs);
+
+  //If we are actually changing fs
+  if(new_path_fs != current_dir_fs) {
+    //Then anyway we need to lookup from the root of the new fs.
+    (*node_store) = fsop_get_root(new_path_fs);
+    if(*new_path == '\0') {
+      (*subpath) = ".";
     }
-		*subpath = path;
-		return vfs_get_curdir(node_store);
-	}
-
-	if (colon > 0) {
-    //TODO: This is a guard to prevent any legacy <devname>: path.
-    panic("path = %s. <devname>: syntax is no longer supported!\r\n", path);
-		/* device:path - get root of device's filesystem */
-		path[colon] = '\0';
-
-		/* device:/path - skip slash, treat as device:path */
-		while (path[++colon] == '/') ;
-
-		*subpath = path + colon;
-		return vfs_get_root(path, node_store);
-	}
-
-	/* *
-	 * we have either /path or :path
-	 * /path is a path relative to the root of the "boot filesystem"
-	 * :path is a path relative to the root of the current filesystem
-	 * */
-	int ret;
-	if (*path == '/') {
-    if(memcmp(full_path_buffer, "/dev/", 5) == 0) {
-      //TODO: Security issue: this may lead to buffer overflow.
-      strcpy(path, full_path_buffer + 5);
-      *subpath = path;
-      return vfs_get_root("dev", node_store);
+    else {
+      (*subpath) = new_path;
     }
-		if ((ret = vfs_get_bootfs(node_store)) != 0) {
-			return ret;
-		}
-	} else {
-    //TODO: This is a guard to prevent any legacy :path.
-    panic("path = %s. :path syntax is no longer supported!\r\n", path);
-		assert(*path == ':');
-		struct inode *node;
-		if ((ret = vfs_get_curdir(&node)) != 0) {
-			return ret;
-		}
-		/* The current directory may not be a device, so it must have a fs. */
-		assert(node->in_fs != NULL);
-		*node_store = fsop_get_root(node->in_fs);
-		vop_ref_dec(node);
-	}
-
-	/* ///... or :/... */
-	while (*(++path) == '/') ;
-	*subpath = path;
-	return 0;
+    return 0;
+  }
+  //Otherwise, check whether path is absolute or relative
+  else {
+    if(path[0] == '/') {
+      //For absolute path, look up from root inode.
+      (*node_store) = fsop_get_root(current_dir_fs);
+      (*subpath) = path + 1;
+    }
+    else {
+      //Otherwise, lookup from current directory
+      (*node_store) = current_dir_node;
+      (*subpath) = path;
+    }
+    return 0;
+  }
 }
 
 /*

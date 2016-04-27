@@ -24,9 +24,19 @@ void fs_init(void)
   if ((ret = devfs_mount("dev")) != 0) {
     panic("failed: devfs: devfs_mount: %e.\n", ret);
   }
-  //TODO: vfs: need to find out why vfs_add_fs didn't work.
-  //vfs_add_fs("dev", devfs_getfs());
-  vfs_get_root("disk0", &root_inode);
+
+  const char* ROOT_MOUNTPOINT = "/";
+  const char* ROOT_FS_DEVICE = "disk0";
+
+  const char* DEV_MOUNTPOINT = "/dev";
+  const char* DEV_FS_DEVICE = "dev";
+  struct inode* inode;
+
+  vfs_get_root(ROOT_FS_DEVICE, &inode);
+  vfs_mount_add_record(ROOT_MOUNTPOINT, vop_fs(inode));
+
+  vfs_get_root(DEV_FS_DEVICE, &inode);
+  vfs_mount_add_record(DEV_MOUNTPOINT, vop_fs(inode));
 }
 
 void fs_cleanup(void)

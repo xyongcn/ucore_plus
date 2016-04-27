@@ -59,6 +59,7 @@ void vfs_expand_path(const char* path, char* full_path_buffer, int max_length)
       struct iobuf full_path_iob;
       iobuf_init(&full_path_iob, full_path_buffer, max_length, 0);
       vop_namefile(node, &full_path_iob);
+      strcat(full_path_buffer, "/");
       strcat(full_path_buffer, path);
     }
     else {

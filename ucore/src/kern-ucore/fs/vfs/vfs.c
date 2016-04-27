@@ -2,10 +2,12 @@
 #include <stdio.h>
 #include <string.h>
 #include <slab.h>
-#include <vfs.h>
-#include <inode.h>
 #include <sem.h>
 #include <error.h>
+
+#include <vfs.h>
+#include <inode.h>
+#include <vfsmount.h>
 
 struct inode* root_inode = NULL;
 
@@ -28,6 +30,7 @@ void vfs_init(void)
 	sem_init(&bootfs_sem, 1);
 	vfs_devlist_init();
 	file_system_type_list_init();
+  vfs_mount_init();
 }
 
 static void lock_bootfs(void)
