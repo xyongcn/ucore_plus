@@ -30,16 +30,27 @@ static int get_device(char *path, char **subpath, struct inode **node_store)
 			break;
 		}
 	}
+
+  static char full_path_buffer[1024];
+  vfs_expand_path(path, full_path_buffer, 1024);
+
 	if (colon < 0 && slash != 0) {
 		/* *
 		 * No colon before a slash, so no device name specified, and the slash isn't leading
 		 * or is also absent, so this is a relative path or just a bare filename. Start from
 		 * the current directory, and use the whole thing as the subpath.
 		 * */
+    if(memcmp(full_path_buffer, "/dev/", 5) == 0) {
+      //TODO: Security issue: this may lead to buffer overflow.
+      strcpy(path, full_path_buffer + 5);
+    }
 		*subpath = path;
 		return vfs_get_curdir(node_store);
 	}
+
 	if (colon > 0) {
+    //TODO: This is a guard to prevent any legacy <devname>: path.
+    panic("path = %s. <devname>: syntax is no longer supported!\r\n", path);
 		/* device:path - get root of device's filesystem */
 		path[colon] = '\0';
 
@@ -57,10 +68,18 @@ static int get_device(char *path, char **subpath, struct inode **node_store)
 	 * */
 	int ret;
 	if (*path == '/') {
+    if(memcmp(full_path_buffer, "/dev/", 5) == 0) {
+      //TODO: Security issue: this may lead to buffer overflow.
+      strcpy(path, full_path_buffer + 5);
+      *subpath = path;
+      return vfs_get_root("dev", node_store);
+    }
 		if ((ret = vfs_get_bootfs(node_store)) != 0) {
 			return ret;
 		}
 	} else {
+    //TODO: This is a guard to prevent any legacy :path.
+    panic("path = %s. :path syntax is no longer supported!\r\n", path);
 		assert(*path == ':');
 		struct inode *node;
 		if ((ret = vfs_get_curdir(&node)) != 0) {

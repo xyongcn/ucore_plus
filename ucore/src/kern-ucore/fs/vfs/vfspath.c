@@ -49,6 +49,24 @@ void vfs_simplify_path(char* path) {
   else path[1] = '\0';
 }
 
+void vfs_expand_path(const char* path, char* full_path_buffer, int max_length)
+{
+  //TODO: Security issue: this may lead to buffer overflow.
+  struct inode *node;
+  //Firstly, get current working directory inode
+  if (vfs_get_curdir(&node) == 0) {
+    if(path[0] != '/') {
+      struct iobuf full_path_iob;
+      iobuf_init(&full_path_iob, full_path_buffer, max_length, 0);
+      vop_namefile(node, &full_path_iob);
+      strcat(full_path_buffer, path);
+    }
+    else {
+      strcpy(full_path_buffer, path);
+    }
+  }
+}
+
 static struct inode *get_cwd_nolock(void)
 {
 	return current->fs_struct->pwd;
@@ -141,10 +159,10 @@ int vfs_chdir(char *path)
     //TODO: Security issue: this may lead to buffer overflow.
     vfs_simplify_path(full_path_buffer);
     //kprintf("Full path:%s\r\n", full_path_buffer);
-    //TODO: This hard-encoding needs to be removed.
+    //TODO: This hard-encoding needs to be removed, and consider vfs mount.
     if(memcmp(full_path_buffer, "/dev", 5) == 0 ||
     memcmp(full_path_buffer, "/dev/", 5) == 0) {
-      if ((ret = vfs_lookup("dev:", &node)) == 0) {
+      if ((ret = vfs_get_root("dev", &node)) == 0) {
         ret = vfs_set_curdir(node);
         vop_ref_dec(node);
       }
@@ -173,7 +191,8 @@ int vfs_getcwd(struct iobuf *iob)
 	/* The current dir must be a directory, and thus it is not a device. */
 	assert(node->in_fs != NULL);
 
-	const char *devname = vfs_get_devname(node->in_fs);
+  //TODO: After disabling <devname>: syntax, need to consider mount point.
+	/*const char *devname = vfs_get_devname(node->in_fs);
 	if ((ret =
 	     iobuf_move(iob, (char *)devname, strlen(devname), 1, NULL)) != 0) {
 		goto out;
@@ -181,7 +200,7 @@ int vfs_getcwd(struct iobuf *iob)
 	char colon = ':';
 	if ((ret = iobuf_move(iob, &colon, sizeof(colon), 1, NULL)) != 0) {
 		goto out;
-	}
+	}*/
 	ret = vop_namefile(node, iob);
 
 out:

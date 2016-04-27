@@ -23,7 +23,7 @@ static struct inode *devfs_get_root(struct fs *fs)
 {
   extern const struct inode_ops devfs_root_dirops;
   static struct inode *node = NULL;
-  //if(node != NULL) return node;
+  if(node != NULL) return node;
   node = alloc_inode(device);
 	if(node != NULL) {
 		vop_init(node, &devfs_root_dirops, fs);

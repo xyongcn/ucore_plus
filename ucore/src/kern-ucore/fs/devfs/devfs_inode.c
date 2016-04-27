@@ -45,7 +45,8 @@ static int devfs_fsync(struct inode *node)
 
 static int devfs_namefile(struct inode *node, struct iobuf *iob)
 {
-  //TODO:
+  //TODO: Temporary workaround. A fs doesn't have to care about where it is mounted.
+  iobuf_move(iob, "/dev", 5, 1, NULL);
   return 0;
 }
 
@@ -87,6 +88,7 @@ static int devfs_getdirentry(struct inode *node, struct iobuf *iob)
 
 static int devfs_reclaim(struct inode *node)
 {
+  vop_ref_inc(node);
 	return 0;
 }
 

@@ -64,23 +64,22 @@ static void change_bootfs(struct inode *node)
  *
  * It is also incidentally the system's first current directory.
  */
-int vfs_set_bootfs(char *fsname)
+int vfs_set_bootfs(char *device_name)
 {
-	struct inode *node = NULL;
-	if (fsname != NULL) {
-		char *s;
-		if ((s = strchr(fsname, ':')) == NULL || s[1] != '\0') {
-			return -E_INVAL;
-		}
-		int ret;
-		if ((ret = vfs_chdir(fsname)) != 0) {
-			return ret;
-		}
-		if ((ret = vfs_get_curdir(&node)) != 0) {
-			return ret;
-		}
-	}
-	change_bootfs(node);
+  if(device_name == NULL) {
+    panic("VFS: setting bootfs with NULL as device_name.\r\n");
+    return -E_INVAL;
+  }
+	struct inode *device_root = NULL;
+	int ret;
+
+  ret = vfs_get_root(device_name, &device_root);
+  if(ret != 0) return ret;
+
+  ret = vfs_set_curdir(device_root);
+  if(ret != 0) return ret;
+
+	change_bootfs(device_root);
 	return 0;
 }
 
