@@ -17,7 +17,7 @@ void fs_init(void)
 	pipe_init();
 	sfs_init();
   int ret;
-  if ((ret = sfs_mount("disk0")) != 0) {
+  if ((ret = sfs_mount("disk2")) != 0) {
     panic("failed: sfs: sfs_mount: %e.\n", ret);
   }
   vfs_add_dev("dev", NULL, 1);
@@ -26,7 +26,7 @@ void fs_init(void)
   }
 
   const char* ROOT_MOUNTPOINT = "/";
-  const char* ROOT_FS_DEVICE = "disk0";
+  const char* ROOT_FS_DEVICE = "disk2";
 
   const char* DEV_MOUNTPOINT = "/dev";
   const char* DEV_FS_DEVICE = "dev";
