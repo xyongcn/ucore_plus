@@ -1972,10 +1972,11 @@ static int init_main(void *arg)
 #endif
 
 	int ret;
-	const char* ROOT_DEVICE = "disk0";
+	/*const char* ROOT_DEVICE = "disk0";
 	if ((ret = vfs_set_bootfs(ROOT_DEVICE)) != 0) {
 		panic("set boot fs failed: %e.\n", ret);
-	}
+	}*/
+  vfs_path_init_cwd("/");
 
 	size_t nr_used_pages_store = nr_used_pages();
 	size_t slab_allocated_store = slab_allocated();

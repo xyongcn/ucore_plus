@@ -121,6 +121,7 @@ int vfs_get_curdir(struct inode **dir_store);
 int vfs_sync(void);
 int vfs_get_root(const char *devname, struct inode **root_store);
 const char *vfs_get_devname(struct fs *fs);
+int vfs_path_init_cwd(char* path);
 
 /*
  * VFS layer high-level operations on pathnames
@@ -167,14 +168,6 @@ int vfs_lookup_parent(char *path, struct inode **node_store, char **endp);
 /*
  * Misc
  *
- *    vfs_set_bootfs - Set the filesystem that paths beginning with a
- *                    slash are sent to. If not set, these paths fail
- *                    with ENOENT. The argument should be the device
- *                    name or volume name for the filesystem (such as
- *                    "lhd0:") but need not have the trailing colon.
- *
- *    vfs_get_bootfs - return the inode of the bootfs filesystem.
- *
  *    vfs_add_fs     - Add a hardwired filesystem to the VFS named device
  *                    list. It will be accessible as "devname:". This is
  *                    intended for filesystem-devices like emufs, and
@@ -203,8 +196,6 @@ int vfs_lookup_parent(char *path, struct inode **node_store, char **endp);
  *
  *    vfs_unmountall - Unmount all mounted filesystems.
  */
-int vfs_set_bootfs(char *fsname);
-int vfs_get_bootfs(struct inode **node_store);
 
 int vfs_add_fs(const char *devname, struct fs *fs);
 int vfs_add_dev(const char *devname, struct inode *devnode, bool mountable);

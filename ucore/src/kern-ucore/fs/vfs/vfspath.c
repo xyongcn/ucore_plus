@@ -139,6 +139,26 @@ out:
 	return ret;
 }
 
+//This function is used to initialize cwd for a proc. path must be a full path.
+int vfs_path_init_cwd(char* path)
+{
+  //First set root to "/", after this, vfs_chdir can be used.
+  assert(path[0] == '/');
+  vfs_simplify_path(path);
+  struct mount_record* root_mount_record;
+  struct inode* root_inode;
+  vfs_mount_find_record_by_mountpoint("/", &root_mount_record);
+  if(root_mount_record == NULL) {
+    panic("Root is not mounted!");
+    return -E_INVAL;
+  }
+  root_inode = fsop_get_root(vfs_mount_get_record_fs(root_mount_record));
+  vfs_set_curdir(root_inode);
+
+  //Then call vfs_chdir
+  return vfs_chdir(path);
+}
+
 /*
  * Set current directory, as a pathname. Use vfs_lookup to translate
  * it to a inode.
