@@ -13,7 +13,7 @@
  * Common code to pull the device name, if any, off the front of a
  * path and choose the inode to begin the name lookup relative to.
  */
-static int get_device(char *path, char **subpath, struct inode **node_store)
+static int get_device(char *path, char *subpath, struct inode **node_store)
 {
   int ret;
 
@@ -24,9 +24,9 @@ static int get_device(char *path, char **subpath, struct inode **node_store)
   struct fs* current_dir_fs = vop_fs(current_dir_node);
 
   //Get the path and fs we are changing into.
-  //TODO: This may lead to incorrect behavious when call get_device twice.
   static char full_path[1024];
   vfs_expand_path(path, full_path, 1024);
+  vfs_simplify_path(full_path);
   char* new_path;
   struct fs* new_path_fs;
   vfs_mount_parse_full_path(full_path, &new_path, &new_path_fs);
@@ -36,24 +36,24 @@ static int get_device(char *path, char **subpath, struct inode **node_store)
     //Then anyway we need to lookup from the root of the new fs.
     (*node_store) = fsop_get_root(new_path_fs);
     if(*new_path == '\0') {
-      (*subpath) = ".";
+      strcpy(subpath, ".");
     }
     else {
-      (*subpath) = new_path;
+      strcpy(subpath, new_path);
     }
     return 0;
   }
   //Otherwise, check whether path is absolute or relative
   else {
     if(path[0] == '/') {
-      //For absolute path, look up from root inode.
-      (*node_store) = fsop_get_root(current_dir_fs);
-      (*subpath) = path + 1;
+      //For absolute path, look up from root inode (use new_path is required).
+      (*node_store) = fsop_get_root(new_path_fs);
+      strcpy(subpath, new_path);
     }
     else {
       //Otherwise, lookup from current directory
       (*node_store) = current_dir_node;
-      (*subpath) = path;
+      strcpy(subpath, path);
     }
     return 0;
   }
@@ -68,11 +68,14 @@ int vfs_lookup(char *path, struct inode **node_store)
 {
 	int ret;
 	struct inode *node;
-	if ((ret = get_device(path, &path, &node)) != 0) {
+  //TODO: Security issue: this may lead to buffer overflow.
+  static char subpath[1024];
+	if ((ret = get_device(path, subpath, &node)) != 0) {
 		return ret;
 	}
-	if (*path != '\0') {
-		ret = vop_lookup(node, path, node_store);
+	if (*subpath != '\0') {
+    //panic("...");
+		ret = vop_lookup(node, subpath, node_store);
 		vop_ref_dec(node);
 		return ret;
 	}
@@ -82,13 +85,15 @@ int vfs_lookup(char *path, struct inode **node_store)
 
 int vfs_lookup_parent(char *path, struct inode **node_store, char **endp)
 {
-	int ret;
+  int ret;
 	struct inode *node;
-	if ((ret = get_device(path, &path, &node)) != 0) {
+  //TODO: Security issue: this may lead to buffer overflow.
+  static char subpath[1024];
+	if ((ret = get_device(path, subpath, &node)) != 0) {
 		return ret;
 	}
 	ret =
-	    (*path != '\0') ? vop_lookup_parent(node, path, node_store,
+	    (*path != '\0') ? vop_lookup_parent(node, subpath, node_store,
 						endp) : -E_INVAL;
 	vop_ref_dec(node);
 	return ret;

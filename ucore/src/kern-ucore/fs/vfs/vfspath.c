@@ -8,6 +8,8 @@
 #include <error.h>
 #include <assert.h>
 
+#include "vfsmount.h"
+
 void vfs_simplify_path(char* path) {
   int write_pos = 0;
   int last_slash_pos = 0;
@@ -54,11 +56,12 @@ void vfs_expand_path(const char* path, char* full_path_buffer, int max_length)
   //TODO: Security issue: this may lead to buffer overflow.
   struct inode *node;
   //Firstly, get current working directory inode
+  full_path_buffer[0] = '\0';
   if (vfs_get_curdir(&node) == 0) {
     if(path[0] != '/') {
       struct iobuf full_path_iob;
       iobuf_init(&full_path_iob, full_path_buffer, max_length, 0);
-      vop_namefile(node, &full_path_iob);
+      vfs_getcwd(&full_path_iob);
       strcat(full_path_buffer, "/");
       strcat(full_path_buffer, path);
     }
@@ -144,34 +147,9 @@ int vfs_chdir(char *path)
 {
   int ret;
   struct inode *node;
-  //Firstly, get current working directory inode
-  if (vfs_get_curdir(&node) == 0) {
-    //Then get the full path of the working directory.
-    static char full_path_buffer[1024];
-    if(path[0] != '/') {
-      struct iobuf full_path_iob;
-      iobuf_init(&full_path_iob, full_path_buffer, 1024, 0);
-      vop_namefile(node, &full_path_iob);
-      strcat(full_path_buffer, path);
-    }
-    else {
-      strcpy(full_path_buffer, path);
-    }
-    //TODO: Security issue: this may lead to buffer overflow.
-    vfs_simplify_path(full_path_buffer);
-    //kprintf("Full path:%s\r\n", full_path_buffer);
-    //TODO: This hard-encoding needs to be removed, and consider vfs mount.
-    if(memcmp(full_path_buffer, "/dev", 5) == 0 ||
-    memcmp(full_path_buffer, "/dev/", 5) == 0) {
-      if ((ret = vfs_get_root("dev", &node)) == 0) {
-        ret = vfs_set_curdir(node);
-        vop_ref_dec(node);
-      }
-      return ret;
-    }
-  }
   //Try to lookup from current inode
 	if ((ret = vfs_lookup(path, &node)) == 0) {
+    //If found, change directory.
 		ret = vfs_set_curdir(node);
 		vop_ref_dec(node);
 	}
@@ -185,26 +163,39 @@ int vfs_chdir(char *path)
 int vfs_getcwd(struct iobuf *iob)
 {
 	int ret;
-	struct inode *node;
-	if ((ret = vfs_get_curdir(&node)) != 0) {
-		return ret;
-	}
-	/* The current dir must be a directory, and thus it is not a device. */
-	assert(node->in_fs != NULL);
+	struct inode *current_dir_node;
+  struct fs *current_dir_fs;
 
-  //TODO: After disabling <devname>: syntax, need to consider mount point.
-	/*const char *devname = vfs_get_devname(node->in_fs);
-	if ((ret =
-	     iobuf_move(iob, (char *)devname, strlen(devname), 1, NULL)) != 0) {
-		goto out;
-	}
-	char colon = ':';
-	if ((ret = iobuf_move(iob, &colon, sizeof(colon), 1, NULL)) != 0) {
-		goto out;
-	}*/
-	ret = vop_namefile(node, iob);
+  //Get the inode and fs of current working directory.
+  ret = vfs_get_curdir(&current_dir_node);
+  if(ret != 0) return ret;
+  current_dir_fs = vop_fs(current_dir_node);
+	assert(current_dir_fs != NULL);
+
+  //TODO: Security issue: this may lead to buffer overflow.
+  static char full_path[1024];
+  static char partial_path[1024];
+
+  //Get the current mountpoint
+  struct vfs_mount_record* mount_record;
+  vfs_mount_find_record_by_fs(current_dir_fs, &mount_record);
+  assert(mount_record != NULL);
+  strcpy(full_path, mount_record->mountpoint);
+
+  //Get the file path relative to the mount point.
+  struct iobuf partial_path_iob;
+  iobuf_init(&partial_path_iob, partial_path, 1024, 0);
+  ret = vop_namefile(current_dir_node, &partial_path_iob);
+  if(ret != 0) goto out;
+
+  //Joint them together and simplify
+  //TODO: string operations here can be optimized.
+  strcat(full_path, "/");
+  strcat(full_path, partial_path);
+  vfs_simplify_path(full_path);
+  iobuf_move(iob, full_path, strlen(full_path) + 1, 1, NULL);
 
 out:
-	vop_ref_dec(node);
+	vop_ref_dec(current_dir_node);
 	return ret;
 }
