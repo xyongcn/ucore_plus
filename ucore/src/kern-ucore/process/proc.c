@@ -37,20 +37,20 @@ manage all these details efficiently. In ucore, a thread is just a special kind 
 process state       :     meaning               -- reason
     PROC_UNINIT     :   uninitialized           -- alloc_proc
     PROC_SLEEPING   :   sleeping                -- try_free_pages, do_wait, do_sleep
-    PROC_RUNNABLE   :   runnable(maybe running) -- proc_init, wakeup_proc, 
+    PROC_RUNNABLE   :   runnable(maybe running) -- proc_init, wakeup_proc,
     PROC_ZOMBIE     :   almost dead             -- do_exit
 
 -----------------------------
 process state changing:
-                                            
+
   alloc_proc                                 RUNNING
       +                                   +--<----<--+
       +                                   + proc_run +
-      V                                   +-->---->--+ 
+      V                                   +-->---->--+
 PROC_UNINIT -- proc_init/wakeup_proc --> PROC_RUNNABLE -- try_free_pages/do_wait/do_sleep --> PROC_SLEEPING --
                                            A      +                                                           +
                                            |      +--- do_exit --> PROC_ZOMBIE                                +
-                                           +                                                                  + 
+                                           +                                                                  +
                                            -----------------------wakeup_proc----------------------------------
 -----------------------------
 process relations
@@ -66,9 +66,9 @@ SYS_wait        : wait process                            -->do_wait
 SYS_exec        : after fork, process execute a program   -->load a program and refresh the mm
 SYS_clone       : create child thread                     -->do_fork-->wakeup_proc
 SYS_yield       : process flag itself need resecheduling, -- proc->need_sched=1, then scheduler will rescheule this process
-SYS_sleep       : process sleep                           -->do_sleep 
+SYS_sleep       : process sleep                           -->do_sleep
 SYS_kill        : kill process                            -->do_kill-->proc->flags |= PF_EXITING
-                                                                 -->wakeup_proc-->do_wait-->do_exit   
+                                                                 -->wakeup_proc-->do_wait-->do_exit
 SYS_getpid      : get the process's pid
 
 */
@@ -562,7 +562,7 @@ void may_killed(void)
 //    1. call alloc_proc to allocate a proc_struct
 //    2. call setup_kstack to allocate a kernel stack for child process
 //    3. call copy_mm to dup OR share mm according clone_flag
-//    4. call wakup_proc to make the new child process RUNNABLE 
+//    4. call wakup_proc to make the new child process RUNNABLE
 int do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf)
 {
 	int ret = -E_NO_FREE_PROC;
@@ -986,7 +986,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 		   end = ph->p_va + ph->p_memsz;
 
 		   if (start < la) {
-		   // ph->p_memsz == ph->p_filesz 
+		   // ph->p_memsz == ph->p_filesz
 		   if (start == end) {
 		   continue ;
 		   }
@@ -1800,7 +1800,7 @@ int do_mprotect(void *addr, size_t len, int prot)
 {
 
 	/*
-	   return 0; 
+	   return 0;
 	 */
 
 	struct mm_struct *mm = current->mm;
@@ -1942,9 +1942,9 @@ out_unlock:
 // user_main - kernel thread used to exec a user program
 static int user_main(void *arg)
 {
-	sysfile_open("stdin:", O_RDONLY);
-	sysfile_open("stdout:", O_WRONLY);
-	sysfile_open("stdout:", O_WRONLY);
+	sysfile_open("/dev/stdin", O_RDONLY);
+	sysfile_open("/dev/stdout", O_WRONLY);
+	sysfile_open("/dev/stdout", O_WRONLY);
 #ifdef UNITTEST
 #ifdef TESTSCRIPT
 	KERNEL_EXECVE3(UNITTEST, TESTSCRIPT);
@@ -1972,10 +1972,11 @@ static int init_main(void *arg)
 #endif
 
 	int ret;
-	char root[] = "disk0:";
-	if ((ret = vfs_set_bootfs(root)) != 0) {
+	/*const char* ROOT_DEVICE = "disk0";
+	if ((ret = vfs_set_bootfs(ROOT_DEVICE)) != 0) {
 		panic("set boot fs failed: %e.\n", ret);
-	}
+	}*/
+  vfs_path_init_cwd("/");
 
 	size_t nr_used_pages_store = nr_used_pages();
 	size_t slab_allocated_store = slab_allocated();
@@ -2023,7 +2024,7 @@ static int init_main(void *arg)
 	return 0;
 }
 
-// proc_init - set up the first kernel thread idleproc "idle" by itself and 
+// proc_init - set up the first kernel thread idleproc "idle" by itself and
 //           - create the second kernel thread init_main
 void proc_init(void)
 {

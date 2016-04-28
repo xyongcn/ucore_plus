@@ -16,7 +16,7 @@ struct iobuf;
 /*
  * A struct inode is an abstract representation of a file.
  *
- * It is an interface that allows the kernel's filesystem-independent 
+ * It is an interface that allows the kernel's filesystem-independent
  * code to interact usefully with multiple sets of filesystem code.
  */
 
@@ -106,7 +106,7 @@ void inode_kill(struct inode *node);
  *                      reject illegal or undesired open modes. Note that
  *                      various operations can be performed without the
  *                      file actually being opened.
- *                      The inode need not look at O_CREAT, O_EXCL, or 
+ *                      The inode need not look at O_CREAT, O_EXCL, or
  *                      O_TRUNC, as these are handled in the VFS layer.
  *
  *                      VOP_EACHOPEN should not be called directly from
@@ -153,7 +153,7 @@ void inode_kill(struct inode *node);
  *                      DATA. The interpretation of the data is specific
  *                      to each ioctl.
  *
- *    vop_stat        - Return info about a file. The pointer is a 
+ *    vop_stat        - Return info about a file. The pointer is a
  *                      pointer to struct stat; see kern/stat.h.
  *
  *    vop_gettype     - Return type of file. The values for file types
@@ -192,7 +192,7 @@ void inode_kill(struct inode *node);
  *    vop_link        - Create hard link, with name NAME, to file FILE
  *                      in the passed directory DIR.
  *
- *    vop_unlink      - Delete non-directory object NAME from passed 
+ *    vop_unlink      - Delete non-directory object NAME from passed
  *                      directory. If NAME refers to a directory,
  *                      return EISDIR. If passed inode is not a
  *                      directory, return ENOTDIR.
