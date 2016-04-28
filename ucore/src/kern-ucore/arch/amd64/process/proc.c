@@ -59,7 +59,7 @@ copy_thread(uint32_t clone_flags, struct proc_struct *proc, uintptr_t rsp,
 }
 
 // kernel_thread - create a kernel thread using "fn" function
-// NOTE: the contents of temp trapframe tf will be copied to 
+// NOTE: the contents of temp trapframe tf will be copied to
 //       proc->tf in do_fork-->copy_thread function
 int kernel_thread(int (*fn) (void *), void *arg, uint32_t clone_flags)
 {
@@ -103,6 +103,9 @@ init_new_context(struct proc_struct *proc, struct elfhdr *elf,
 	int i;
 	for (i = 0; i < argc; i++) {
 		uargv[i] = strcpy((char *)(stacktop + i * PGSIZE), kargv[i]);
+    //TODO: Seems __strcpy for amd64 has a bug, always returning 0,
+    //But I don't find the exact reason so the following work around is used.
+    uargv[i] = (char *)(stacktop + i * PGSIZE);
 	}
 	stacktop = (uintptr_t) uargv;
 
