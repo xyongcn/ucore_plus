@@ -11,9 +11,9 @@ list_entry_t devfs_device_list;
 
 void devfs_init(void)
 {
-	int ret;
-	if ((ret = register_filesystem("devfs", devfs_mount)) != 0) {
-		panic("failed: sfs: register_filesystem: %e.\n", ret);
+	int ret = register_filesystem(&devfs_fs_type);
+	if (ret != 0) {
+		panic("failed: devfs: register_filesystem: %e.\n", ret);
 	}
   list_init(&devfs_device_list);
   return ret;

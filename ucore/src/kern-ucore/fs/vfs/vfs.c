@@ -62,56 +62,30 @@ void file_system_type_list_init(void)
 	sem_init(&file_system_type_sem, 1);
 }
 
-int register_filesystem(const char *name, int (*mount) (const char *devname))
+int register_filesystem(struct file_system_type* fs_type)
 {
-	assert(name != NULL);
-	if (strlen(name) > FS_MAX_DNAME_LEN) {
-		return -E_TOO_BIG;
-	}
+	assert(fs_type->name != NULL);
 
-	int ret = -E_NO_MEM;
-	char *s_name;
-	if ((s_name = strdup(name)) == NULL) {
-		return ret;
-	}
-
-	struct file_system_type *fstype;
-	if ((fstype = kmalloc(sizeof(struct file_system_type))) == NULL) {
-		goto failed_cleanup_name;
-	}
-
-	ret = -E_EXISTS;
 	lock_file_system_type_list();
-	if (!check_file_system_type_name_conflict(s_name)) {
+	if (!check_file_system_type_name_conflict(fs_type->name)) {
 		unlock_file_system_type_list();
-		goto failed_cleanup_fstype;
+		return -E_EXISTS;
 	}
-	fstype->name = s_name;
-	fstype->mount = mount;
 
-	list_add(&file_system_type_list, &(fstype->file_system_type_link));
+	list_add(&file_system_type_list, &(fs_type->file_system_type_link));
 	unlock_file_system_type_list();
 	return 0;
-
-failed_cleanup_fstype:
-	kfree(fstype);
-failed_cleanup_name:
-	kfree(s_name);
-	return ret;
 }
 
-int unregister_filesystem(const char *name)
+int unregister_filesystem(struct file_system_type* fs_type)
 {
-	int ret = -E_EXISTS;
+	int ret = -E_INVAL;
 	lock_file_system_type_list();
+
 	list_entry_t *list = &file_system_type_list, *le = list;
 	while ((le = list_next(le)) != list) {
-		struct file_system_type *fstype =
-		    le2fstype(le, file_system_type_link);
-		if (strcmp(fstype->name, name) == 0) {
+		if (le2fstype(le, file_system_type_link) == fs_type) {
 			list_del(le);
-			kfree((char *)fstype->name);
-			kfree(fstype);
 			ret = 0;
 			break;
 		}
@@ -121,8 +95,41 @@ int unregister_filesystem(const char *name)
 	return ret;
 }
 
-int do_mount(const char *devname, const char *fsname)
+int vfs_find_filesystem_by_name(const char* name, struct file_system_type** fs_type_store)
 {
+	lock_file_system_type_list();
+
+	list_entry_t *list = &file_system_type_list, *le = list;
+	while ((le = list_next(le)) != list) {
+    struct file_system_type *fs_type = le2fstype(le, file_system_type_link);
+		if (strcmp(fs_type->name, name) == 0) {
+      unlock_file_system_type_list();
+      (*fs_type_store) = fs_type;
+			return 0;
+		}
+	}
+
+	unlock_file_system_type_list();
+	return -E_INVAL;
+}
+
+int vfs_do_mount_nocheck(const char *devname, const char* mountpoint,
+  const char *fs_name, int flags, void* data)
+{
+  int ret;
+  struct file_system_type *fs_type;
+  ret = vfs_find_filesystem_by_name(fs_name, &fs_type);
+  if(ret != 0) return ret;
+  struct fs *filesystem;
+  ret = fs_type->mount(fs_type, flags, devname, data, &filesystem);
+  if(ret != 0) return ret;
+  return vfs_mount_add_record(mountpoint, filesystem);
+}
+
+int do_mount(const char *devname, const char* mountpoint, const char *fs_name)
+{
+  vfs_do_mount_nocheck(devname, mountpoint, fs_name, 0, NULL);
+  /*const char* fsname = filesystem;
 	int ret = -E_EXISTS;
 	lock_file_system_type_list();
 	list_entry_t *list = &file_system_type_list, *le = list;
@@ -136,7 +143,7 @@ int do_mount(const char *devname, const char *fsname)
 		}
 	}
 	unlock_file_system_type_list();
-	return ret;
+	return ret;*/
 }
 
 int do_umount(const char *devname)

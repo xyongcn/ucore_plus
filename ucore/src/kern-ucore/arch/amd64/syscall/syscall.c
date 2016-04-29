@@ -335,6 +335,21 @@ static uint64_t sys_halt(uint64_t arg[])
 	panic("halt returned");
 }
 
+static uint64_t sys_mount(uint64_t arg[])
+{
+	const char *source = (const char *)arg[0];
+	const char *target = (const char *)arg[1];
+	const char *filesystemtype = (const char *)arg[2];
+	const void *data = (const void *)arg[3];
+	return do_mount(source, target, filesystemtype);
+}
+
+static uint64_t sys_umount(uint64_t arg[])
+{
+	const char *target = (const char *)arg[0];
+	return do_umount(target);
+}
+
 static uint64_t(*syscalls[]) (uint64_t arg[]) = {
 [SYS_exit] sys_exit,
 	    [SYS_fork] sys_fork,
@@ -379,8 +394,13 @@ static uint64_t(*syscalls[]) (uint64_t arg[]) = {
 	    [SYS_rename] sys_rename,
 	    [SYS_unlink] sys_unlink,
 	    [SYS_getdirentry] sys_getdirentry,
-	    [SYS_dup] sys_dup,[SYS_pipe] sys_pipe,[SYS_mkfifo] sys_mkfifo,
-            [SYS_halt] sys_halt,};
+	    [SYS_dup] sys_dup,
+      [SYS_pipe] sys_pipe,
+      [SYS_mkfifo] sys_mkfifo,
+      [SYS_halt] sys_halt,
+      [SYS_mount] sys_mount,
+      [SYS_umount] sys_umount
+    };
 
 #define NUM_SYSCALLS        ((sizeof(syscalls)) / (sizeof(syscalls[0])))
 
@@ -511,7 +531,7 @@ static uint64_t __sys_linux_pipe(uint64_t arg[])
 /*
   Clone a task - this clones the calling program thread.
   * This is called indirectly via a small wrapper
-  
+
  asmlinkage int sys_clone(unsigned long clone_flags, unsigned long newsp,
                           int __user *parent_tidptr, int tls_val,
                           int __user *child_tidptr, struct pt_regs *regs)
@@ -927,5 +947,3 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_fanotify_mark] unknown,
 	[__NR_prlimit64] unknown
 };
-
-
