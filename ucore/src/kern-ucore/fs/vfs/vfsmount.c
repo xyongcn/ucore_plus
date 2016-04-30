@@ -15,7 +15,7 @@ void vfs_mount_init()
 int vfs_mount_add_record(const char* mountpoint, struct fs* filesystem)
 {
   struct vfs_mount_record* record = kmalloc(sizeof(struct vfs_mount_record));
-  record->mountpoint = mountpoint;
+  record->mountpoint = strdup(mountpoint);
   record->filesystem = filesystem;
   list_add(&vfs_mount_record_list, &record->list_entry);
   return 0;

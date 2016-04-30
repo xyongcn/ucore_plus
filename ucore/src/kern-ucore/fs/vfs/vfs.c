@@ -128,7 +128,7 @@ int vfs_do_mount_nocheck(const char *devname, const char* mountpoint,
 
 int do_mount(const char *devname, const char* mountpoint, const char *fs_name)
 {
-  vfs_do_mount_nocheck(devname, mountpoint, fs_name, 0, NULL);
+  return vfs_do_mount_nocheck(devname, mountpoint, fs_name, 0, NULL);
   /*const char* fsname = filesystem;
 	int ret = -E_EXISTS;
 	lock_file_system_type_list();

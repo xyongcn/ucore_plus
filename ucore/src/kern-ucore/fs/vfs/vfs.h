@@ -210,7 +210,7 @@ void file_system_type_list_init(void);
 int register_filesystem(struct file_system_type* fs_type);
 int unregister_filesystem(struct file_system_type* fs_type);
 
-int do_mount(const char *devname, const char* mountpoint, const char *filesystem);
+int do_mount(const char *devname, const char* mountpoint, const char *fs_name);
 int do_umount(const char *devname);
 
 #endif /* !__KERN_FS_VFS_VFS_H__ */
