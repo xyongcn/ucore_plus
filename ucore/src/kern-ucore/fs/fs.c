@@ -21,7 +21,7 @@ void fs_init(void)
 
   vfs_do_mount_nocheck("none", "/dev", "devfs", 0, NULL);
   vfs_path_init_cwd("/dev");
-  do_mount("/dev/disk2", "/", "sfs", 0, NULL);
+  vfs_do_mount_nocheck("/dev/disk2", "/", "sfs", 0, NULL);
 }
 
 void fs_cleanup(void)

@@ -21,6 +21,13 @@ int vfs_mount_add_record(const char* mountpoint, struct fs* filesystem)
   return 0;
 }
 
+int vfs_mount_remove_record(struct vfs_mount_record* record)
+{
+  list_del(&record->list_entry);
+  kfree(record);
+  return 0;
+}
+
 struct fs* vfs_mount_get_record_fs(struct vfs_mount_record* record)
 {
   return record->filesystem;
@@ -37,7 +44,7 @@ int vfs_mount_find_record_by_fs(struct fs* filesystem, struct vfs_mount_record**
     }
   }
   (*record_store) = NULL;
-  return 0;
+  return -E_INVAL;
 }
 
 int vfs_mount_find_record_by_mountpoint(char* mountpoint, struct vfs_mount_record** record_store)
@@ -45,13 +52,13 @@ int vfs_mount_find_record_by_mountpoint(char* mountpoint, struct vfs_mount_recor
   for(list_entry_t* i = list_next(&vfs_mount_record_list);
   i != &vfs_mount_record_list; i = list_next(i)) {
     struct vfs_mount_record* record = container_of(i, struct vfs_mount_record, list_entry);
-    if(strcmp(record->mountpoint, mountpoint)) {
+    if(strcmp(record->mountpoint, mountpoint) == 0) {
       (*record_store) = record;
       return 0;
     }
   }
   (*record_store) = NULL;
-  return 0;
+  return -E_INVAL;
 }
 
 int vfs_mount_parse_full_path(

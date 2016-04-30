@@ -340,8 +340,9 @@ static uint64_t sys_mount(uint64_t arg[])
 	const char *source = (const char *)arg[0];
 	const char *target = (const char *)arg[1];
 	const char *filesystemtype = (const char *)arg[2];
-	const void *data = (const void *)arg[3];
-	return do_mount(source, target, filesystemtype);
+  uint64_t mountflags = arg[3];
+	const void *data = (const void *)arg[4];
+	return do_mount(source, target, filesystemtype, mountflags, data);
 }
 
 static uint64_t sys_umount(uint64_t arg[])
