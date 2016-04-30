@@ -68,7 +68,7 @@ int sys_cleanup_module(const char __user * name);
 int sys_list_module();
 
 int sys_mount(const char *source, const char *target,
-	      const char *filesystemtype, const void *data);
+	      const char *filesystemtype, unsigned long flags, const void *data);
 int sys_umount(const char *target);
 
 int sys_ioctl(int d, int request, unsigned long data);
