@@ -253,9 +253,8 @@ int sys_list_module()
 	return syscall(SYS_list_module);
 }
 
-int
 int sys_mount(const char *source, const char *target,
-  const char *filesystemtype, unsigned long flags, const void *data);
+  const char *filesystemtype, unsigned long flags, const void *data)
 {
 	return syscall(SYS_mount, source, target, filesystemtype, flags, data);
 }
