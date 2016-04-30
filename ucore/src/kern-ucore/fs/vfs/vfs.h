@@ -66,7 +66,8 @@ struct fs {
 
 struct file_system_type {
 	const char *name;
-	int (*mount) (const char *devname);
+	int (*mount) (struct file_system_type* file_system_type, int flags,
+    const char *devname, void* data, struct fs** fs_store);
 	list_entry_t file_system_type_link;
 };
 
@@ -206,10 +207,13 @@ int vfs_unmount(const char *devname);
 int vfs_unmount_all(void);
 
 void file_system_type_list_init(void);
-int register_filesystem(const char *name, int (*mount) (const char *devname));
-int unregister_filesystem(const char *name);
+int register_filesystem(struct file_system_type* fs_type);
+int unregister_filesystem(struct file_system_type* fs_type);
 
-int do_mount(const char *devname, const char *fsname);
-int do_umount(const char *devname);
+int vfs_do_mount_nocheck(const char *devname, const char* mountpoint,
+  const char *fs_name, int flags, void* data);
+int do_mount(const char *devname, const char* mountpoint, const char *fs_name,
+  unsigned long flags, void* data);
+int do_umount(const char *target);
 
 #endif /* !__KERN_FS_VFS_VFS_H__ */

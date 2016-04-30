@@ -12,7 +12,16 @@
 #include <bitmap.h>
 #include <error.h>
 #include <assert.h>
+#include <stat.h>
 #include <kio.h>
+
+static int sfs_mount(struct file_system_type* file_system_type, int flags,
+  const char *devname, void* data, struct fs** fs_store);
+
+struct file_system_type sfs_fs_type = {
+  .name = "sfs",
+  .mount = sfs_mount
+};
 
 /*
  * Sync routine. This is what gets invoked if you do FS_SYNC on the
@@ -43,9 +52,9 @@ static int sfs_sync(struct fs *fs)
         *           :      :  fs_info(__sfs_info) ---/          |
         *           :      :                             ...|...
         *           :                                   .  VFS  .
-        *           :                                   . layer . 
+        *           :                                   . layer .
         *           :   other members                    .......
-        *           :                                    
+        *           :
         *           :
  *
  * This construct is repeated with inodes and devices and other
@@ -171,8 +180,21 @@ sfs_init_freemap(struct device *dev, struct bitmap *freemap, uint32_t blkno,
  * mounted on the same device at once.
  */
 
-static int sfs_do_mount(struct device *dev, struct fs **fs_store)
+static int sfs_mount(struct file_system_type* file_system_type, int flags,
+  const char *devname, void* data, struct fs** fs_store)
 {
+  //Checks whether devname points to a block device.
+  struct inode* dev_node = NULL;
+  if(vfs_lookup(devname, &dev_node) != 0) {
+    return -E_NOENT;
+  }
+  uint32_t node_type;
+  if(vop_gettype(dev_node, &node_type) != 0 || node_type != S_IFBLK) {
+    return -E_NOTBLK;
+  }
+
+  //Get the block device specified by devname
+  struct device* dev = vop_info(dev_node, device);
 
 /*
  * Make sure SFS on-disk structures aren't messed up
@@ -297,13 +319,4 @@ failed_cleanup_sfs_buffer:
 failed_cleanup_fs:
 	kfree(fs);
 	return ret;
-}
-
-/*
- * Actual function called from high-level code to mount an sfs.
- */
-
-int sfs_mount(const char *devname)
-{
-	return vfs_mount(devname, sfs_do_mount);
 }
