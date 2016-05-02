@@ -67,7 +67,7 @@ __FBSDID("$FreeBSD$");
 #include "freebsd_compat/sys/proc.h"
 #include "freebsd_compat/sys/mount.h"
 #include "freebsd_compat/sys/vnode.h"
-#include "freebsd_compat/sys/stat.h"
+#include <stat.h>
 #include "freebsd_compat/sys/file.h"
 //#include <sys/buf.h>
 #include "freebsd_compat/sys/sysctl.h"

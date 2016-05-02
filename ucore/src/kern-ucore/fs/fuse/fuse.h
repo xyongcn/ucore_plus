@@ -58,6 +58,7 @@
 #include "fuse_kernel.h"
 
 #define printf(...) kprintf(__VA_ARGS__) //Added for printf compatibility
+#define S_BLKSIZE       512              //Added for FUSE need to use this MACRO.
 
 #define FUSE_DEFAULT_DAEMON_TIMEOUT                60     /* s */
 #define FUSE_MIN_DAEMON_TIMEOUT                    0      /* s */
