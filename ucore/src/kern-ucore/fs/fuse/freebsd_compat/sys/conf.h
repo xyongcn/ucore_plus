@@ -16,20 +16,6 @@
 #define D_VERSION_03    0x17122009      /* d_mmap takes memattr,vm_ooffset_t */
 #define D_VERSION       D_VERSION_03
 
-#define		UID_ROOT	0
-#define		UID_BIN		3
-#define		UID_UUCP	66
-#define		UID_NOBODY	65534
-
-#define		GID_WHEEL	0
-#define		GID_KMEM	2
-#define		GID_TTY		4
-#define		GID_OPERATOR	5
-#define		GID_BIN		7
-#define		GID_GAMES	13
-#define		GID_DIALER	68
-#define		GID_NOBODY	65534
-
 struct cdev;
 struct cdevsw;
 struct thread;
@@ -58,26 +44,11 @@ struct cdevsw {
 	d_poll_t *d_poll;
 };
 
-/*
- * Used to pass a stub thread ID and ucred object to FUSE character device I/O
- * functions.
- * TODO: This is a temporary solution and may lead to severe bug.
- */
-
-static struct ucred freebsd_char_device_stub_ucred = {
-  .cr_uid = UID_ROOT,
-  .cr_ruid = UID_ROOT,
-  .cr_svuid = UID_ROOT,
-  .cr_rgid = GID_WHEEL,
-  .cr_svgid = GID_WHEEL,
-  .cr_groups = {GID_WHEEL}
-};
-
 //TODO : Seems only tid and ucred is used in fuse_device operations.
 static struct thread freebsd_stub_thread = {
   .td_proc = NULL,
   .td_tid = 0,
-  .td_ucred = &freebsd_char_device_stub_ucred,
+  .td_ucred = &freebsd_stub_ucred,
   .td_fpop = NULL
   //sigqueue_t	td_sigqueue;
 };

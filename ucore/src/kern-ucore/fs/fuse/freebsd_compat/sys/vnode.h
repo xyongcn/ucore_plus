@@ -8,6 +8,7 @@
 #include "stat.h"
 #include "dirent.h"
 #include "file.h"
+#include <inode.h>
 #include "../vm/vm_page.h"
 
 struct cdev;
@@ -130,6 +131,7 @@ enum vtype      { VNON, VREG, VDIR, VBLK, VCHR, VLNK, VSOCK, VFIFO, VBAD,
                   VMARKER };
 
 struct vnode {
+  struct inode* ucore_inode;
 	/*
 	 * Fields which define the identity of the vnode.  These fields are
 	 * owned by the filesystem (XXX: and vgone() ?)
@@ -291,10 +293,27 @@ extern int              vttoif_tab[];
 static void vfs_hash_remove(struct vnode *vp) {
 }
 
+/*
+ * vputf and vrele are both used for decrease refcount. The following is
+ * from FreeBSD Official document, explaining their difference.
+ *
+ * The vrele() function takes	an unlocked vnode and returns with the vnode
+ * unlocked.
+
+ * The vput()	function should	be given a locked vnode	as argument, the vnode
+ * is	unlocked after the function returned.  The vput() is operationally
+ * equivalent	to calling VOP_UNLOCK(9) followed by vrele(9), with less over-
+ * head.
+ */
+
 static void vput(struct vnode *vp) {
+  //TODO: Unlock the inode.
+  inode_ref_dec(vp->ucore_inode);
 }
 
 static void vrele(struct vnode *vp) {
+  //TODO: Assert the node is locked.
+  inode_ref_dec(vp->ucore_inode);
 }
 
 static void vref(struct vnode *vp) {
@@ -366,10 +385,6 @@ struct componentname *cnp, struct timespec *tsp, int *ticksp) {
   return 0;
 }
 
-static int getnewvnode(const char *tag, struct mount *mp, struct vop_vector *vops, struct vnode **vpp) {
-  return 0;
-}
-
 //vnode_pager.h
 
 static void vnode_pager_setsize(struct vnode *vp, vm_ooffset_t nsize) {
@@ -385,5 +400,126 @@ static int insmntque(struct vnode *vp, struct mount *mp) {
 }
 
 #include "vnode_if.h"
+
+static int ucore_vop_open(struct inode * node, uint32_t open_flags)
+{
+  struct vnode* freebsd_vnode = inode_get_private_data(node);
+  struct vop_open_args open_args;
+  open_args.a_vp = freebsd_vnode;
+  open_args.a_mode = open_flags; //TODO: Convertion mgiht be required?
+  open_args.a_cred = &freebsd_stub_ucred;
+  open_args.a_td = NULL; //TODO: This won't work
+#undef vop_open
+  return freebsd_vnode->v_op->vop_open(&open_args);
+}
+
+static int ucore_vop_close(struct inode * node)
+{
+  struct vnode* freebsd_vnode = inode_get_private_data(node);
+  struct vop_close_args close_args;
+  close_args.a_vp = freebsd_vnode;
+  close_args.a_fflag = 0; //TODO: Using 0 as flags
+  close_args.a_cred = &freebsd_stub_ucred;
+#undef vop_close
+  return freebsd_vnode->v_op->vop_close(&close_args);
+}
+
+static int ucore_vop_read(struct inode * node, struct iobuf * iob)
+{
+  struct iovec freebsd_iovec = {
+    .iov_base = iob->io_base,
+    .iov_len = iob->io_len
+  };
+  struct uio freebsd_uio = {
+    .uio_iov = &freebsd_iovec,
+    .uio_iovcnt = 1,
+    .uio_offset = iob->io_offset,
+    .uio_resid = iob->io_resid,
+    .uio_segflg = UIO_SYSSPACE,
+    .uio_rw = UIO_READ,
+    .uio_td = &freebsd_stub_thread
+  };
+  struct vnode* freebsd_vnode = inode_get_private_data(node);
+  struct vop_read_args read_args = {
+    .a_vp = freebsd_vnode,
+    .a_uio = &freebsd_uio,
+    .a_ioflag = 0, //Use 0 as I/O flags
+    .a_cred = &freebsd_stub_ucred
+  };
+#undef vop_read
+  return freebsd_vnode->v_op->vop_read(&read_args);
+}
+
+static int ucore_vop_write(struct inode * node, struct iobuf * iob)
+{
+  struct iovec freebsd_iovec = {
+    .iov_base = iob->io_base,
+    .iov_len = iob->io_len
+  };
+  struct uio freebsd_uio = {
+    .uio_iov = &freebsd_iovec,
+    .uio_iovcnt = 1,
+    .uio_offset = iob->io_offset,
+    .uio_resid = iob->io_resid,
+    .uio_segflg = UIO_SYSSPACE,
+    .uio_rw = UIO_WRITE,
+    .uio_td = &freebsd_stub_thread
+  };
+  struct vnode* freebsd_vnode = inode_get_private_data(node);
+  struct vop_write_args write_args = {
+    .a_vp = freebsd_vnode,
+    .a_uio = &freebsd_uio,
+    .a_ioflag = 0, //Use 0 as I/O flags
+    .a_cred = &freebsd_stub_ucred
+  };
+#undef vop_write
+  return freebsd_vnode->v_op->vop_write(&write_args);
+}
+
+static struct inode_ops ucore_inode_operation_wrapper = {
+	.vop_magic = VOP_MAGIC,
+  .vop_open = ucore_vop_open,
+  .vop_close = ucore_vop_close,
+  .vop_read = ucore_vop_read,
+  .vop_write = ucore_vop_write,
+	/*int (*vop_fstat) (struct inode * node, struct stat * stat);
+	int (*vop_fsync) (struct inode * node);
+	int (*vop_mkdir) (struct inode * node, const char *name);
+	int (*vop_link) (struct inode * node, const char *name,
+			 struct inode * link_node);
+	int (*vop_rename) (struct inode * node, const char *name,
+			   struct inode * new_node, const char *new_name);
+	int (*vop_readlink) (struct inode * node, struct iobuf * iob);
+	int (*vop_symlink) (struct inode * node, const char *name,
+			    const char *path);
+	int (*vop_namefile) (struct inode * node, struct iobuf * iob);
+	int (*vop_getdirentry) (struct inode * node, struct iobuf * iob);
+	int (*vop_reclaim) (struct inode * node);
+	int (*vop_ioctl) (struct inode * node, int op, void *data);
+	int (*vop_gettype) (struct inode * node, uint32_t * type_store);
+	int (*vop_tryseek) (struct inode * node, off_t pos);
+	int (*vop_truncate) (struct inode * node, off_t len);
+	int (*vop_create) (struct inode * node, const char *name, bool excl,
+			   struct inode ** node_store);
+	int (*vop_unlink) (struct inode * node, const char *name);
+	int (*vop_lookup) (struct inode * node, char *path,
+			   struct inode ** node_store);
+	int (*vop_lookup_parent) (struct inode * node, char *path,
+				  struct inode ** node_store, char **endp);*/
+};
+
+
+static int getnewvnode(const char *tag, struct mount *mp, struct vop_vector *vops, struct vnode **vpp) {
+	//TODO: tag is ignored
+	//TODO: mp is ignored, this matters.
+	struct inode* inode = alloc_inode(default_inode);
+  assert(inode != NULL);
+  struct vnode* vnode = kmalloc(sizeof(struct vnode));
+	vnode->ucore_inode = inode;
+	vnode->v_op = vops;
+  (*vpp) = vnode;
+  inode_set_private_data(inode, vnode);
+  return 0;
+}
 
 #endif

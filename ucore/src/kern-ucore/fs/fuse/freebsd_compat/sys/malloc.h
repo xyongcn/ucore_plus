@@ -3,8 +3,6 @@
 
 #include <mm/slab.h>
 
-#include "types.h"
-
 #define M_NOWAIT        0x0001          /* do not block */
 #define M_WAITOK        0x0002          /* ok to block */
 #define M_ZERO          0x0100          /* bzero the allocation */
@@ -16,25 +14,21 @@
 
 #define M_MAGIC         877983977       /* time when first defined :-) */
 
-struct malloc_type {
-        struct malloc_type *ks_next;    /* Next in global chain. */
-        u_long           ks_magic;      /* Detect programmer error. */
-        const char      *ks_shortdesc;  /* Printable type name. */
-        void            *ks_handle;     /* Priv. data, was lo_class. */
-};
-
-//TODO : simple ignoring those macros might not work.
+/*
+ * FreeBSD introduces "type" for memory allocation for memory usage statistics.
+ * But we will simply ignore them.
+ */
 #define MALLOC_DEFINE(type, shortdesc, longdesc)
-#define malloc(x, y, z) __malloc(x, z)
-#define realloc(x, y, z, w) __realloc(x, y, w)
-#define free(x, y) __free(x)
+#define malloc(size, type, flags) __malloc(size, flags)
+#define realloc(addr, size, type, flags) __realloc(addr, size, flags)
+#define free(addr, type) __free(addr)
 
-static void* __malloc(int size, int flags) {
+static void* __malloc(unsigned long size, int flags) {
   kprintf("TODO! FreeBSD-compat: __malloc flags are ignored.\r\n");
   return kmalloc(size);
 }
 
-static void* __realloc(void* ptr, int size, int flags) {
+static void* __realloc(void* ptr, unsigned long size, int flags) {
   panic("TODO! FreeBSD-compat: realloc not implemented.\r\n");
   return NULL;
 }
