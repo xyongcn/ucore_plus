@@ -126,7 +126,7 @@ void filemap_dup_close(struct file *to, struct file *from)
 	to->node = node;
 }
 
-static inline int fd2file(int fd, struct file **file_store)
+inline int fd2file(int fd, struct file **file_store)
 {
 	if (testfd(fd)) {
 		struct file *file = get_filemap() + fd;

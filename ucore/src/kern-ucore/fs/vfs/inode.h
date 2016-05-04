@@ -53,11 +53,13 @@ struct inode {
 #ifdef UCONFIG_HAVE_FATFS
 		inode_type_ffs_inode_info,
 #endif
+    inode_type_default_inode_info,
 	} in_type;
 	atomic_t ref_count;
 	atomic_t open_count;
 	struct fs *in_fs;
 	const struct inode_ops *in_ops;
+  void* private_data;
 #ifdef UCONFIG_BIONIC_LIBC
 	list_entry_t mapped_addr_list;
 #endif				//UCONFIG_BIONIC_LIBC
@@ -325,6 +327,16 @@ static inline int inode_ref_count(struct inode *node)
 static inline int inode_open_count(struct inode *node)
 {
 	return atomic_read(&(node->open_count));
+}
+
+static inline void inode_set_private_data(struct inode *node, void* private_data)
+{
+  node->private_data = private_data;
+}
+
+static inline void* inode_get_private_data(struct inode *node)
+{
+  return node->private_data;
 }
 
 #endif /* !__KERN_FS_VFS_INODE_H__ */

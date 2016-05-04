@@ -66,17 +66,4 @@ struct vop_vector {
 	vop_vptocnp_t	*vop_vptocnp;
 	vop_allocate_t	*vop_allocate;
 	vop_advise_t	*vop_advise;
-	vop_unp_bind_t	*vop_unp_bind;
-	vop_unp_connect_t	*vop_unp_connect;
-	vop_unp_detach_t	*vop_unp_detach;
-	vop_is_text_t	*vop_is_text;
-	vop_set_text_t	*vop_set_text;
-	vop_unset_text_t	*vop_unset_text;
-	vop_get_writecount_t	*vop_get_writecount;
-	vop_add_writecount_t	*vop_add_writecount;
-	vop_spare1_t	*vop_spare1;
-	vop_spare2_t	*vop_spare2;
-	vop_spare3_t	*vop_spare3;
-	vop_spare4_t	*vop_spare4;
-	vop_spare5_t	*vop_spare5;
 };
