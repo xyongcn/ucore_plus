@@ -60,7 +60,7 @@
 
 #include "freebsd_compat/sys/types.h"
 #include "freebsd_compat/sys/uio.h"
-#include "freebsd_compat/sys/stat.h"
+#include <stat.h>
 #include "freebsd_compat/sys/vnode.h"
 #include "freebsd_compat/sys/systm.h" //Added after
 

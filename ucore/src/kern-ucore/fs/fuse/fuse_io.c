@@ -73,8 +73,8 @@ __FBSDID("$FreeBSD$");
 #include "freebsd_compat/sys/proc.h"
 #include "freebsd_compat/sys/mount.h"
 #include "freebsd_compat/sys/vnode.h"
-#include "freebsd_compat/sys/stat.h"
-#include "freebsd_compat/sys/unistd.h"
+#include <stat.h>
+#include <unistd.h>
 //#include <sys/filedesc.h>
 #include "freebsd_compat/sys/file.h"
 #include "freebsd_compat/sys/fcntl.h"

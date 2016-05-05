@@ -16,9 +16,9 @@ DWORD get_fattime(void)
 
 void ffs_init()
 {
-	int ret;
-	if ((ret = ffs_mount("mmc0")) != 0) {
-		panic("failed: ffs: ffs_mount: %e.\n", ret);
+	int ret = register_filesystem(&fat32_fs_type);
+	if (ret != 0) {
+		panic("failed: fat32: register_filesystem: %e.\n", ret);
 	}
 }
 

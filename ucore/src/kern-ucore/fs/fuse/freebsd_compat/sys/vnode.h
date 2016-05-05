@@ -263,12 +263,6 @@ vattr_null(struct vattr *vap)
         vap->va_vaflags = 0;*/
 }
 
-//__iovec.h
-struct iovec {
-        void    *iov_base;      /* Base address. */
-        size_t   iov_len;       /* Length. */
-};
-
 /*
  * Flags for va_vaflags.
  */

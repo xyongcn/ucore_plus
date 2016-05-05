@@ -6,6 +6,7 @@
 #include <file.h>
 #include <pipe.h>
 #include <sfs.h>
+#include <fatfs/ffs.h>
 #include <inode.h>
 #include <assert.h>
 
@@ -16,27 +17,11 @@ void fs_init(void)
 	dev_init();
 	pipe_init();
 	sfs_init();
-  int ret;
-  if ((ret = sfs_mount("disk0")) != 0) {
-    panic("failed: sfs: sfs_mount: %e.\n", ret);
-  }
-  vfs_add_dev("dev", NULL, 1);
-  if ((ret = devfs_mount("dev")) != 0) {
-    panic("failed: devfs: devfs_mount: %e.\n", ret);
-  }
+  ffs_init();
 
-  const char* ROOT_MOUNTPOINT = "/";
-  const char* ROOT_FS_DEVICE = "disk0";
-
-  const char* DEV_MOUNTPOINT = "/dev";
-  const char* DEV_FS_DEVICE = "dev";
-  struct inode* inode;
-
-  vfs_get_root(ROOT_FS_DEVICE, &inode);
-  vfs_mount_add_record(ROOT_MOUNTPOINT, vop_fs(inode));
-
-  vfs_get_root(DEV_FS_DEVICE, &inode);
-  vfs_mount_add_record(DEV_MOUNTPOINT, vop_fs(inode));
+  vfs_do_mount_nocheck("none", "/dev", "devfs", 0, NULL);
+  vfs_path_init_cwd("/dev");
+  vfs_do_mount_nocheck("/dev/disk2", "/", "sfs", 0, NULL);
 }
 
 void fs_cleanup(void)

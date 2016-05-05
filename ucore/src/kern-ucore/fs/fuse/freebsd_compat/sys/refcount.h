@@ -1,29 +1,32 @@
 #ifndef	_FREEBSD_COMPAT_REFCOUNT_H_
 #define	_FREEBSD_COMPAT_REFCOUNT_H_
 
-#include "atomic.h"
+#include <atomic.h>
 
-static __inline void
-refcount_init(volatile u_int *count, u_int value)
+typedef unsigned int uint_t;
+
+static inline void refcount_init(volatile uint_t *count, uint_t value)
+  __attribute__ ((always_inline));
+static __inline void refcount_acquire(volatile uint_t *count)
+  __attribute__ ((always_inline));
+static __inline int refcount_release(volatile uint_t *count)
+  __attribute__ ((always_inline));
+
+static inline void refcount_init(volatile uint_t *count, uint_t value)
 {
-        *count = value;
+  *count = value;
 }
 
-static __inline void
-refcount_acquire(volatile u_int *count)
+static inline void refcount_acquire(volatile uint_t *count)
 {
-        //KASSERT(*count < UINT_MAX, ("refcount %p overflowed", count));
-        atomic_add_acq_int(count, 1);
+  atomic_inc((atomic_t*)count);
 }
 
-static __inline int
-refcount_release(volatile u_int *count)
+static inline int refcount_release(volatile uint_t *count)
 {
-        u_int old;
-        /* XXX: Should this have a rel membar? */
-        old = atomic_fetchadd_int(count, -1);
-        //KASSERT(old > 0, ("negative refcount %p", count));
-        return (old == 1);
+  uint_t old;
+  old = atomic_add_return_orig((atomic_t*)count, -1);
+  return (old == 1);
 }
 
 #endif

@@ -71,7 +71,7 @@ __FBSDID("$FreeBSD$");
 #include "freebsd_compat/sys/mutex.h"
 #include "freebsd_compat/sys/proc.h"
 #include "freebsd_compat/sys/mount.h"
-#include "freebsd_compat/sys/stat.h"
+#include <stat.h>
 #include "freebsd_compat/sys/fcntl.h"
 //#include "freebsd_compat/sys/sysctl.h"
 #include "freebsd_compat/sys/poll.h"
