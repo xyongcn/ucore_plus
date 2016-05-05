@@ -62,7 +62,8 @@
 #ifndef FUSE_DEBUG_MODULE
 #error "FUSE_DEBUG_MODULE is not defined"
 #else
-#define FUSE_DEBUG_VAR		__CONCAT(FUSE_DEBUG_,FUSE_DEBUG_MODULE)
+#define FUSE_DEBUG_VAR 2
+//#define FUSE_DEBUG_VAR		__CONCAT(FUSE_DEBUG_,FUSE_DEBUG_MODULE)
 #endif
 
 #define	FS_DEBUG(fmt, ...)	DEBUGX(FUSE_DEBUG_VAR >= 1, fmt, ## __VA_ARGS__)

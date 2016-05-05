@@ -1,6 +1,8 @@
 #ifndef _FREEBSD_COMPAT_MALLOC_H_
 #define	_FREEBSD_COMPAT_MALLOC_H_
 
+#include <mm/slab.h>
+
 #include "types.h"
 
 #define M_NOWAIT        0x0001          /* do not block */
@@ -28,15 +30,17 @@ struct malloc_type {
 #define free(x, y) __free(x)
 
 static void* __malloc(int size, int flags) {
-  return NULL;
+  kprintf("TODO! FreeBSD-compat: __malloc flags are ignored.\r\n");
+  return kmalloc(size);
 }
 
 static void* __realloc(void* ptr, int size, int flags) {
+  panic("TODO! FreeBSD-compat: realloc not implemented.\r\n");
   return NULL;
 }
 
-static void* __free(void* ptr) {
-  return NULL;
+static void __free(void* ptr) {
+  kfree(ptr);
 }
 
 #endif

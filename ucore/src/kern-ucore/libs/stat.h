@@ -120,6 +120,14 @@ struct linux_stat64 {
 #define S_IWOTH 00002
 #define S_IXOTH 00001
 
+#define S_ISUID 0004000                 /* set user id on execution */
+#define S_ISGID 0002000                 /* set group id on execution */
+#define S_ISTXT 0001000                 /* sticky bit */
+
+#define ACCESSPERMS     (S_IRWXU|S_IRWXG|S_IRWXO)
+#define ALLPERMS        (S_ISUID|S_ISGID|S_ISTXT|S_IRWXU|S_IRWXG|S_IRWXO)
+#define DEFFILEMODE     (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)
+
 #endif
 #endif
 

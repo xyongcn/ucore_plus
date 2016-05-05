@@ -60,7 +60,7 @@
 
 #include "freebsd_compat/sys/types.h"
 #include "freebsd_compat/sys/fcntl.h"
-#include "freebsd_compat/sys/stat.h"
+#include <stat.h>
 #include "freebsd_compat/sys/mman.h"
 #include "freebsd_compat/sys/vnode.h"
 

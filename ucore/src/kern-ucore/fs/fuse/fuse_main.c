@@ -67,7 +67,7 @@ __FBSDID("$FreeBSD$");
 #include "freebsd_compat/sys/proc.h"
 #include "freebsd_compat/sys/mount.h"
 #include "freebsd_compat/sys/vnode.h"
-#include "freebsd_compat/sys/stat.h"
+#include <stat.h>
 #include "freebsd_compat/sys/file.h"
 //#include <sys/buf.h>
 #include "freebsd_compat/sys/sysctl.h"
@@ -149,6 +149,11 @@ fuse_loader(struct module *m, int what, void *arg)
 	}
 
 	return (err);
+}
+
+void dev_init_fuse()
+{
+  fuse_loader(NULL, MOD_LOAD, NULL);
 }
 
 /* Registering the module */

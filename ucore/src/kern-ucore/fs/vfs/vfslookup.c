@@ -25,8 +25,13 @@ static int get_device(char *path, char *subpath, struct inode **node_store)
 
   //Get the path and fs we are changing into.
   static char full_path[1024];
-  vfs_expand_path(path, full_path, 1024);
-  vfs_simplify_path(full_path);
+  if(path[0] != "/") {
+    vfs_expand_path(path, full_path, 1024);
+    vfs_simplify_path(full_path);
+  }
+  else {
+    strcpy(full_path, path);
+  }
   char* new_path;
   struct fs* new_path_fs;
   vfs_mount_parse_full_path(full_path, &new_path, &new_path_fs);
