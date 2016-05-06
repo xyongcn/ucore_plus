@@ -53,11 +53,11 @@
 
 #define SEG_CODE(type)                          \
     .word 0x0, 0x0;                             \
-    .byte 0x0, (0x90 | (type)), 0x20, 0x0;      
+    .byte 0x0, (0x90 | (type)), 0x20, 0x0;
 
 #define SEG_DATA(type)                          \
     .word 0x0, 0x0;                             \
-    .byte 0x0, (0x90 | (type)), 0x0, 0x0;       
+    .byte 0x0, (0x90 | (type)), 0x0, 0x0;
 
 #else /* not __ASSEMBLER__ */
 
@@ -155,10 +155,10 @@ struct segdesc_tss {
 };
 
 #define SEG_NULL                                            \
-    (struct segdesc) {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 #define SEG(type, dpl)                                      \
-    (struct segdesc) {                                      \
+    {                                                       \
         0, 0, 0, type, 1, dpl, 1,                           \
         0, 0, 1, 0, 1,			                             \
     }
