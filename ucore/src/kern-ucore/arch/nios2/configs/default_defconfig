@@ -27,3 +27,8 @@ SFS_IMAGE_SIZE=1
 # Linux Device Driver Environment
 #
 # HAVE_LINUX_DDE_BASE is not set
+
+#
+# Bionic libc porting related code is currently not supported in NIOS2.
+#
+BIONIC_LIBC=n

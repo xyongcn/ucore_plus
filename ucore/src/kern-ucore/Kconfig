@@ -9,4 +9,12 @@ config ADDITIONAL_CFLAGS
 config ADDITIONAL_LDFLAGS
   string "Additional LDFLAGS"
 
+config BIONIC_LIBC
+  bool "Enable bionic C library related-code"
+  default n
+  help
+    When selected, this option enable bionic C related code. Note that currently
+    only amd64 and ARM architecture is supported. Enabling this on other
+    architectures triggers compiling error.
+
 endmenu
