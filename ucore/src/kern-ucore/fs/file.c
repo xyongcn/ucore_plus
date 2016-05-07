@@ -360,6 +360,26 @@ int file_getdirentry(int fd, struct dirent *direntp)
 	return ret;
 }
 
+int file_getdirentry64(int fd, struct dirent64 *direntp)
+{
+	int ret;
+	struct file *file;
+	if ((ret = fd2file(fd, &file)) != 0) {
+		return ret;
+	}
+	filemap_acquire(file);
+
+	struct iobuf __iob, *iob =
+	    iobuf_init(&__iob, direntp->d_name, sizeof(direntp->d_name),
+		       direntp->d_off);
+	if ((ret = vop_getdirentry(file->node, iob)) == 0) {
+		direntp->d_off += iobuf_used(iob);
+	}
+  direntp->d_type = 8;
+	filemap_release(file);
+	return ret;
+}
+
 int file_dup(int fd1, int fd2)
 {
 	int ret;
@@ -468,7 +488,7 @@ bool __is_linux_devfile(int fd)
 /* *
  * linux_devfile_read - this function is used to read from device file
  *						such as console
- * 
+ *
  * */
 int linux_devfile_read(int fd, void *base, size_t len, size_t * copied_store)
 {

@@ -475,33 +475,53 @@ static uint64_t __sys_linux_fcntl(uint64_t arg[])
 
 static uint64_t __sys_linux_getdents(uint64_t arg[])
 {
-	int fd = (int)arg[0];
+	unsigned int fd = (unsigned int)arg[0];
 	struct dirent *dir = (struct dirent *)arg[1];
-	uint64_t count = arg[2];
+	unsigned int count = (unsigned int)arg[2];
 	if (count < sizeof(struct dirent))
-		return -1;
-//	kprintf("call getdirendry %d %p %p\n", fd, dir, &count);
+		return -E_INVAL;
 	int ret = sysfile_getdirentry(fd, dir, (uint32_t *)&count);
-	if (ret < 0)
-		return -1;
+	if (ret < 0) return ret;
+	return count;
+}
+
+static uint64_t __sys_linux_getdents64(uint64_t arg[])
+{
+  unsigned int fd = (unsigned int)arg[0];
+	struct dirent64 *dir = (struct dirent64 *)arg[1];
+	unsigned int count = (unsigned int)arg[2];
+	if (count < sizeof(struct dirent64))
+		return -E_INVAL;
+//	kprintf("call getdirendry %d %p %p\n", fd, dir, &count);
+	int ret = sysfile_getdirentry64(fd, dir, (uint32_t *)&count);
+  if (ret < 0) return ret;
 	return count;
 }
 
 static uint64_t sys_linux_mmap(uint64_t arg[])
 {
-	void *addr = (void *)arg[0];
-	size_t len = arg[1];
-	int fd = (int)arg[2];
-	size_t off = (size_t) arg[3];
-	return (uint64_t) sysfile_linux_mmap2(addr, len, 0, 0, fd, off);
+  void *addr = (void *)arg[0];
+  size_t len = arg[1];
+  int prot = (int)arg[2];
+  int flags = (int)arg[3];
+  int fd = (int)arg[4];
+  size_t off = (size_t) arg[5];
+  kprintf("addr = %x, len = %d, fd = %d, off = %d\r\n", addr, len, fd, off);
+	return (uint64_t) sysfile_linux_mmap2(addr, len, prot, flags, fd, off);
 }
 
 static uint64_t __sys_linux_stat(uint64_t args[])
 {
 	char *fn = (char *)args[0];
 	struct linux_stat *st = (struct linux_stat *)args[1];
-	//kprintf("TODO __sys_linux_stat, %s %d\n", fn, sizeof(struct linux_stat));
-	return sysfile_linux_stat(fn, st);
+	return sysfile_linux_stat64(fn, st);
+}
+
+static uint64_t __sys_linux_fstat(uint64_t args[])
+{
+	int fd = (char *)args[0];
+	struct linux_stat *st = (struct linux_stat *)args[1];
+	return sysfile_linux_fstat64(fd, st);
 }
 
 static uint64_t __sys_linux_waitpid(uint64_t arg[])
@@ -611,7 +631,7 @@ void syscall_linux()
 	struct trapframe *tf = current->tf;
 	uint64_t arg[6];
 	int num = tf->tf_regs.reg_rax;
-//kprintf("LINUX syscall %d  gs = 0x%x\n", num, mycpu());
+  //kprintf("LINUX syscall %d  gs = 0x%x\n", num, mycpu());
 	if (num >= 0 && num < NUM_LINUX_SYSCALLS) {
 		if (syscalls_linux[num] != unknown)
 		if (syscalls_linux[num] != NULL) {
@@ -649,7 +669,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_open] sys_open,
 	[__NR_close] sys_close,
 	[__NR_stat] __sys_linux_stat,
-	[__NR_fstat] sys_fstat,
+	[__NR_fstat] __sys_linux_fstat,
 	[__NR_lstat] unknown,
 	[__NR_poll] __sys_linux_poll,
 	[__NR_lseek] unknown,
@@ -722,7 +742,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_fdatasync] unknown,
 	[__NR_truncate] unknown,
 	[__NR_ftruncate] unknown,
-	[__NR_getdents] unknown,
+	[__NR_getdents] __sys_linux_getdents,
 	[__NR_getcwd] unknown,
 	[__NR_chdir] unknown,
 	[__NR_fchdir] unknown,
@@ -861,7 +881,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_epoll_ctl_old] unknown,
 	[__NR_epoll_wait_old] unknown,
 	[__NR_remap_file_pages] unknown,
-	[__NR_getdents64] unknown,
+	[__NR_getdents64] __sys_linux_getdents64,
 	[__NR_set_tid_address] unknown,
 	[__NR_restart_syscall] unknown,
 	[__NR_semtimedop] unknown,

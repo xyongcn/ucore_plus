@@ -136,6 +136,18 @@ struct Page {
 	list_entry_t swap_link;	// swap hash link
 };
 
+#ifdef UCONFIG_BIONIC_LIBC
+struct mapped_addr {
+	struct Page *page;
+	off_t offset;
+	list_entry_t list;
+};
+
+#define le2maddr(le)	\
+		to_struct((le), struct mapped_addr, list)
+
+#endif //UCONFIG_BIONIC_LIBC
+
 /* Flags describing the status of a page frame */
 #define PG_reserved                 0	// the page descriptor is reserved for kernel or unusable
 #define PG_property                 1	// the member 'property' is valid
