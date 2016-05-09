@@ -191,7 +191,7 @@ void proc_run(struct proc_struct *proc)
 			load_rsp0(next->kstack + KSTACKSIZE);
 			mp_set_mm_pagetable(next->mm);
 
-#ifdef UCONFIG_BIONIC_LIBC
+#if defined(UCONFIG_BIONIC_LIBC) && defined(__ARCH_ARM_INCLUDE_ARCH_PROC_H__)
 			// for tls switch
 			tls_switch(next);
 #endif //UCONFIG_BIONIC_LIBC

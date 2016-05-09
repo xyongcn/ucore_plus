@@ -3,6 +3,7 @@
 #include <trap.h>
 #include <stdio.h>
 #include <pmm.h>
+#include <vmm.h>
 #include <clock.h>
 #include <error.h>
 #include <assert.h>
@@ -506,8 +507,35 @@ static uint64_t sys_linux_mmap(uint64_t arg[])
   int flags = (int)arg[3];
   int fd = (int)arg[4];
   size_t off = (size_t) arg[5];
-  kprintf("addr = %x, len = %d, fd = %d, off = %d\r\n", addr, len, fd, off);
-	return (uint64_t) sysfile_linux_mmap2(addr, len, prot, flags, fd, off);
+  //kprintf("addr = %x, len = %d, fd = %d, off = %d\r\n", addr, len, fd, off);
+	//return (uint64_t) sysfile_linux_mmap2(addr, len, prot, flags, fd, off);
+  #ifndef UCONFIG_BIONIC_LIBC
+  	kprintf
+  	    ("TODO __sys_linux_mmap2 addr=%08x len=%08x prot=%08x flags=%08x fd=%d off=%08x\n",
+  	     addr, len, prot, flags, fd, off);
+  #endif //UCONFIG_BIONIC_LIBC
+  	if (fd == -1 || flags & MAP_ANONYMOUS) {
+  		//print_trapframe(current->tf);
+  #ifdef UCONFIG_BIONIC_LIBC
+  		if (flags & MAP_FIXED) {
+  			return linux_regfile_mmap2(addr, len, prot, flags, fd,
+  						   off);
+  		}
+  #endif //UCONFIG_BIONIC_LIBC
+
+  		uint64_t ucoreflags = 0;
+  		if (prot & PROT_WRITE)
+  			ucoreflags |= MMAP_WRITE;
+  		int ret = __do_linux_mmap((uintptr_t) & addr, len, ucoreflags);
+  		//kprintf("@@@ ret=%d %e %08x\n", ret,ret, addr);
+  		if (ret)
+  			return (uint64_t)MAP_FAILED;
+  		//kprintf("__sys_linux_mmap2 ret=%08x\n", addr);
+  		return (uint64_t) addr;
+  	} else {
+  		return (uint64_t) sysfile_linux_mmap2(addr, len, prot, flags,
+  						      fd, off);
+  	}
 }
 
 static uint64_t __sys_linux_stat(uint64_t args[])
@@ -626,24 +654,31 @@ uint32_t count = 0;
 
 void syscall_linux()
 {
-//	panic("Syscall Linux\n");
-//prrsp();
+  //panic("Syscall Linux\n");
+  //prrsp();
 	struct trapframe *tf = current->tf;
 	uint64_t arg[6];
 	int num = tf->tf_regs.reg_rax;
   //kprintf("LINUX syscall %d  gs = 0x%x\n", num, mycpu());
 	if (num >= 0 && num < NUM_LINUX_SYSCALLS) {
+    /*if(num == __NR_execve) {
+      kprintf("Beginning execve= =\r\n");
+      print_trapframe(tf);
+      print_stackframe();
+      print_stackframe_ext(tf->tf_rsp, tf->tf_rip);
+      //panic("");
+    }*/
 		if (syscalls_linux[num] != unknown)
 		if (syscalls_linux[num] != NULL) {
-//	kprintf("%d : LINUX syscall %d, pid = %d, name = %s  ARGS :", ++count, num, current->pid, current->name);
-	arg[0] = tf->tf_regs.reg_rdi;
+	    //kprintf("%d : LINUX syscall %d, pid = %d, name = %s  ARGS :\r\n", ++count, num, current->pid, current->name);
+	    arg[0] = tf->tf_regs.reg_rdi;
 			arg[1] = tf->tf_regs.reg_rsi;
 			arg[2] = tf->tf_regs.reg_rdx;
 			arg[3] = tf->tf_regs.reg_r10;
 			arg[4] = tf->tf_regs.reg_r8;
 			arg[5] = tf->tf_regs.reg_r9;
-	int i;
-//	for (i = 0; i < 6; i++)		kprintf(" %x", arg[i]);	kprintf("\n");
+	    int i;
+      //for (i = 0; i < 6; i++)		kprintf(" %x", arg[i]);	kprintf("\n");
 			tf->tf_regs.reg_rax = syscalls_linux[num] (arg);
 #if 0
 	kprintf("%d : SyscallID %d, ARGS :", ++count, num);
@@ -654,6 +689,7 @@ void syscall_linux()
 //if(num==12)
 //	debug = 1;
 #endif
+//kprintf("%d : LINUX syscall exit %d, pid = %d, name = %s  ARGS :\r\n", ++count, num, current->pid, current->name);
 			return;
 		}
 	}
