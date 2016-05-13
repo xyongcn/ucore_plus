@@ -38,18 +38,29 @@ static uint64_t read_rip(void)
 	return rip;
 }
 
+/*
+ * print_stackframe_ext is a more flexible version for print_stackframe,
+ * allowing the initial rbp and rip being specified.
+ * NOTE: print_stackframe_ext is mostly used by giving rbp and rip in trapframe
+ * so that it can track stackframe of a user-state program, if rbp-based stack
+ * positioning is not optimized out (only true for gcc -O0 by default).
+ * TODO：a more complete version of print_stackframe is in progress.
+ */
+void print_stackframe_ext(uint64_t rbp, uint64_t rip)
+{
+	int i, j;
+	for (i = 0; rbp != 0 && rip != 0 && i < STACKFRAME_DEPTH; i++) {
+		kprintf("rbp:%p rip:%p\n", rbp, rip);
+		rip = ((uint64_t *) rbp)[1];
+		rbp = ((uint64_t *) rbp)[0];
+	}
+}
+
 /* *
  * print_stackframe - print a list of the saved rip values from the nested 'call'
  * instructions that led to the current point of execution
  * */
 void print_stackframe(void)
 {
-	uint64_t rbp = read_rbp(), rip = read_rip();
-
-	int i, j;
-	for (i = 0; rbp != 0 && i < STACKFRAME_DEPTH; i++) {
-		kprintf("rbp:%p rip:%p\n", rbp, rip);
-		rip = ((uint64_t *) rbp)[1];
-		rbp = ((uint64_t *) rbp)[0];
-	}
+  print_stackframe_ext(read_rbp(), read_rip());
 }

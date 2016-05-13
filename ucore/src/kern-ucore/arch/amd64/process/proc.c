@@ -124,6 +124,16 @@ init_new_context(struct proc_struct *proc, struct elfhdr *elf,
 	return 0;
 }
 
+//TODO: Bionic C related code requires this function to be implemented.
+int
+init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int argc,
+			 char **kargv, int envc, char **kenvp,
+			 uint64_t is_dynamic, uint64_t real_entry,
+			 uint64_t load_address, uint64_t linker_base)
+{
+  init_new_context(proc, elf, argc, kargv, envc, kenvp);
+}
+
 // cpu_idle - at the end of kern_init, the first kernel thread idleproc will do below works
 void cpu_idle(void)
 {

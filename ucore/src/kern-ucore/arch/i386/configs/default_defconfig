@@ -32,3 +32,8 @@ HAVE_FATFS=y
 # ucore test is set
 # close this function by setting var to ''
 #
+
+#
+# Bionic libc porting related code is currently not supported in i386.
+#
+BIONIC_LIBC=n

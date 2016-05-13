@@ -33,3 +33,10 @@ HAVE_FATFS=y
 #
 # Linux Device Driver Environment
 #
+
+#
+# Bionic libc porting related code.
+# amd64 support part of Bionic-specified features. And they may be useful for
+# uClibc porting. So It is enabled by default.
+#
+BIONIC_LIBC=y

@@ -156,6 +156,10 @@ static inline void print_pgfault(struct trapframe *tf)
 	if ((addr >> 32) & 0x8000) {
 		addr |= (0xFFFFLLU << 48);
 	}
+  //kprintf("page fault at\r\n");
+  print_trapframe(tf);
+  //print_stackframe();
+  //print_stackframe_ext(tf->tf_rsp, 0x1234);
 	kprintf("page fault at 0x%016llx: %c/%c [%s].\n", addr,
 		(tf->tf_err & 4) ? 'U' : 'K',
 		(tf->tf_err & 2) ? 'W' : 'R',
@@ -186,7 +190,7 @@ static int pgfault_handler(struct trapframe *tf)
 		mm = current->mm;
 	}
 uintptr_t addr = rcr2();
-if (addr >= 0x20060000 && addr <= 0x00000fffefff2040) 
+if (addr >= 0x20060000 && addr <= 0x00000fffefff2040)
 {
 	print_pgfault(tf);
 	do_debug(tf);
@@ -203,7 +207,7 @@ uintptr_t addr;
 	switch (tf->tf_trapno) {
 	case T_PGFLT:
 //addr = rcr2();
-//if (addr >= 0x20060000 && addr <= 0x00000fffefff2040) 
+//if (addr >= 0x20060000 && addr <= 0x00000fffefff2040)
 //	kprintf("in: user rsp %p\n",tf->tf_rsp);
 		if ((ret = pgfault_handler(tf)) != 0) {
 			print_trapframe(tf);
@@ -221,7 +225,7 @@ uintptr_t addr;
 				do_exit(-E_KILLED);
 			}
 		}
-//if (addr >= 0x20060000 && addr <= 0x00000fffefff2040) 
+//if (addr >= 0x20060000 && addr <= 0x00000fffefff2040)
 //		kprintf("out :user rsp %p\n",tf->tf_rsp);
 		break;
 	case T_SYSCALL:
@@ -241,7 +245,7 @@ uintptr_t addr;
 		break;
 #endif
 	case T_TLBFLUSH:
-		lcr3(rcr3());	
+		lcr3(rcr3());
 	case IRQ_OFFSET + IRQ_TIMER:
 		if(id==0){
 			ticks++;
