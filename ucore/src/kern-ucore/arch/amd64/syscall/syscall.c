@@ -463,6 +463,11 @@ static uint64_t sys_linux_sigaction(uint64_t arg[])
 			    (struct sigaction *)arg[2]);
 }
 
+static uint64_t __sys_linux_sigreturn(uint64_t arg[])
+{
+  return do_sigreturn();
+}
+
 static uint64_t sys_linux_sigprocmask(uint64_t arg[])
 {
 	return do_sigprocmask((int)arg[0], (const sigset_t *)arg[1],
@@ -670,7 +675,8 @@ void syscall_linux()
     }*/
 		if (syscalls_linux[num] != unknown)
 		if (syscalls_linux[num] != NULL) {
-	    //kprintf("%d : LINUX syscall %d, pid = %d, name = %s  ARGS :\r\n", ++count, num, current->pid, current->name);
+	    //kprintf("%d : LINUX syscall %d, pid = %d, name = %s rip = %lx  ARGS :\r\n", ++count, num, current->pid, current->name
+      //  , tf->tf_rip);
 	    arg[0] = tf->tf_regs.reg_rdi;
 			arg[1] = tf->tf_regs.reg_rsi;
 			arg[2] = tf->tf_regs.reg_rdx;
@@ -690,6 +696,7 @@ void syscall_linux()
 //	debug = 1;
 #endif
 //kprintf("%d : LINUX syscall exit %d, pid = %d, name = %s  ARGS :\r\n", ++count, num, current->pid, current->name);
+      //kprintf("LINUX syscall ret, rsp = %lx pid = %d rip = %lx\r\n", tf->tf_rsp, current->pid, tf->tf_rip);
 			return;
 		}
 	}
@@ -715,7 +722,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_brk] __sys_linux_brk,
 	[__NR_rt_sigaction] sys_linux_sigaction,
 	[__NR_rt_sigprocmask] sys_linux_sigprocmask,
-	[__NR_rt_sigreturn] unknown,//sys_linux_sigreturn,
+	[__NR_rt_sigreturn] __sys_linux_sigreturn,
 	[__NR_ioctl] sys_ioctl,
 	[__NR_pread64] unknown,
 	[__NR_pwrite64] unknown,

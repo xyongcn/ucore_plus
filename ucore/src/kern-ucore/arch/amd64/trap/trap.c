@@ -156,10 +156,10 @@ static inline void print_pgfault(struct trapframe *tf)
 	if ((addr >> 32) & 0x8000) {
 		addr |= (0xFFFFLLU << 48);
 	}
-  kprintf("page fault at\r\n");
+  //kprintf("page fault at\r\n");
   print_trapframe(tf);
-  print_stackframe();
-  print_stackframe_ext(tf->tf_rsp, 0x1234);
+  //print_stackframe();
+  //print_stackframe_ext(tf->tf_rsp, 0x1234);
 	kprintf("page fault at 0x%016llx: %c/%c [%s].\n", addr,
 		(tf->tf_err & 4) ? 'U' : 'K',
 		(tf->tf_err & 2) ? 'W' : 'R',

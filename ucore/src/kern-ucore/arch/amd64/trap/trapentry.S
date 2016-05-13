@@ -80,18 +80,19 @@ syscall_exit:
     popq %rdi
     #This is used as a workaround for syscalls on amd64 that changes
     #tf_rip or tf_rsp. sysret instruction doesn't really recover rip and rsp
-    #from stack, it recovers them from %rcx and %rdx.
+    #from stack, it recovers them from rip from %rcx, and rip have to be set
+    #manually.
     #TODO: Should have better way to do this (e.g. update reg_rcx and reg_rdx)
     #in syscall_linux, but seems it doesn't work and I can't figure out why.
-    popq %rcx #tf_trapno
-    popq %rcx #tf_err
+    #TODO: Not sure about Intel/AMD's sysenter/sysexit, syscall/sysret, need
+    #further research.
+    add $16, %rsp #tf_trapno, tf_err
     popq %rcx #tf_rip
-    popq %rdx #tf_cs (and its paddings)
-    popq %rdx #tf_rflags
-    popq %rdx #tf_rsp
+    add $16, %rsp #tf_cs (and its paddings), tf_rflags
+    popq %rsp #tf_rsp
 
     # restore user rsp
-	movq %gs:0x10, %rsp
+	#movq %gs:0x10, %rsp
 
 	swapgs
 	sysretq
