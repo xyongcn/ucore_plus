@@ -5,6 +5,7 @@
 #include <sem.h>
 #include "cdefs.h"
 #include "stddef.h"
+#include <proc.h>
 
 #define mtxlock2mtx(c)  (container_of(c, struct mtx, mtx_lock))
 
@@ -56,14 +57,14 @@ static void _mtx_lock(volatile uintptr_t *c) {
     m = mtxlock2mtx(c);
 
     down(&(m->sem));
-    m->mtx_lock = (uintptr_t)curthread;
+    m->mtx_lock = (uintptr_t)current;
 }
 
 static void _mtx_unlock(volatile uintptr_t *c) {
     struct mtx *m;
     m = mtxlock2mtx(c);
 
-    if (m->mtx_lock == (uintptr_t)curthread) {
+    if (m->mtx_lock == (uintptr_t)current) {
         m->mtx_lock = MA_NOTOWNED;
         up(&(m->sem));
     }
