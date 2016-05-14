@@ -21,11 +21,11 @@ struct rwlock {
 
 static void rw_wlock(struct rwlock* lock) {
     down(&(lock->sem));
-    lock->rw_lock = (uintptr_t)curthread;
+    lock->rw_lock = (uintptr_t)current;
 }
 
 static void rw_wunlock(struct rwlock* lock) {
-    if (lock->rw_lock == (uintptr_t)curthread) {
+    if (lock->rw_lock == (uintptr_t)current) {
         lock->rw_lock = NOTOWNED;
         up(&(lock->sem));
     }

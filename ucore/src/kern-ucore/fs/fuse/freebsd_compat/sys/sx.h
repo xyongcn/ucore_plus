@@ -30,11 +30,11 @@ static void sx_destroy(struct sx *sx) {
 
 static void sx_xlock(struct sx *sx) {
     down(&(sx->sem));
-    sx->sx_lock = (uintptr_t)curthread;
+    sx->sx_lock = (uintptr_t)current;
 }
 
 static void sx_unlock(struct sx *sx) {
-    if (sx->sx_lock == (uintptr_t)curthread) {
+    if (sx->sx_lock == (uintptr_t)current) {
         sx->sx_lock = MA_NOTOWNED:
         up(&(sx->sem));
     }
