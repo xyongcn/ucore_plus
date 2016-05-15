@@ -239,6 +239,11 @@ static uint64_t sys_write(uint64_t arg[])
 	int fd = (int)arg[0];
 	void *base = (void *)arg[1];
 	size_t len = (size_t) arg[2];
+
+	//print_stackframe debug code
+	print_stackframe();
+	panic("Stackframe printing complete, panic\r\n");
+
 	return sysfile_write(fd, base, len);
 }
 
@@ -403,6 +408,7 @@ void syscall(void)
 		}
 	}
 	print_trapframe(tf);
+	print_stackframe();
 	panic("undefined syscall %d, pid = %d, name = %s.\n",
 	      num, current->pid, current->name);
 }
@@ -511,7 +517,7 @@ static uint64_t __sys_linux_pipe(uint64_t arg[])
 /*
   Clone a task - this clones the calling program thread.
   * This is called indirectly via a small wrapper
-  
+
  asmlinkage int sys_clone(unsigned long clone_flags, unsigned long newsp,
                           int __user *parent_tidptr, int tls_val,
                           int __user *child_tidptr, struct pt_regs *regs)
@@ -927,5 +933,3 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_fanotify_mark] unknown,
 	[__NR_prlimit64] unknown
 };
-
-
