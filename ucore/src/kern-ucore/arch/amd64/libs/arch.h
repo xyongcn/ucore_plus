@@ -48,10 +48,13 @@ static inline void cli(void) __attribute__ ((always_inline));
 static inline void ltr(uint16_t sel) __attribute__ ((always_inline));
 static inline void lcr0(uintptr_t cr0) __attribute__ ((always_inline));
 static inline void lcr3(uintptr_t cr3) __attribute__ ((always_inline));
+static inline void lcr4(uintptr_t cr4) __attribute__ ((always_inline));
 static inline uintptr_t rcr0(void) __attribute__ ((always_inline));
 static inline uintptr_t rcr1(void) __attribute__ ((always_inline));
 static inline uintptr_t rcr2(void) __attribute__ ((always_inline));
 static inline uintptr_t rcr3(void) __attribute__ ((always_inline));
+static inline uintptr_t rcr4(void) __attribute__ ((always_inline));
+static inline void enable_sse(void) __attribute__ ((always_inline));
 static inline void invlpg(void *addr) __attribute__ ((always_inline));
 
 static inline uint8_t inb(uint16_t port)
@@ -143,6 +146,11 @@ static inline void lcr3(uintptr_t cr3)
 	asm volatile ("mov %0, %%cr3"::"r" (cr3):"memory");
 }
 
+static inline void lcr4(uintptr_t cr4)
+{
+	asm volatile ("mov %0, %%cr4"::"r" (cr4):"memory");
+}
+
 static inline uintptr_t rcr0(void)
 {
 	uintptr_t cr0;
@@ -169,6 +177,24 @@ static inline uintptr_t rcr3(void)
 	uintptr_t cr3;
 	asm volatile ("mov %%cr3, %0":"=r" (cr3)::"memory");
 	return cr3;
+}
+
+static inline uintptr_t rcr4(void)
+{
+	uintptr_t cr4;
+	asm volatile ("mov %%cr4, %0":"=r" (cr4)::"memory");
+	return cr4;
+}
+
+static inline void enable_sse(void)
+{
+  uintptr_t cr0 = rcr0();
+  cr0 &= ~(1 << 2);
+  cr0 |= (1 << 1);
+  lcr0(cr0);
+  uintptr_t cr4 = rcr4();
+  cr4 |= (3 << 9);
+  lcr4(cr4);
 }
 
 static inline void invlpg(void *addr)
