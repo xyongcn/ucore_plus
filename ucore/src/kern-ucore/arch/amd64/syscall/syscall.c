@@ -718,7 +718,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_lseek] unknown,
 	[__NR_mmap] sys_linux_mmap,
 	[__NR_mprotect] unknown,
-	[__NR_munmap] unknown,
+	[__NR_munmap] sys_munmap,
 	[__NR_brk] __sys_linux_brk,
 	[__NR_rt_sigaction] sys_linux_sigaction,
 	[__NR_rt_sigprocmask] sys_linux_sigprocmask,
