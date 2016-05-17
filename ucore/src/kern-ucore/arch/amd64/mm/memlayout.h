@@ -89,7 +89,8 @@
 #define USTACKPAGE          4096	// # of pages in user stack
 #define USTACKSIZE          (USTACKPAGE * PGSIZE)	// sizeof user stack
 
-#define USERBASE            0x0000000001000000
+//#define USERBASE            0x0000000001000000
+#define USERBASE            0x0000000000000000
 #define UTEXT               0x0000000010000000	// where user programs generally begin
 #define USTAB               USERBASE	// the location of the user STABS data structure
 

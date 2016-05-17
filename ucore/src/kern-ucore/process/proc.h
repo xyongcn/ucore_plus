@@ -158,5 +158,6 @@ int init_new_context(struct proc_struct *proc, struct elfhdr *elf,
 int kernel_thread(int (*fn) (void *), void *arg, uint32_t clone_flags);
 int kernel_execve(const char *name, const char **argv, const char **kenvp);
 int do_execve_arch_hook(int argc, char **kargv);
+int __do_linux_mmap(uintptr_t __user * addr_store, size_t len, uint32_t mmap_flags);
 
 #endif /* !__KERN_PROCESS_PROC_H__ */

@@ -512,11 +512,12 @@ static uint64_t sys_linux_mmap(uint64_t arg[])
   int flags = (int)arg[3];
   int fd = (int)arg[4];
   size_t off = (size_t) arg[5];
-  //kprintf("addr = %x, len = %d, fd = %d, off = %d\r\n", addr, len, fd, off);
+  if(len > (uint64_t)0x80000000) return -E_INVAL;
+  kprintf("addr = %llx, len = %d, fd = %d, off = %d\r\n", addr, len, fd, off);
 	//return (uint64_t) sysfile_linux_mmap2(addr, len, prot, flags, fd, off);
   #ifndef UCONFIG_BIONIC_LIBC
   	kprintf
-  	    ("TODO __sys_linux_mmap2 addr=%08x len=%08x prot=%08x flags=%08x fd=%d off=%08x\n",
+  	    ("TODO __sys_linux_mmap2 addr=%llx len=%llx prot=%llx flags=%llx fd=%d off=%llx\n",
   	     addr, len, prot, flags, fd, off);
   #endif //UCONFIG_BIONIC_LIBC
   	if (fd == -1 || flags & MAP_ANONYMOUS) {
@@ -532,10 +533,10 @@ static uint64_t sys_linux_mmap(uint64_t arg[])
   		if (prot & PROT_WRITE)
   			ucoreflags |= MMAP_WRITE;
   		int ret = __do_linux_mmap((uintptr_t) & addr, len, ucoreflags);
-  		//kprintf("@@@ ret=%d %e %08x\n", ret,ret, addr);
+  		kprintf("@@@ ret=%d %e %llx\n", ret,ret, addr);
   		if (ret)
   			return (uint64_t)MAP_FAILED;
-  		//kprintf("__sys_linux_mmap2 ret=%08x\n", addr);
+  		kprintf("__sys_linux_mmap2 ret=%llx\n", addr);
   		return (uint64_t) addr;
   	} else {
   		return (uint64_t) sysfile_linux_mmap2(addr, len, prot, flags,
@@ -630,6 +631,12 @@ static uint64_t __sys_linux_poll(uint64_t arg[])
 	return nfds;
 }
 
+static uint64_t __sys_linux_readlinkat(uint64_t arg[])
+{
+  //TODO: This is a stub function.
+  return E_NOENT;
+}
+
 static uint64_t sys_linux_sigkill(uint64_t arg[])
 {
 	return do_sigkill((int)arg[0], (int)arg[1]);
@@ -675,8 +682,8 @@ void syscall_linux()
     }*/
 		if (syscalls_linux[num] != unknown)
 		if (syscalls_linux[num] != NULL) {
-	    //kprintf("%d : LINUX syscall %d, pid = %d, name = %s rip = %lx  ARGS :\r\n", ++count, num, current->pid, current->name
-      //  , tf->tf_rip);
+	    kprintf("%d : LINUX syscall %d, pid = %d, name = %s rip = %lx  ARGS :\r\n", ++count, num, current->pid, current->name
+        , tf->tf_rip);
 	    arg[0] = tf->tf_regs.reg_rdi;
 			arg[1] = tf->tf_regs.reg_rsi;
 			arg[2] = tf->tf_regs.reg_rdx;
@@ -974,7 +981,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_renameat] unknown,
 	[__NR_linkat] unknown,
 	[__NR_symlinkat] unknown,
-	[__NR_readlinkat] unknown,
+	[__NR_readlinkat] __sys_linux_readlinkat,
 	[__NR_fchmodat] unknown,
 	[__NR_faccessat] unknown,
 	[__NR_pselect6] unknown,

@@ -95,10 +95,14 @@ int kernel_execve(const char *name, const char **argv, const char **kenvp)
 	return ret;
 }
 
+/*
+ * Initialize a new context for the program on the execve system call.
+ * The init_new_context_dynamic
+ */
 int init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int argc,
 			 char **kargv, int envc, char **kenvp,
-			 uint64_t is_dynamic, uint64_t real_entry,
-			 uint64_t load_address, uint64_t linker_base)
+			 uint64_t elf_have_interpreter, uint64_t interpreter_entry,
+			 uint64_t elf_entry, uint64_t linker_base, void* program_header_address)
 {
   //Conclude this by using LD_SHOW_AUXV=1 on my laptop running Linux 4.5.4
   const int ELF_AUXILIARY_VECTOR_COUNT = 19;
@@ -153,7 +157,13 @@ int init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int a
   auxiliary_vector[2].a_val = PGSIZE;
   auxiliary_vector[3].a_type = AT_CLKTCK;
   auxiliary_vector[3].a_val = 100;
-  auxiliary_vector[4].a_type = AT_IGNORE; //AT_PHDR
+  if(program_header_address != NULL) {
+    auxiliary_vector[4].a_type = AT_PHDR;
+    auxiliary_vector[4].a_val = program_header_address;
+  }
+  else {
+    auxiliary_vector[4].a_type = AT_IGNORE;
+  }
   auxiliary_vector[5].a_type = AT_PHENT;
   auxiliary_vector[5].a_val = elf->e_phentsize;
   auxiliary_vector[6].a_type = AT_PHNUM;
@@ -163,7 +173,7 @@ int init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int a
   auxiliary_vector[8].a_type = AT_FLAGS;
   auxiliary_vector[8].a_val = 0;
   auxiliary_vector[9].a_type = AT_ENTRY;
-  auxiliary_vector[9].a_val = elf->e_entry; //TODO
+  auxiliary_vector[9].a_val = elf_entry; //TODO
 
   //TODO: Currently uCore doesn't support multi-user. So we're simulating
   //The user root and the group root.
@@ -189,7 +199,12 @@ int init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int a
 	tf->tf_es = USER_DS;
 	tf->tf_ss = USER_DS;
 	tf->tf_rsp = (uint64_t)stack_top;
-	tf->tf_rip = elf->e_entry;
+  if(elf_have_interpreter) {
+	   tf->tf_rip = interpreter_entry;
+  }
+  else {
+    tf->tf_rip = elf_entry;
+  }
 	tf->tf_rflags = FL_IF;
 
   //Only uCore built-in utilities cares about this - C library likes uClibc only
