@@ -1112,7 +1112,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 	if (!is_dynamic) {
 		real_entry += bias;
 	}
-#ifdef UCONFIG_BIONIC_LIBC
+#if defined(UCONFIG_BIONIC_LIBC) || defined(ARCH_AMD64)
 	if (init_new_context_dynamic(current, elf, argc, kargv, envc, kenvp,
 				     is_dynamic, real_entry, load_address,
 				     bias) < 0)
