@@ -640,7 +640,8 @@ void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 		goto out_unlock;
 	}
 	if (!(flags & MAP_ANONYMOUS)) {
-		vma_mapfile(vma, fd, off << 12, NULL);
+    vma_mapfile(vma, fd, off, NULL);
+		//vma_mapfile(vma, fd, off << 12, NULL);
 	}
 	subret = 0;
 out_unlock:
