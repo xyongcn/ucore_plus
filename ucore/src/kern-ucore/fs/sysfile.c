@@ -271,27 +271,26 @@ int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * linux_stat_store)
 	if ((ret = file_fstat(fd, &ucore_stat)) != 0) {
 		return ret;
 	}
-  kprintf("%d\n",offsetof(struct linux_stat64, st_dev));
-  kprintf("%d\n",offsetof(struct linux_stat64, st_ino));
-  kprintf("%d\n",offsetof(struct linux_stat64, st_mode));
-  kprintf("%d\n",offsetof(struct linux_stat64, st_nlink));
-  kprintf("%d\n",offsetof(struct linux_stat64, st_uid));
-  kprintf("%d\n",offsetof(struct linux_stat64, st_gid));
-  kprintf("%d\n",offsetof(struct linux_stat64, st_rdev));
-  kprintf("%d\n",offsetof(struct linux_stat64, st_size));
-  kprintf("%d\n",offsetof(struct linux_stat64, st_blksize));
-  kprintf("%d\n",offsetof(struct linux_stat64, st_blocks));
-  kprintf("kstat->st_size = %d\r\n", ucore_stat.st_size);
 
   lock_mm(mm);
   memset(linux_stat_store, 0, sizeof(struct linux_stat64));
-  linux_stat_store->st_ino = 1;
+
+  static int unique_ino = 100;
+
+  linux_stat_store->st_ino = unique_ino; //TODO: This is a temporary fix.
+  unique_ino++;
   /* ucore never check access permision */
 	linux_stat_store->st_mode = ucore_stat.st_mode | 0777;
 	linux_stat_store->st_nlink = ucore_stat.st_nlinks;
 	linux_stat_store->st_blksize = 512;
 	linux_stat_store->st_blocks = ucore_stat.st_blocks;
 	linux_stat_store->st_size = ucore_stat.st_size;
+  kprintf("Returning size = %d\n", linux_stat_store->st_ino);
+  kprintf("Returning size = %d\n", linux_stat_store->st_mode);
+  kprintf("Returning size = %d\n", linux_stat_store->st_nlink);
+  kprintf("Returning size = %d\n", linux_stat_store->st_blksize);
+  kprintf("Returning size = %d\n", linux_stat_store->st_blocks);
+  kprintf("Returning size = %d\n", linux_stat_store->st_size);
   unlock_mm(mm);
 
 	return 0;
@@ -616,7 +615,7 @@ int sysfile_ioctl(int fd, unsigned int cmd, unsigned long arg)
 void *sysfile_linux_mmap2(void *addr, size_t len, int prot, int flags,
 			  int fd, size_t pgoff)
 {
-  kprintf("sysfile_linux_mmap2, len = %d", len);
+  //kprintf("sysfile_linux_mmap2, len = %d, pgoff = %d\n", len, pgoff);
 	if (!file_testfd(fd, 1, 0)) {
 		return MAP_FAILED;
 	}
