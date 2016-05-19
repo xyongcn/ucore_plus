@@ -285,12 +285,6 @@ int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * linux_stat_store)
 	linux_stat_store->st_blksize = 512;
 	linux_stat_store->st_blocks = ucore_stat.st_blocks;
 	linux_stat_store->st_size = ucore_stat.st_size;
-  kprintf("Returning size = %d\n", linux_stat_store->st_ino);
-  kprintf("Returning size = %d\n", linux_stat_store->st_mode);
-  kprintf("Returning size = %d\n", linux_stat_store->st_nlink);
-  kprintf("Returning size = %d\n", linux_stat_store->st_blksize);
-  kprintf("Returning size = %d\n", linux_stat_store->st_blocks);
-  kprintf("Returning size = %d\n", linux_stat_store->st_size);
   unlock_mm(mm);
 
 	return 0;
