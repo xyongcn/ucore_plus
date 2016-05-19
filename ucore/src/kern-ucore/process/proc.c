@@ -778,6 +778,16 @@ static bool proc_elf_program_load_needed(struct proghdr *program_header)
     program_header->p_type == ELF_PT_PHDR;
 }
 
+/*
+ * Allocate memory for the ELF image, this includes the following steps:
+ * 1. Create the vma for the ELF image. this specifies where the program is
+ * loaded. This doesn't involve any actual page allocation. Those access flags
+ * of vma is created corresponse to the program header.
+ * 2. create temporary page table entries for those vma, that doesn't match
+ * those vma access flags, instead, all pages are set to kernel-only read and
+ * write access. This provides great convience for @proc_elf_load_program.
+ * Those permissions will be fixed by @proc_elf_set_permission
+ */
 static int proc_elf_allocate_memory(struct proghdr *program_headers,
 int program_count, struct mm_struct *mm, int fd)
 {
@@ -789,12 +799,12 @@ int program_count, struct mm_struct *mm, int fd)
   for(int i = 0; i < program_count; i++) {
     ranges[i].start_addr = ranges[i].end_addr = 0;
   }
+
   for(int i = 0; i < program_count; i++) {
     struct proghdr *program_header = &program_headers[i];
     if(!proc_elf_program_load_needed(program_header)) continue;
-    int ret;
+    uint64_t bias = 0;
     uint32_t vm_flags = 0;
-    uint32_t bias = 0;
 
     if (program_header->p_flags & ELF_PF_X)
       vm_flags |= VM_EXEC;
@@ -803,15 +813,46 @@ int program_count, struct mm_struct *mm, int fd)
     if (program_header->p_flags & ELF_PF_R)
       vm_flags |= VM_READ;
 
-    ret = mm_map(mm, program_header->p_va + bias, program_header->p_memsz, vm_flags, NULL);
-    //if(ret != 0) return -E_NOMEM;
-
     if (mm->brk_start < program_header->p_va + bias + program_header->p_memsz) {
       mm->brk_start = program_header->p_va + bias + program_header->p_memsz;
     }
 
-    char* start = program_header->p_va + bias;
-    char* end = program_header->p_va + bias + program_header->p_memsz;
+    char *start = program_header->p_va + bias;
+    char *end = program_header->p_va + bias + program_header->p_memsz;
+
+    //TODO: Not certain if this may introduce a bug if end % PGSIZE == 0.
+    start = ROUNDDOWN(start, PGSIZE);
+    end = ROUNDUP(end, PGSIZE);
+    ranges[i].start_addr = start;
+    ranges[i].end_addr = end;
+
+    for(int j = 0; j < i; j++) {
+      if(ranges[j].end_addr <= start || ranges[i].start_addr >= end ||
+      ranges[j].end_addr == ranges[i].start_addr) {
+        continue;
+      }
+      mm_unmap(mm, ranges[j].start_addr, ranges[j].end_addr - ranges[j].start_addr);
+      start = ranges[j].start_addr < start ? ranges[j].start_addr : start;
+      end = ranges[j].end_addr > end ? ranges[j].end_addr : end;
+      ranges[j].start_addr = ranges[j].end_addr = 0;
+    }
+    if(mm_map(mm, start, end - start, vm_flags, NULL) != 0) {
+      return -E_NOMEM;
+    }
+  }
+
+  for(int i = 0; i < program_count; i++) {
+    ranges[i].start_addr = ranges[i].end_addr = 0;
+  }
+
+  for(int i = 0; i < program_count; i++) {
+    struct proghdr *program_header = &program_headers[i];
+    if(!proc_elf_program_load_needed(program_header)) continue;
+    int ret;
+    uint64_t bias = 0;
+
+    char *start = program_header->p_va + bias;
+    char *end = program_header->p_va + bias + program_header->p_memsz;
 
     //TODO: Not certain if this may introduce a bug if end % PGSIZE == 0.
     start = ROUNDDOWN(start, PGSIZE);

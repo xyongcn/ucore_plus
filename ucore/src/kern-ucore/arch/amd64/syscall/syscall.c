@@ -63,6 +63,12 @@ static uint64_t sys_exit_thread(uint64_t arg[])
 	return do_exit_thread(error_code);
 }
 
+static uint64_t __sys_linux_exit_group(uint64_t arg[])
+{
+	int error_code = (int)arg[0];
+	return do_exit(error_code);
+}
+
 static uint64_t sys_yield(uint64_t arg[])
 {
 	return do_yield();
@@ -219,7 +225,6 @@ static uint64_t sys_open(uint64_t arg[])
 {
 	const char *path = (const char *)arg[0];
 	uint32_t open_flags = (uint32_t) arg[1];
-  kprintf("\nPath = %s\n", path);
 	return sysfile_open(path, open_flags);
 }
 
@@ -514,9 +519,6 @@ static uint64_t sys_linux_mmap(uint64_t arg[])
   int flags = (int)arg[3];
   int fd = (int)arg[4];
   size_t off = (size_t) arg[5];
-  //if(len > (uint64_t)0x80000000) return -E_INVAL;
-  kprintf("Entering mmap: addr = %llx, len = %d, fd = %d, off = %d\r\n", addr, len, fd, off);
-	//return (uint64_t) sysfile_linux_mmap2(addr, len, prot, flags, fd, off);
   #ifndef UCONFIG_BIONIC_LIBC
   	kprintf
   	    ("TODO __sys_linux_mmap2 addr=%llx len=%llx prot=%llx flags=%llx fd=%d off=%llx\n",
@@ -537,18 +539,12 @@ static uint64_t sys_linux_mmap(uint64_t arg[])
   		if (prot & PROT_WRITE)
   			ucoreflags |= MMAP_WRITE;
   		int ret = __do_linux_mmap((uintptr_t) & addr, len, ucoreflags);
-  		//kprintf("@@@ ret=%d %e %llx\n", ret,ret, addr);
   		if (ret) {
   			return (uint64_t)MAP_FAILED;
       }
-  		//kprintf("\nExiting sys_linux_mmap: %llx\n", addr);
   		return (uint64_t) addr;
   	} else {
-      //kprintf("*** sysfile_linux_mmap2 off = %d\n", off);
-  		uint64_t ret = (uint64_t) sysfile_linux_mmap2(addr, len, prot, flags,
-  						      fd, off);
-                    //kprintf("\nExiting sys_linux_mmap: %llx\n", ret);
-                		return (uint64_t) ret;
+  		return (uint64_t)sysfile_linux_mmap2(addr, len, prot, flags, fd, off);
   	}
 }
 
@@ -994,7 +990,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_clock_gettime] unknown,
 	[__NR_clock_getres] unknown,
 	[__NR_clock_nanosleep] unknown,
-	[__NR_exit_group] unknown,
+	[__NR_exit_group] __sys_linux_exit_group,
 	[__NR_epoll_wait] unknown,
 	[__NR_epoll_ctl] unknown,
 	[__NR_tgkill] unknown,
