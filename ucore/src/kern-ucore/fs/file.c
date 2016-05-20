@@ -618,6 +618,7 @@ void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 		goto out_unlock;
 	}
 	uintptr_t end = start + len;
+  kprintf("start = %llx, end = %llx, len = %llx", start, end, len);
 	struct vma_struct *vma = find_vma(mm, start);
 	if (vma == NULL || vma->vm_start >= end) {
 		vma = NULL;
@@ -629,7 +630,9 @@ void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 	} else if (vma->vm_start == start && end == vma->vm_end) {
 		vma->vm_flags = vm_flags;
 	} else {
-		assert(vma->vm_start <= start && end <= vma->vm_end);
+    if(vma->vm_start > start || end > vma->vm_end) {
+      goto out_unlock;
+    }
 		if ((subret = mm_unmap_keep_pages(mm, start, len)) != 0) {
 			goto out_unlock;
 		}
@@ -640,7 +643,8 @@ void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 		goto out_unlock;
 	}
 	if (!(flags & MAP_ANONYMOUS)) {
-		vma_mapfile(vma, fd, off << 12, NULL);
+    vma_mapfile(vma, fd, off, NULL);
+		//vma_mapfile(vma, fd, off << 12, NULL);
 	}
 	subret = 0;
 out_unlock:

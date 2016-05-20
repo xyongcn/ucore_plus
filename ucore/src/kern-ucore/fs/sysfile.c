@@ -257,37 +257,34 @@ int sysfile_linux_fstat(int fd, struct linux_stat __user * buf)
 	return ret;
 }
 
-int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * buf)
+int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * linux_stat_store)
 {
-	struct mm_struct *mm = current->mm;
-	int ret;
-	struct stat __local_stat, *kstat = &__local_stat;
-	if ((ret = file_fstat(fd, kstat)) != 0) {
-		return -1;
-	}
-	struct linux_stat64 *kls = kmalloc(sizeof(struct linux_stat64));
-	if (!kls) {
-		return -1;
-	}
-	memset(kls, 0, sizeof(struct linux_stat64));
-	kls->st_ino = 1;
-	/* ucore never check access permision */
-	kls->st_mode = kstat->st_mode | 0777;
-	kls->st_nlink = kstat->st_nlinks;
-	kls->st_blksize = 512;
-	kls->st_blocks = kstat->st_blocks;
-	kls->st_size = kstat->st_size;
+  struct mm_struct *mm = current->mm;
 
-	ret = 0;
-	lock_mm(mm);
-	{
-		if (!copy_to_user(mm, buf, kls, sizeof(struct linux_stat64))) {
-			ret = -1;
-		}
+  //Ensure that buf is a valid userspace address
+  if(!user_mem_check(mm, (uintptr_t)linux_stat_store, sizeof(struct linux_stat64), 1)) {
+    return -E_FAULT;
+  }
+	struct stat ucore_stat;
+
+  int ret;
+	if ((ret = file_fstat(fd, &ucore_stat)) != 0) {
+		return ret;
 	}
-	unlock_mm(mm);
-	kfree(kls);
-	return ret;
+
+  lock_mm(mm);
+  memset(linux_stat_store, 0, sizeof(struct linux_stat64));
+
+  linux_stat_store->st_ino = ucore_stat.st_ino; //TODO: Some fs have no support for this.
+  /* ucore never check access permision */
+	linux_stat_store->st_mode = ucore_stat.st_mode | 0777;
+	linux_stat_store->st_nlink = ucore_stat.st_nlinks;
+	linux_stat_store->st_blksize = 512;
+	linux_stat_store->st_blocks = ucore_stat.st_blocks;
+	linux_stat_store->st_size = ucore_stat.st_size;
+  unlock_mm(mm);
+
+	return 0;
 }
 
 int sysfile_linux_fcntl64(int fd, int cmd, int arg)
@@ -609,7 +606,7 @@ int sysfile_ioctl(int fd, unsigned int cmd, unsigned long arg)
 void *sysfile_linux_mmap2(void *addr, size_t len, int prot, int flags,
 			  int fd, size_t pgoff)
 {
-  kprintf("sysfile_linux_mmap2, len = %d", len);
+  //kprintf("sysfile_linux_mmap2, len = %d, pgoff = %d\n", len, pgoff);
 	if (!file_testfd(fd, 1, 0)) {
 		return MAP_FAILED;
 	}

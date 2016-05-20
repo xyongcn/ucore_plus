@@ -27,9 +27,9 @@ struct arch_proc_struct {
 };
 
 //Bionic C related context initialization code
-int init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf,
-			     int argc, char **kargv, int envc, char **kenvp,
-			     uint64_t is_dynamic, uint64_t real_entry,
-			     uint64_t load_address, uint64_t linker_base);
+int init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int argc,
+			 char **kargv, int envc, char **kenvp,
+			 uint64_t elf_have_interpreter, uint64_t interpreter_entry,
+			 uint64_t elf_entry, uint64_t linker_base, void* program_header_address);
 
 #endif /* !__ARCH_PROC_H__ */
