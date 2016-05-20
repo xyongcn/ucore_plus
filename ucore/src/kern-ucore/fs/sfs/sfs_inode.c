@@ -727,6 +727,7 @@ static int sfs_fstat(struct inode *node, struct stat *stat)
 		return ret;
 	}
 	struct sfs_disk_inode *din = vop_info(node, sfs_inode)->din;
+  stat->st_ino = vop_info(node, sfs_inode)->ino;
 	stat->st_nlinks = din->nlinks;
 	stat->st_blocks = din->blocks;
 	if (din->type != SFS_TYPE_DIR) {
