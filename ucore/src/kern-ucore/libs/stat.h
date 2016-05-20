@@ -8,6 +8,7 @@ struct stat {
 #else
 struct ucore_stat {
 #endif
+  uint32_t st_ino;
 	uint32_t st_mode;	// protection mode and file type
 	size_t st_nlinks;	// number of hard links
 	size_t st_blocks;	// number of blocks file is using
@@ -45,6 +46,7 @@ struct linux_stat {
 	unsigned long __unused5;
 };
 
+#ifdef ARCH_ARM
 struct linux_stat64 {
 	unsigned long long st_dev;
 	unsigned char __pad0[4];
@@ -66,6 +68,28 @@ struct linux_stat64 {
 	unsigned long st_ctime_nsec;
 	unsigned long long st_ino;
 };
+#endif //ARCH_ARM
+
+#ifdef ARCH_AMD64
+struct linux_stat64 {
+	uint64_t st_dev;
+	uint64_t st_ino;
+  uint64_t st_nlink;
+	uint32_t st_mode;
+	uint32_t st_uid;
+	uint32_t st_gid;
+	uint64_t st_rdev;
+	uint64_t st_size;
+	uint64_t st_blksize;
+	uint64_t st_blocks;
+	unsigned long st_atime;
+	unsigned long st_atime_nsec;
+	unsigned long st_mtime;
+	unsigned long st_mtime_nsec;
+	unsigned long st_ctime;
+	unsigned long st_ctime_nsec;
+};
+#endif //ARCH_AMD64
 
 #if 0
 #define S_IFMT          070000	// mask for type of file

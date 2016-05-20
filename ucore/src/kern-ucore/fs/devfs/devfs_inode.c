@@ -122,8 +122,8 @@ static int devfs_gettype(struct inode *node, uint32_t * type_store)
 static int devfs_lookup_parent(
 struct inode *node, char *path, struct inode **node_store, char **endp)
 {
-  //TODO: need to implement real device lookup.
-  panic("");
+  vop_ref_inc(node);
+  (*node_store) = node;
   return 0;
 }
 
