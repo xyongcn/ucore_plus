@@ -275,10 +275,7 @@ int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * linux_stat_store)
   lock_mm(mm);
   memset(linux_stat_store, 0, sizeof(struct linux_stat64));
 
-  static int unique_ino = 100;
-
-  linux_stat_store->st_ino = unique_ino; //TODO: This is a temporary fix.
-  unique_ino++;
+  linux_stat_store->st_ino = ucore_stat.st_ino; //TODO: Some fs have no support for this.
   /* ucore never check access permision */
 	linux_stat_store->st_mode = ucore_stat.st_mode | 0777;
 	linux_stat_store->st_nlink = ucore_stat.st_nlinks;
