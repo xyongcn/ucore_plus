@@ -15,6 +15,7 @@
 #include <sysfile.h>
 #include <kio.h>
 #include <file.h>
+#include <time/time.h>
 
 static uint64_t sys_exit(uint64_t arg[])
 {
@@ -233,7 +234,7 @@ static uint64_t sys_mbox_info(uint64_t arg[])
 static uint64_t sys_open(uint64_t arg[])
 {
 	const char *path = (const char *)arg[0];
-  //kprintf("opening %s\r\n", path);
+  //kprintf("opening %s\n", path);
 	uint32_t open_flags = (uint32_t) arg[1];
 	return sysfile_open(path, open_flags);
 }
@@ -565,6 +566,15 @@ static uint64_t sys_linux_stat(uint64_t args[])
 	return sysfile_linux_stat64(fn, st);
 }
 
+static uint64_t sys_linux_lstat(uint64_t args[])
+{
+	char *fn = (char *)args[0];
+	struct linux_stat *st = (struct linux_stat *)args[1];
+  //TODO: lstat should be handling symbolic link in a different way than stat
+  //This is a temporary workaround.
+	return sysfile_linux_stat64(fn, st);
+}
+
 static uint64_t sys_linux_fstat(uint64_t args[])
 {
 	int fd = (char *)args[0];
@@ -711,6 +721,21 @@ static uint64_t sys_linux_sigkill(uint64_t arg[])
 	return do_sigkill((int)arg[0], (int)arg[1]);
 }
 
+static uint64_t sys_linux_getuid(uint64_t arg[])
+{
+  //TODO: This is a stub function. uCore now has no support for multiple user,
+  //so the UID of root is returned.
+  const static int UID_ROOT = 0;
+  return UID_ROOT;
+}
+
+static uint64_t sys_linux_time(uint64_t args[])
+{
+  time_t* time = (time_t*)args[0];
+  if(time != NULL) (*time) = time_get_current();
+  return time_get_current();
+}
+
 #define sys_linux_kill    sys_linux_sigkill
 
 
@@ -774,7 +799,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_close] sys_close,
 	[__NR_stat] sys_linux_stat,
 	[__NR_fstat] sys_linux_fstat,
-	[__NR_lstat] unknown,
+	[__NR_lstat] sys_linux_lstat,
 	[__NR_poll] sys_linux_poll,
 	[__NR_lseek] unknown,
 	[__NR_mmap] sys_linux_mmap,
@@ -870,7 +895,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_sysinfo] unknown,
 	[__NR_times] unknown,
 	[__NR_ptrace] unknown,
-	[__NR_getuid] unknown,
+	[__NR_getuid] sys_linux_getuid,
 	[__NR_syslog] unknown,
 	[__NR_getgid] unknown,
 	[__NR_setuid] unknown,
@@ -969,7 +994,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_lremovexattr] unknown,
 	[__NR_fremovexattr] unknown,
 	[__NR_tkill] unknown,
-	[__NR_time] unknown,
+	[__NR_time] sys_linux_time,
 	[__NR_futex] unknown,
 	[__NR_sched_setaffinity] unknown,
 	[__NR_sched_getaffinity] unknown,
