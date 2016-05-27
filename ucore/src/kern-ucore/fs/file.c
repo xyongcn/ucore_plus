@@ -367,6 +367,7 @@ int file_getdirentry64(int fd, struct dirent64 *direntp)
 	if ((ret = fd2file(fd, &file)) != 0) {
 		return ret;
 	}
+  direntp->d_off = file->pos;
 	filemap_acquire(file);
 
 	struct iobuf __iob, *iob =
@@ -377,6 +378,7 @@ int file_getdirentry64(int fd, struct dirent64 *direntp)
 	}
   direntp->d_type = 8;
 	filemap_release(file);
+  file->pos = direntp->d_off;
 	return ret;
 }
 
@@ -618,7 +620,7 @@ void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 		goto out_unlock;
 	}
 	uintptr_t end = start + len;
-  kprintf("start = %llx, end = %llx, len = %llx", start, end, len);
+  //kprintf("start = %llx, end = %llx, len = %llx", start, end, len);
 	struct vma_struct *vma = find_vma(mm, start);
 	if (vma == NULL || vma->vm_start >= end) {
 		vma = NULL;
