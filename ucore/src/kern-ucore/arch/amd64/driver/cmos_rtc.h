@@ -1,10 +1,12 @@
 /*
  * CMOS RTC (Real Time Clock) Module. This module provides access to system
  * time provided by the motherboard.
- * Those code are created with the knowledge and sample codes from
- * http://wiki.osdev.org/CMOS and those algorithm we used are from the file
- * http://mirrors.neusoft.edu.cn/rpi-kernel/drivers/rtc/rtc-lib.c
+ * Those code are created with the knowledge and sample codes from this page
+ * http://wiki.osdev.org/CMOS in the osdev wiki.
  */
+
+#ifndef __KERN_DRIVER_CMOS_RTC_H__
+#define __KERN_DRIVER_CMOS_RTC_H__
 
 #include <types.h>
 
@@ -17,4 +19,6 @@ struct cmos_rtc_data {
   uint16_t year;
 };
 
-void read_rtc(struct cmos_rtc_data* rtc_data);
+void cmos_rtc_read(struct cmos_rtc_data* rtc_data);
+
+#endif
