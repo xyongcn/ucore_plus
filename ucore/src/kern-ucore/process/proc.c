@@ -778,6 +778,39 @@ static bool proc_elf_program_load_needed(struct proghdr *program_header)
     program_header->p_type == ELF_PT_PHDR;
 }
 
+static off_t proc_elf_determine_load_offset(struct proghdr *program_headers,
+int program_count, struct mm_struct *mm)
+{
+  //TODO: Currently this is only for the whole elf, instead of
+  //some of its "programs".
+  //TODO: Not sure this "-1 as max address" works on all architectures.
+  uintptr_t begin_address = (uintptr_t)-1;
+  uintptr_t end_address = 0;
+  for(int i = 0; i < program_count; i++) {
+    struct proghdr *program_header = &program_headers[i];
+    if(!proc_elf_program_load_needed(program_header)) continue;
+    uint32_t vm_flags = 0;
+    if(program_header->p_va < begin_address) {
+      begin_address = program_header->p_va;
+    }
+    if(program_header->p_va + program_header->p_memsz > end_address) {
+      end_address = program_header->p_va + program_header->p_memsz;
+    }
+  }
+  begin_address = ROUNDDOWN(begin_address, PGSIZE);
+  end_address = ROUNDUP(end_address, PGSIZE);
+  off_t offset = 0;
+  //TODO: Currently, this is just intended for ld.so,
+  //whose base address tends to be 0.
+  if (begin_address == 0) {
+    //TODO: Seems use get_unmapped_area will not work, for the returned area
+    //is in mmap preserved region and doing this can break its data structure
+    offset = 0x8000;
+    //offset = get_unmapped_area(mm, end_address - begin_address);
+  }
+  return offset;
+}
+
 /*
  * Allocate memory for the ELF image, this includes the following steps:
  * 1. Create the vma for the ELF image. this specifies where the program is
@@ -789,7 +822,7 @@ static bool proc_elf_program_load_needed(struct proghdr *program_header)
  * Those permissions will be fixed by @proc_elf_set_permission
  */
 static int proc_elf_allocate_memory(struct proghdr *program_headers,
-int program_count, struct mm_struct *mm, int fd)
+int program_count, struct mm_struct *mm, int fd, off_t bias)
 {
   struct address_range {
     char* start_addr;
@@ -803,7 +836,6 @@ int program_count, struct mm_struct *mm, int fd)
   for(int i = 0; i < program_count; i++) {
     struct proghdr *program_header = &program_headers[i];
     if(!proc_elf_program_load_needed(program_header)) continue;
-    uint64_t bias = 0;
     uint32_t vm_flags = 0;
 
     if (program_header->p_flags & ELF_PF_X)
@@ -813,8 +845,13 @@ int program_count, struct mm_struct *mm, int fd)
     if (program_header->p_flags & ELF_PF_R)
       vm_flags |= VM_READ;
 
-    if (mm->brk_start < program_header->p_va + bias + program_header->p_memsz) {
-      mm->brk_start = program_header->p_va + bias + program_header->p_memsz;
+    //TODO: This is a workaround. If bias is not 0, it means that this program
+    //is a elf interpreter, and will be loaded to as high as the mmap-preserved
+    //memory region. Setting brk to that high will lead to problem.
+    if(bias == 0) {
+      if (mm->brk_start < program_header->p_va + bias + program_header->p_memsz) {
+        mm->brk_start = program_header->p_va + bias + program_header->p_memsz;
+      }
     }
 
     char *start = program_header->p_va + bias;
@@ -849,7 +886,6 @@ int program_count, struct mm_struct *mm, int fd)
     struct proghdr *program_header = &program_headers[i];
     if(!proc_elf_program_load_needed(program_header)) continue;
     int ret;
-    uint64_t bias = 0;
 
     char *start = program_header->p_va + bias;
     char *end = program_header->p_va + bias + program_header->p_memsz;
@@ -880,9 +916,8 @@ int program_count, struct mm_struct *mm, int fd)
 }
 
 static void proc_elf_load_program(struct proghdr *program_headers,
-int program_count, int fd)
+int program_count, int fd, off_t bias)
 {
-  int bias = 0;
   for(int i = 0; i < program_count; i++) {
     struct proghdr* program_header = &program_headers[i];
     if(!proc_elf_program_load_needed(program_header)) continue;
@@ -894,9 +929,8 @@ int program_count, int fd)
 }
 
 static void proc_elf_set_permission(struct proghdr *program_headers,
-int program_count, struct mm_struct *mm, int fd)
+int program_count, struct mm_struct *mm, int fd, off_t bias)
 {
-  uint64_t bias = 0;
   for(int i = 0; i < program_count; i++) {
     struct proghdr* program_header = &program_headers[i];
     if(!proc_elf_program_load_needed(program_header)) continue;
@@ -918,11 +952,14 @@ int program_count, struct mm_struct *mm, int fd)
 }
 
 static void proc_load_elf(struct proghdr *program_headers,
-int program_count, struct mm_struct *mm, int fd)
+int program_count, struct mm_struct *mm, int fd, off_t* offset_store)
 {
-  proc_elf_allocate_memory(program_headers, program_count, mm, fd);
-  proc_elf_load_program(program_headers, program_count, fd);
-  proc_elf_set_permission(program_headers, program_count, mm, fd);
+  off_t offset = proc_elf_determine_load_offset(program_headers,
+    program_count, mm);
+  proc_elf_allocate_memory(program_headers, program_count, mm, fd, offset);
+  proc_elf_load_program(program_headers, program_count, fd, offset);
+  proc_elf_set_permission(program_headers, program_count, mm, fd, offset);
+  *offset_store = offset;
 }
 
 static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
@@ -966,11 +1003,11 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
   char *interpreter_path = NULL;
   void* program_header_address = NULL;
 	uint32_t interp_idx;
-	uint32_t bias = 0;
+	off_t bias = 0;
 
   struct proghdr* program_headers = kmalloc(sizeof(struct proghdr) * elf->e_phnum);
   load_icode_read(fd, program_headers, sizeof(struct proghdr) * elf->e_phnum, elf->e_phoff);
-  proc_load_elf(program_headers, elf->e_phnum, mm, fd);
+  proc_load_elf(program_headers, elf->e_phnum, mm, fd, &bias);
 
   for(int i = 0; i < elf->e_phnum; i++) {
     struct proghdr* ph = &program_headers[i];
@@ -1018,7 +1055,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
       interp_fd, interpreter_headers, sizeof(struct proghdr) * interp_elf->e_phnum,
       interp_elf->e_phoff
     );
-    proc_load_elf(interpreter_headers, interp_elf->e_phnum, mm, interp_fd);
+    proc_load_elf(interpreter_headers, interp_elf->e_phnum, mm, interp_fd, &bias);
 		sysfile_close(interp_fd);
 		kfree(interpreter_path);
 	}
@@ -1038,7 +1075,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 
 #if defined(UCONFIG_BIONIC_LIBC) || defined(ARCH_AMD64)
 	if (init_new_context_dynamic(current, elf, argc, kargv, envc, kenvp,
-				     elf_have_interpreter, interpreter_entry, elf_entry,
+				     elf_have_interpreter, interpreter_entry + bias, elf_entry,
 				     bias, program_header_address) < 0)
 		goto bad_cleanup_mmap;
 #else
