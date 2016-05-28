@@ -8,12 +8,6 @@
 #include "cdefs.h"
 
 struct rwlock {
-        rwlock() { 
-            rw_lock = MA_NOTOWNED;
-            sem_init(&(sem), 1);
-        }
-
-
         semaphore_t sem;
         //struct lock_object      lock_object;
         volatile uintptr_t      rw_lock;
@@ -26,7 +20,7 @@ static void rw_wlock(struct rwlock* lock) {
 
 static void rw_wunlock(struct rwlock* lock) {
     if (lock->rw_lock == (uintptr_t)current) {
-        lock->rw_lock = NOTOWNED;
+        lock->rw_lock = MA_NOTOWNED;
         up(&(lock->sem));
     }
 }
