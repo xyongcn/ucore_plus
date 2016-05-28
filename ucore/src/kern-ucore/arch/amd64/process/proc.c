@@ -169,7 +169,7 @@ int init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int a
   auxiliary_vector[6].a_type = AT_PHNUM;
   auxiliary_vector[6].a_val = elf->e_phnum;
   auxiliary_vector[7].a_type = AT_BASE; //The base address of the program interpreter
-  auxiliary_vector[7].a_val = 0; //TODO
+  auxiliary_vector[7].a_val = linker_base; //TODO
   auxiliary_vector[8].a_type = AT_FLAGS;
   auxiliary_vector[8].a_val = 0;
   auxiliary_vector[9].a_type = AT_ENTRY;
