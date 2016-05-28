@@ -70,4 +70,10 @@ static inline int fopen_count_dec(struct file *file)
 	return atomic_sub_return(&(file->open_count), 1);
 }
 
+#ifdef UCONFIG_BIONIC_LIBC
+struct file* fd2file_onfs(int fd, struct fs_struct *fs_struct);
+void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
+			  size_t off);
+#endif
+
 #endif /* !__KERN_FS_FILE_H__ */
