@@ -68,7 +68,7 @@ static void parse_initrd(Mbdata *mb)
 	int i;
 	struct Mbmod *mods = (struct Mbmod*)VADDR_DIRECT(mb->mods_addr);
 	for(i=0;i<mb->mods_count;i++){
-		kprintf("mbmod: %d %p %p\n", i, 
+		kprintf("mbmod: %d %p %p\n", i,
 		  mods[i].start, mods[i].end);
 	}
 	if(mb->mods_count<1)
@@ -79,6 +79,7 @@ static void parse_initrd(Mbdata *mb)
 
 int kern_init(uint64_t mbmagic, uint64_t mbmem)
 {
+  enable_sse();
 	extern char edata[], end[];
 	memset(edata, 0, end - edata);
 

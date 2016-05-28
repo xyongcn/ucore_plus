@@ -14,6 +14,7 @@
 #include <dirent.h>
 #include <sysfile.h>
 #include <kio.h>
+#include <file.h>
 
 static uint64_t sys_exit(uint64_t arg[])
 {
@@ -53,13 +54,28 @@ static uint64_t sys_clone(uint64_t arg[])
 	if (stack == 0) {
 		stack = tf->tf_rsp;
 	}
-	return do_fork(clone_flags, stack, tf);
+  long thread_id = do_fork(clone_flags, stack, tf);
+  if(clone_flags & CLONE_CHILD_SETTID) {
+    long* child_tid_storage = arg[3];
+    *child_tid_storage = thread_id;
+  }
+  if(clone_flags & CLONE_PARENT_SETTID) {
+    long* parent_tid_storage = arg[2];
+    *parent_tid_storage = thread_id;
+  }
+  return thread_id;
 }
 
 static uint64_t sys_exit_thread(uint64_t arg[])
 {
 	int error_code = (int)arg[0];
 	return do_exit_thread(error_code);
+}
+
+static uint64_t sys_linux_exit_group(uint64_t arg[])
+{
+	int error_code = (int)arg[0];
+	return do_exit(error_code);
 }
 
 static uint64_t sys_yield(uint64_t arg[])
@@ -217,6 +233,7 @@ static uint64_t sys_mbox_info(uint64_t arg[])
 static uint64_t sys_open(uint64_t arg[])
 {
 	const char *path = (const char *)arg[0];
+  //kprintf("opening %s\r\n", path);
 	uint32_t open_flags = (uint32_t) arg[1];
 	return sysfile_open(path, open_flags);
 }
@@ -451,7 +468,7 @@ static uint64_t sys_setrlimit(uint64_t arg[])
 	return do_linux_usetrlimit(res, lim);
 }
 
-static uint64_t __sys_linux_brk(uint64_t arg[])
+static uint64_t sys_linux_brk(uint64_t arg[])
 {
 	uintptr_t brk = (uintptr_t) arg[0];
 	return do_linux_brk(brk);
@@ -463,7 +480,7 @@ static uint64_t sys_linux_sigaction(uint64_t arg[])
 			    (struct sigaction *)arg[2]);
 }
 
-static uint64_t __sys_linux_sigreturn(uint64_t arg[])
+static uint64_t sys_linux_sigreturn(uint64_t arg[])
 {
   return do_sigreturn();
 }
@@ -474,12 +491,12 @@ static uint64_t sys_linux_sigprocmask(uint64_t arg[])
 			      (sigset_t *) arg[2]);
 }
 
-static uint64_t __sys_linux_fcntl(uint64_t arg[])
+static uint64_t sys_linux_fcntl(uint64_t arg[])
 {
 	return sysfile_linux_fcntl64(arg[0], arg[1], arg[2]);
 }
 
-static uint64_t __sys_linux_getdents(uint64_t arg[])
+static uint64_t sys_linux_getdents(uint64_t arg[])
 {
 	unsigned int fd = (unsigned int)arg[0];
 	struct dirent *dir = (struct dirent *)arg[1];
@@ -491,7 +508,7 @@ static uint64_t __sys_linux_getdents(uint64_t arg[])
 	return count;
 }
 
-static uint64_t __sys_linux_getdents64(uint64_t arg[])
+static uint64_t sys_linux_getdents64(uint64_t arg[])
 {
   unsigned int fd = (unsigned int)arg[0];
 	struct dirent64 *dir = (struct dirent64 *)arg[1];
@@ -512,19 +529,19 @@ static uint64_t sys_linux_mmap(uint64_t arg[])
   int flags = (int)arg[3];
   int fd = (int)arg[4];
   size_t off = (size_t) arg[5];
-  //kprintf("addr = %x, len = %d, fd = %d, off = %d\r\n", addr, len, fd, off);
-	//return (uint64_t) sysfile_linux_mmap2(addr, len, prot, flags, fd, off);
   #ifndef UCONFIG_BIONIC_LIBC
   	kprintf
-  	    ("TODO __sys_linux_mmap2 addr=%08x len=%08x prot=%08x flags=%08x fd=%d off=%08x\n",
+  	    ("TODO sys_linux_mmap2 addr=%llx len=%llx prot=%llx flags=%llx fd=%d off=%llx\n",
   	     addr, len, prot, flags, fd, off);
   #endif //UCONFIG_BIONIC_LIBC
   	if (fd == -1 || flags & MAP_ANONYMOUS) {
+      //kprintf("Trying anonymous map.\r\n");
   		//print_trapframe(current->tf);
   #ifdef UCONFIG_BIONIC_LIBC
   		if (flags & MAP_FIXED) {
-  			return linux_regfile_mmap2(addr, len, prot, flags, fd,
+  			uint64_t ret = linux_regfile_mmap2(addr, len, prot, flags, fd,
   						   off);
+        return (uint64_t)ret;
   		}
   #endif //UCONFIG_BIONIC_LIBC
 
@@ -532,32 +549,30 @@ static uint64_t sys_linux_mmap(uint64_t arg[])
   		if (prot & PROT_WRITE)
   			ucoreflags |= MMAP_WRITE;
   		int ret = __do_linux_mmap((uintptr_t) & addr, len, ucoreflags);
-  		//kprintf("@@@ ret=%d %e %08x\n", ret,ret, addr);
-  		if (ret)
+  		if (ret) {
   			return (uint64_t)MAP_FAILED;
-  		//kprintf("__sys_linux_mmap2 ret=%08x\n", addr);
+      }
   		return (uint64_t) addr;
   	} else {
-  		return (uint64_t) sysfile_linux_mmap2(addr, len, prot, flags,
-  						      fd, off);
+  		return (uint64_t)sysfile_linux_mmap2(addr, len, prot, flags, fd, off);
   	}
 }
 
-static uint64_t __sys_linux_stat(uint64_t args[])
+static uint64_t sys_linux_stat(uint64_t args[])
 {
 	char *fn = (char *)args[0];
 	struct linux_stat *st = (struct linux_stat *)args[1];
 	return sysfile_linux_stat64(fn, st);
 }
 
-static uint64_t __sys_linux_fstat(uint64_t args[])
+static uint64_t sys_linux_fstat(uint64_t args[])
 {
 	int fd = (char *)args[0];
 	struct linux_stat *st = (struct linux_stat *)args[1];
 	return sysfile_linux_fstat64(fd, st);
 }
 
-static uint64_t __sys_linux_waitpid(uint64_t arg[])
+static uint64_t sys_linux_waitpid(uint64_t arg[])
 {
 	int pid = (int)arg[0];
 	int *store = (int *)arg[1];
@@ -568,7 +583,7 @@ static uint64_t __sys_linux_waitpid(uint64_t arg[])
 	return do_linux_waitpid(pid, store);
 }
 
-static uint64_t __sys_linux_nanosleep(uint64_t arg[])
+static uint64_t sys_linux_nanosleep(uint64_t arg[])
 {
 	//TODO: handle signal interrupt
 	struct linux_timespec *req = (struct linux_timespec *)arg[0];
@@ -576,7 +591,7 @@ static uint64_t __sys_linux_nanosleep(uint64_t arg[])
 	return do_linux_sleep(req, rem);
 }
 
-static uint64_t __sys_linux_pipe(uint64_t arg[])
+static uint64_t sys_linux_pipe(uint64_t arg[])
 {
 	int *fd_store = (int *)arg[0];
 	return sysfile_pipe(fd_store) ? -1 : 0;
@@ -590,7 +605,7 @@ static uint64_t __sys_linux_pipe(uint64_t arg[])
                           int __user *parent_tidptr, int tls_val,
                           int __user *child_tidptr, struct pt_regs *regs)
  */
-static uint64_t __sys_linux_clone(uint64_t arg[])
+static uint64_t sys_linux_clone(uint64_t arg[])
 {
 	struct trapframe *tf = current->tf;
 	uint64_t clone_flags = (uint64_t) arg[0];
@@ -606,7 +621,7 @@ static uint64_t sys_linux_sigsuspend(uint64_t arg[])
 	return do_sigsuspend((sigset_t *) arg[0]);
 }
 
-static uint64_t __sys_linux_getppid(uint64_t arg[])
+static uint64_t sys_linux_getppid(uint64_t arg[])
 {
 	struct proc_struct *parent = current->parent;
 	if (!parent)
@@ -620,7 +635,7 @@ struct linux_pollfd {
 	short revents;		/* returned events */
 };
 
-static uint64_t __sys_linux_poll(uint64_t arg[])
+static uint64_t sys_linux_poll(uint64_t arg[])
 {
 	//FIXME
 	struct linux_pollfd *fd = (struct linux_pollfd *)arg[0]; // can be hacked
@@ -630,13 +645,73 @@ static uint64_t __sys_linux_poll(uint64_t arg[])
 	return nfds;
 }
 
+static uint64_t sys_linux_readlinkat(uint64_t arg[])
+{
+  //TODO: This is a stub function.
+  return -E_NOENT;
+}
+
+const static int ARCH_SET_GS = 0x1001;
+const static int ARCH_SET_FS = 0x1002;
+const static int ARCH_GET_FS = 0x1003;
+const static int ARCH_GET_GS = 0x1004;
+
+static uint64_t sys_linux_arch_prctl(uint64_t arg[])
+{
+  int code = (int)arg[0];
+  if(code == ARCH_SET_GS) {
+    panic("TODO: Need to handle swapgs problem.");
+  }
+  else if(code == ARCH_SET_FS) {
+    uint64_t new_fs = arg[1];
+    writemsr(MSR_FS_BASE, new_fs);
+    return 0;
+  }
+  else if(code == ARCH_GET_GS) {
+    uint64_t* fs_ptr = (uint64_t*)arg[1];
+    //TODO: Check user-space address.
+    *fs_ptr = readmsr(MSR_FS_BASE);
+    return 0;
+  }
+  else if(code == ARCH_SET_GS) {
+    panic("TODO: Need to handle swapgs problem.");
+  }
+  else {
+    return -E_INVAL;
+  }
+  return 0;
+}
+
+static uint64_t sys_linux_mprotect(uint64_t arg[])
+{
+
+	void *addr = (void *)arg[0];
+	size_t len = arg[1];
+	int prot = arg[2];
+
+	//kprintf("mprotect addr=0x%08x len=%08x prot=%08x\n", addr, len, prot);
+
+	return do_mprotect(addr, len, prot);
+}
+
+static uint64_t sys_linux_set_tid_address(uint64_t arg[])
+{
+  //TODO: This is a stub function.
+  return current->tid + 1;
+}
+
+static uint64_t sys_linux_set_robust_list(uint64_t arg[])
+{
+  //TODO: This is a stub function.
+  return 0;
+}
+
 static uint64_t sys_linux_sigkill(uint64_t arg[])
 {
 	return do_sigkill((int)arg[0], (int)arg[1]);
 }
 
-#define __sys_linux_sigkill sys_linux_sigkill
-#define __sys_linux_kill    sys_linux_sigkill
+#define sys_linux_kill    sys_linux_sigkill
 
 
 uint64_t unknown(uint64_t arg[])
@@ -659,12 +734,10 @@ uint32_t count = 0;
 
 void syscall_linux()
 {
-  //panic("Syscall Linux\n");
-  //prrsp();
 	struct trapframe *tf = current->tf;
 	uint64_t arg[6];
 	int num = tf->tf_regs.reg_rax;
-  //kprintf("LINUX syscall %d  gs = 0x%x\n", num, mycpu());
+  //kprintf("LINUX syscall %d  gs = 0x%x fs = %llx rip = %llx\n", num, mycpu(), readmsr(MSR_FS_BASE), tf->tf_rip);
 	if (num >= 0 && num < NUM_LINUX_SYSCALLS) {
     /*if(num == __NR_execve) {
       kprintf("Beginning execve= =\r\n");
@@ -683,20 +756,8 @@ void syscall_linux()
 			arg[3] = tf->tf_regs.reg_r10;
 			arg[4] = tf->tf_regs.reg_r8;
 			arg[5] = tf->tf_regs.reg_r9;
-	    int i;
-      //for (i = 0; i < 6; i++)		kprintf(" %x", arg[i]);	kprintf("\n");
 			tf->tf_regs.reg_rax = syscalls_linux[num] (arg);
-#if 0
-	kprintf("%d : SyscallID %d, ARGS :", ++count, num);
-	for (i = 0; i < 6; i++)
-		kprintf(" %lx", arg[i]);
-//	kprintf("\n");
-	kprintf("\t= %d 0x%x.\n", tf->tf_regs.reg_rax, tf->tf_regs.reg_rax);
-//if(num==12)
-//	debug = 1;
-#endif
-//kprintf("%d : LINUX syscall exit %d, pid = %d, name = %s  ARGS :\r\n", ++count, num, current->pid, current->name);
-      //kprintf("LINUX syscall ret, rsp = %lx pid = %d rip = %lx\r\n", tf->tf_rsp, current->pid, tf->tf_rip);
+      //kprintf("LINUX syscall ret %d, returning %llx rip = %lx\r\n", num, tf->tf_regs.reg_rax, tf->tf_rip);
 			return;
 		}
 	}
@@ -711,25 +772,25 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_write] sys_write,
 	[__NR_open] sys_open,
 	[__NR_close] sys_close,
-	[__NR_stat] __sys_linux_stat,
-	[__NR_fstat] __sys_linux_fstat,
+	[__NR_stat] sys_linux_stat,
+	[__NR_fstat] sys_linux_fstat,
 	[__NR_lstat] unknown,
-	[__NR_poll] __sys_linux_poll,
+	[__NR_poll] sys_linux_poll,
 	[__NR_lseek] unknown,
 	[__NR_mmap] sys_linux_mmap,
-	[__NR_mprotect] unknown,
-	[__NR_munmap] unknown,
-	[__NR_brk] __sys_linux_brk,
+	[__NR_mprotect] sys_linux_mprotect,
+	[__NR_munmap] sys_munmap,
+	[__NR_brk] sys_linux_brk,
 	[__NR_rt_sigaction] sys_linux_sigaction,
 	[__NR_rt_sigprocmask] sys_linux_sigprocmask,
-	[__NR_rt_sigreturn] __sys_linux_sigreturn,
+	[__NR_rt_sigreturn] sys_linux_sigreturn,
 	[__NR_ioctl] sys_ioctl,
 	[__NR_pread64] unknown,
 	[__NR_pwrite64] unknown,
 	[__NR_readv] unknown,
 	[__NR_writev] unknown,
 	[__NR_access] unknown,
-	[__NR_pipe] __sys_linux_pipe,
+	[__NR_pipe] sys_linux_pipe,
 	[__NR_select] unknown,
 	[__NR_sched_yield] unknown,
 	[__NR_mremap] unknown,
@@ -742,7 +803,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_dup] unknown,
 	[__NR_dup2] unknown,
 	[__NR_pause] unknown,
-	[__NR_nanosleep] __sys_linux_nanosleep,
+	[__NR_nanosleep] sys_linux_nanosleep,
 	[__NR_getitimer] unknown,
 	[__NR_alarm] unknown,
 	[__NR_setitimer] unknown,
@@ -763,13 +824,13 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_socketpair] unknown,
 	[__NR_setsockopt] unknown,
 	[__NR_getsockopt] unknown,
-	[__NR_clone] __sys_linux_clone,
+	[__NR_clone] sys_linux_clone,
 	[__NR_fork] sys_fork,
 	[__NR_vfork] unknown,
 	[__NR_execve] sys_execve,
 	[__NR_exit] sys_exit,
-	[__NR_wait4] __sys_linux_waitpid,
-	[__NR_kill] __sys_linux_kill,
+	[__NR_wait4] sys_linux_waitpid,
+	[__NR_kill] sys_linux_kill,
 	[__NR_uname] unknown,
 	[__NR_semget] unknown,
 	[__NR_semop] unknown,
@@ -779,13 +840,13 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_msgsnd] unknown,
 	[__NR_msgrcv] unknown,
 	[__NR_msgctl] unknown,
-	[__NR_fcntl] __sys_linux_fcntl,
+	[__NR_fcntl] sys_linux_fcntl,
 	[__NR_flock] unknown,
 	[__NR_fsync] unknown,
 	[__NR_fdatasync] unknown,
 	[__NR_truncate] unknown,
 	[__NR_ftruncate] unknown,
-	[__NR_getdents] __sys_linux_getdents,
+	[__NR_getdents] sys_linux_getdents,
 	[__NR_getcwd] unknown,
 	[__NR_chdir] unknown,
 	[__NR_fchdir] unknown,
@@ -817,7 +878,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_geteuid] unknown,
 	[__NR_getegid] unknown,
 	[__NR_setpgid] unknown,
-	[__NR_getppid] __sys_linux_getppid,
+	[__NR_getppid] sys_linux_getppid,
 	[__NR_getpgrp] unknown,
 	[__NR_setsid] unknown,
 	[__NR_setreuid] unknown,
@@ -865,7 +926,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_pivot_root] unknown,
 	[__NR__sysctl] unknown,
 	[__NR_prctl] unknown,
-	[__NR_arch_prctl] unknown,
+	[__NR_arch_prctl] sys_linux_arch_prctl,
 	[__NR_adjtimex] unknown,
 	[__NR_setrlimit] sys_setrlimit,
 	[__NR_chroot] unknown,
@@ -924,8 +985,8 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_epoll_ctl_old] unknown,
 	[__NR_epoll_wait_old] unknown,
 	[__NR_remap_file_pages] unknown,
-	[__NR_getdents64] __sys_linux_getdents64,
-	[__NR_set_tid_address] unknown,
+	[__NR_getdents64] sys_linux_getdents64,
+	[__NR_set_tid_address] sys_linux_set_tid_address,
 	[__NR_restart_syscall] unknown,
 	[__NR_semtimedop] unknown,
 	[__NR_fadvise64] unknown,
@@ -938,7 +999,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_clock_gettime] unknown,
 	[__NR_clock_getres] unknown,
 	[__NR_clock_nanosleep] unknown,
-	[__NR_exit_group] unknown,
+	[__NR_exit_group] sys_linux_exit_group,
 	[__NR_epoll_wait] unknown,
 	[__NR_epoll_ctl] unknown,
 	[__NR_tgkill] unknown,
@@ -974,13 +1035,13 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_renameat] unknown,
 	[__NR_linkat] unknown,
 	[__NR_symlinkat] unknown,
-	[__NR_readlinkat] unknown,
+	[__NR_readlinkat] sys_linux_readlinkat,
 	[__NR_fchmodat] unknown,
 	[__NR_faccessat] unknown,
 	[__NR_pselect6] unknown,
 	[__NR_ppoll] unknown,
 	[__NR_unshare] unknown,
-	[__NR_set_robust_list] unknown,
+	[__NR_set_robust_list] sys_linux_set_robust_list,
 	[__NR_get_robust_list] unknown,
 	[__NR_splice] unknown,
 	[__NR_tee] unknown,

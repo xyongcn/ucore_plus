@@ -22,6 +22,7 @@ int kern_init(void) __attribute__ ((noreturn));
 
 int kern_init(void)
 {
+  enable_sse();
 	extern char edata[], end[];
 	memset(edata, 0, end - edata);
 

@@ -214,10 +214,12 @@ uintptr_t addr;
 			if (current == NULL) {
 				panic("handle pgfault failed. %e\n", ret);
 			} else {
+        uintptr_t addr = rcr2();
 				if (trap_in_kernel(tf)) {
+          print_stackframe();
 					panic
-					    ("handle pgfault failed in kernel mode. %e\n",
-					     ret);
+					    ("%llx: handle pgfault failed in kernel mode. %e\n",
+					     addr, ret);
 				}
 				print_pgfault(tf);
 				kprintf("pgfault_handler return %d\n", ret);

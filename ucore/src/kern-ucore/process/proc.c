@@ -761,104 +761,169 @@ static int load_icode_read(int fd, void *buf, size_t len, off_t offset)
 	return 0;
 }
 
-//#ifdef UCONFIG_BIONIC_LIBC
-static int
-map_ph(int fd, struct proghdr *ph, struct mm_struct *mm, uint32_t * pbias,
-       uint32_t linker)
+/*
+ * An ELF executable contains one or more "program", each program is defines
+ * its offset and size in the ELF file, as well as where it expects it self
+ * to be loaded in the virtual memory. Full content of the program header is
+ * represented by a proghdr structure.
+ * However, an important point needs to be mentioned is that, despite the
+ * virtual address in the proghdr structure (i.e. ph->p_va), the OS doesn't have
+ * to load the ELF into the specified location of the virtual memory.
+ */
+
+static bool proc_elf_program_load_needed(struct proghdr *program_header)
 {
-	int ret = 0;
-	struct Page *page;
-	uint32_t vm_flags = 0;
-	uint32_t bias = 0;
-	pte_perm_t perm = 0;
-	ptep_set_u_read(&perm);
-
-	if (ph->p_flags & ELF_PF_X)
-		vm_flags |= VM_EXEC;
-	if (ph->p_flags & ELF_PF_W)
-		vm_flags |= VM_WRITE;
-	if (ph->p_flags & ELF_PF_R)
-		vm_flags |= VM_READ;
-
-	if (vm_flags & VM_WRITE)
-		ptep_set_u_write(&perm);
-
-	if (pbias) {
-		bias = *pbias;
-	}
-	if (!bias && !ph->p_va) {
-		bias = get_unmapped_area(mm, ph->p_memsz + PGSIZE);
-		bias = ROUNDUP(bias, PGSIZE);
-		if (pbias)
-			*pbias = bias;
-	}
-
-	if ((ret =
-	     mm_map(mm, ph->p_va + bias, ph->p_memsz, vm_flags, NULL)) != 0) {
-		goto bad_cleanup_mmap;
-	}
-
-	if (!linker && mm->brk_start < ph->p_va + bias + ph->p_memsz) {
-		mm->brk_start = ph->p_va + bias + ph->p_memsz;
-	}
-
-	off_t offset = ph->p_offset;
-	size_t off, size;
-	uintptr_t start = ph->p_va + bias, end, la = ROUNDDOWN(start, PGSIZE);
-
-	end = ph->p_va + bias + ph->p_filesz;
-	while (start < end) {
-		if ((page = pgdir_alloc_page(mm->pgdir, la, perm)) == NULL) {
-			ret = -E_NO_MEM;
-			goto bad_cleanup_mmap;
-		}
-		off = start - la, size = PGSIZE - off, la += PGSIZE;
-		if (end < la) {
-			size -= la - end;
-		}
-		if ((ret =
-		     load_icode_read(fd, page2kva(page) + off, size,
-				     offset)) != 0) {
-			goto bad_cleanup_mmap;
-		}
-		start += size, offset += size;
-	}
-
-	end = ph->p_va + bias + ph->p_memsz;
-
-	if (start < la) {
-		if (start == end) {
-			goto normal_exit;
-		}
-		off = start + PGSIZE - la, size = PGSIZE - off;
-		if (end < la) {
-			size -= la - end;
-		}
-		memset(page2kva(page) + off, 0, size);
-		start += size;
-		assert((end < la && start == end)
-		       || (end >= la && start == la));
-	}
-
-	while (start < end) {
-		if ((page = pgdir_alloc_page(mm->pgdir, la, perm)) == NULL) {
-			ret = -E_NO_MEM;
-			goto bad_cleanup_mmap;
-		}
-		off = start - la, size = PGSIZE - off, la += PGSIZE;
-		if (end < la) {
-			size -= la - end;
-		}
-		memset(page2kva(page) + off, 0, size);
-		start += size;
-	}
-normal_exit:
-	return 0;
-bad_cleanup_mmap:
-	return ret;
+  return program_header->p_type == ELF_PT_LOAD ||
+    program_header->p_type == ELF_PT_DYNAMIC ||
+    program_header->p_type == ELF_PT_PHDR;
 }
 
-//#endif //UCONFIG_BIONIC_LIBC
+/*
+ * Allocate memory for the ELF image, this includes the following steps:
+ * 1. Create the vma for the ELF image. this specifies where the program is
+ * loaded. This doesn't involve any actual page allocation. Those access flags
+ * of vma is created corresponse to the program header.
+ * 2. create temporary page table entries for those vma, that doesn't match
+ * those vma access flags, instead, all pages are set to kernel-only read and
+ * write access. This provides great convience for @proc_elf_load_program.
+ * Those permissions will be fixed by @proc_elf_set_permission
+ */
+static int proc_elf_allocate_memory(struct proghdr *program_headers,
+int program_count, struct mm_struct *mm, int fd)
+{
+  struct address_range {
+    char* start_addr;
+    char* end_addr;
+  };
+  struct address_range* ranges = kmalloc(program_count * sizeof(struct address_range));
+  for(int i = 0; i < program_count; i++) {
+    ranges[i].start_addr = ranges[i].end_addr = 0;
+  }
+
+  for(int i = 0; i < program_count; i++) {
+    struct proghdr *program_header = &program_headers[i];
+    if(!proc_elf_program_load_needed(program_header)) continue;
+    uint64_t bias = 0;
+    uint32_t vm_flags = 0;
+
+    if (program_header->p_flags & ELF_PF_X)
+      vm_flags |= VM_EXEC;
+    if (program_header->p_flags & ELF_PF_W)
+      vm_flags |= VM_WRITE;
+    if (program_header->p_flags & ELF_PF_R)
+      vm_flags |= VM_READ;
+
+    if (mm->brk_start < program_header->p_va + bias + program_header->p_memsz) {
+      mm->brk_start = program_header->p_va + bias + program_header->p_memsz;
+    }
+
+    char *start = program_header->p_va + bias;
+    char *end = program_header->p_va + bias + program_header->p_memsz;
+
+    //TODO: Not certain if this may introduce a bug if end % PGSIZE == 0.
+    start = ROUNDDOWN(start, PGSIZE);
+    end = ROUNDUP(end, PGSIZE);
+    ranges[i].start_addr = start;
+    ranges[i].end_addr = end;
+
+    for(int j = 0; j < i; j++) {
+      if(ranges[j].end_addr <= start || ranges[i].start_addr >= end ||
+      ranges[j].end_addr == ranges[i].start_addr) {
+        continue;
+      }
+      mm_unmap(mm, ranges[j].start_addr, ranges[j].end_addr - ranges[j].start_addr);
+      start = ranges[j].start_addr < start ? ranges[j].start_addr : start;
+      end = ranges[j].end_addr > end ? ranges[j].end_addr : end;
+      ranges[j].start_addr = ranges[j].end_addr = 0;
+    }
+    if(mm_map(mm, start, end - start, vm_flags, NULL) != 0) {
+      return -E_NOMEM;
+    }
+  }
+
+  for(int i = 0; i < program_count; i++) {
+    ranges[i].start_addr = ranges[i].end_addr = 0;
+  }
+
+  for(int i = 0; i < program_count; i++) {
+    struct proghdr *program_header = &program_headers[i];
+    if(!proc_elf_program_load_needed(program_header)) continue;
+    int ret;
+    uint64_t bias = 0;
+
+    char *start = program_header->p_va + bias;
+    char *end = program_header->p_va + bias + program_header->p_memsz;
+
+    //TODO: Not certain if this may introduce a bug if end % PGSIZE == 0.
+    start = ROUNDDOWN(start, PGSIZE);
+    end = ROUNDUP(end, PGSIZE);
+    ranges[i].start_addr = start;
+    ranges[i].end_addr = end;
+
+    for(uintptr_t addr = start; addr < end; addr += PGSIZE) {
+      bool already_allocated = 0;
+      for(int j = 0; j < i; j++) {
+        if(addr < ranges[j].end_addr && addr >= ranges[j].start_addr) {
+          already_allocated = 1;
+          break;
+        }
+      }
+      if(already_allocated) continue;
+      if (pgdir_alloc_page(mm->pgdir, addr, PTE_W) == NULL) {
+        return -E_NO_MEM;
+      }
+    }
+  }
+  kfree(ranges);
+  mp_set_mm_pagetable(mm);
+  return 0;
+}
+
+static void proc_elf_load_program(struct proghdr *program_headers,
+int program_count, int fd)
+{
+  int bias = 0;
+  for(int i = 0; i < program_count; i++) {
+    struct proghdr* program_header = &program_headers[i];
+    if(!proc_elf_program_load_needed(program_header)) continue;
+    int ret = load_icode_read(fd, program_header->p_va + bias,
+      program_header->p_filesz, program_header->p_offset);
+    if(ret != 0) return ret;
+  }
+  return 0;
+}
+
+static void proc_elf_set_permission(struct proghdr *program_headers,
+int program_count, struct mm_struct *mm, int fd)
+{
+  uint64_t bias = 0;
+  for(int i = 0; i < program_count; i++) {
+    struct proghdr* program_header = &program_headers[i];
+    if(!proc_elf_program_load_needed(program_header)) continue;
+    pte_perm_t perm = 0;
+    ptep_set_u_read(&perm);
+    if (program_header->p_flags & ELF_PF_W)
+      ptep_set_u_write(&perm);
+    uintptr_t start = program_header->p_va + bias;
+    uintptr_t end = program_header->p_va + bias + program_header->p_memsz;
+    start = ROUNDDOWN(start, PGSIZE);
+    end = ROUNDUP(end, PGSIZE);
+    int program_page_count = (end - start) / PGSIZE;
+    pte_t* pte = get_pte(mm->pgdir, start, 0);
+    for(int i = 0; i < program_page_count; i++) {
+      pte[i] = (pte[i] & ~(PTE_W|PTE_U)) | perm;
+    }
+  }
+  return 0;
+}
+
+static void proc_load_elf(struct proghdr *program_headers,
+int program_count, struct mm_struct *mm, int fd)
+{
+  proc_elf_allocate_memory(program_headers, program_count, mm, fd);
+  proc_elf_load_program(program_headers, program_count, fd);
+  proc_elf_set_permission(program_headers, program_count, mm, fd);
+}
 
 static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 {
@@ -870,14 +935,8 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 
 	int ret = -E_NO_MEM;
 
-//#ifdef UCONFIG_BIONIC_LIBC
-	uint32_t real_entry;
-//#endif //UCONFIG_BIONIC_LIBC
-
-	struct mm_struct *mm;
-	if ((mm = mm_create()) == NULL) {
-		goto bad_mm;
-	}
+	struct mm_struct *mm = mm_create();
+	if (mm == NULL) goto bad_mm;
 
 	if (setup_pgdir(mm) != 0) {
 		goto bad_pgdir_cleanup_mm;
@@ -896,124 +955,45 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 		ret = -E_INVAL_ELF;
 		goto bad_elf_cleanup_pgdir;
 	}
-//#ifdef UCONFIG_BIONIC_LIBC
-	real_entry = elf->e_entry;
-
-	uint32_t load_address, load_address_flag = 0;
-//#endif //UCONFIG_BIONIC_LIBC
 
 	struct proghdr __ph, *ph = &__ph;
 	uint32_t vm_flags, phnum;
 	pte_perm_t perm = 0;
 
-//#ifdef UCONFIG_BIONIC_LIBC
-	uint32_t is_dynamic = 0, interp_idx;
+  bool elf_have_interpreter = 0;
+  void *elf_entry = elf->e_entry;
+  void *interpreter_entry = NULL;
+  char *interpreter_path = NULL;
+  void* program_header_address = NULL;
+	uint32_t interp_idx;
 	uint32_t bias = 0;
-//#endif //UCONFIG_BIONIC_LIBC
-	for (phnum = 0; phnum < elf->e_phnum; phnum++) {
-		off_t phoff = elf->e_phoff + sizeof(struct proghdr) * phnum;
-		if ((ret =
-		     load_icode_read(fd, ph, sizeof(struct proghdr),
-				     phoff)) != 0) {
-			goto bad_cleanup_mmap;
-		}
 
-		if (ph->p_type == ELF_PT_INTERP) {
-			is_dynamic = 1;
-			interp_idx = phnum;
-			continue;
-		}
+  struct proghdr* program_headers = kmalloc(sizeof(struct proghdr) * elf->e_phnum);
+  load_icode_read(fd, program_headers, sizeof(struct proghdr) * elf->e_phnum, elf->e_phoff);
+  proc_load_elf(program_headers, elf->e_phnum, mm, fd);
 
-		if (ph->p_type != ELF_PT_LOAD) {
-			continue;
-		}
-		if (ph->p_filesz > ph->p_memsz) {
-			ret = -E_INVAL_ELF;
-			goto bad_cleanup_mmap;
-		}
-
-		if (ph->p_va == 0 && !bias) {
-			bias = 0x00008000;
-		}
-
-		if ((ret = map_ph(fd, ph, mm, &bias, 0)) != 0) {
-			kprintf("load address: 0x%08x size: %d\n", ph->p_va,
-				ph->p_memsz);
-			goto bad_cleanup_mmap;
-		}
-
-		if (load_address_flag == 0)
-			load_address = ph->p_va + bias;
-		++load_address_flag;
-
-	  /*********************************************/
-		/*
-		   vm_flags = 0;
-		   ptep_set_u_read(&perm);
-		   if (ph->p_flags & ELF_PF_X) vm_flags |= VM_EXEC;
-		   if (ph->p_flags & ELF_PF_W) vm_flags |= VM_WRITE;
-		   if (ph->p_flags & ELF_PF_R) vm_flags |= VM_READ;
-		   if (vm_flags & VM_WRITE) ptep_set_u_write(&perm);
-
-		   if ((ret = mm_map(mm, ph->p_va, ph->p_memsz, vm_flags, NULL)) != 0) {
-		   goto bad_cleanup_mmap;
-		   }
-
-		   if (mm->brk_start < ph->p_va + ph->p_memsz) {
-		   mm->brk_start = ph->p_va + ph->p_memsz;
-		   }
-
-		   off_t offset = ph->p_offset;
-		   size_t off, size;
-		   uintptr_t start = ph->p_va, end, la = ROUNDDOWN(start, PGSIZE);
-
-		   end = ph->p_va + ph->p_filesz;
-		   while (start < end) {
-		   if ((page = pgdir_alloc_page(mm->pgdir, la, perm)) == NULL) {
-		   ret = -E_NO_MEM;
-		   goto bad_cleanup_mmap;
-		   }
-		   off = start - la, size = PGSIZE - off, la += PGSIZE;
-		   if (end < la) {
-		   size -= la - end;
-		   }
-		   if ((ret = load_icode_read(fd, page2kva(page) + off, size, offset)) != 0) {
-		   goto bad_cleanup_mmap;
-		   }
-		   start += size, offset += size;
-		   }
-
-		   end = ph->p_va + ph->p_memsz;
-
-		   if (start < la) {
-		   // ph->p_memsz == ph->p_filesz
-		   if (start == end) {
-		   continue ;
-		   }
-		   off = start + PGSIZE - la, size = PGSIZE - off;
-		   if (end < la) {
-		   size -= la - end;
-		   }
-		   memset(page2kva(page) + off, 0, size);
-		   start += size;
-		   assert((end < la && start == end) || (end >= la && start == la));
-		   }
-
-		   while (start < end) {
-		   if ((page = pgdir_alloc_page(mm->pgdir, la, perm)) == NULL) {
-		   ret = -E_NO_MEM;
-		   goto bad_cleanup_mmap;
-		   }
-		   off = start - la, size = PGSIZE - off, la += PGSIZE;
-		   if (end < la) {
-		   size -= la - end;
-		   }
-		   memset(page2kva(page) + off, 0, size);
-		   start += size;
-		   }
-		 */
-	  /**************************************/
-	}
+  for(int i = 0; i < elf->e_phnum; i++) {
+    struct proghdr* ph = &program_headers[i];
+    if (ph->p_type == ELF_PT_INTERP) {
+      if(!elf_have_interpreter) {
+        elf_have_interpreter = 1;
+        interpreter_path = (char*)kmalloc(ph->p_filesz);
+        load_icode_read(fd, interpreter_path, ph->p_filesz, ph->p_offset);
+      }
+      else {
+        ret = -E_INVAL_ELF;
+        goto bad_cleanup_mmap;
+      }
+      interp_idx = phnum;
+    }
+    else if(ph->p_type == ELF_PT_PHDR) {
+      program_header_address = ph->p_va;
+    }
+    if (ph->p_filesz > ph->p_memsz) {
+      ret = -E_INVAL_ELF;
+      goto bad_cleanup_mmap;
+    }
+  }
 
 	mm->brk_start = mm->brk = ROUNDUP(mm->brk_start, PGSIZE);
 
@@ -1024,76 +1004,23 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 		    NULL)) != 0) {
 		goto bad_cleanup_mmap;
 	}
-
-	if (is_dynamic) {
-		elf->e_entry += bias;
-
-		bias = 0;
-
-		off_t phoff =
-		    elf->e_phoff + sizeof(struct proghdr) * interp_idx;
-		if ((ret =
-		     load_icode_read(fd, ph, sizeof(struct proghdr),
-				     phoff)) != 0) {
-			goto bad_cleanup_mmap;
-		}
-
-		char *interp_path = (char *)kmalloc(ph->p_filesz);
-		load_icode_read(fd, interp_path, ph->p_filesz, ph->p_offset);
-
-		int interp_fd = sysfile_open(interp_path, O_RDONLY);
+	if (elf_have_interpreter) {
+		int interp_fd = sysfile_open(interpreter_path, O_RDONLY);
 		assert(interp_fd >= 0);
 		struct elfhdr interp___elf, *interp_elf = &interp___elf;
 		assert((ret =
 			load_icode_read(interp_fd, interp_elf,
 					sizeof(struct elfhdr), 0)) == 0);
 		assert(interp_elf->e_magic == ELF_MAGIC);
-
-		struct proghdr interp___ph, *interp_ph = &interp___ph;
-		uint32_t interp_phnum;
-		uint32_t va_min = 0xffffffff, va_max = 0;
-		for (interp_phnum = 0; interp_phnum < interp_elf->e_phnum;
-		     ++interp_phnum) {
-			off_t interp_phoff =
-			    interp_elf->e_phoff +
-			    sizeof(struct proghdr) * interp_phnum;
-			assert((ret =
-				load_icode_read(interp_fd, interp_ph,
-						sizeof(struct proghdr),
-						interp_phoff)) == 0);
-			if (interp_ph->p_type != ELF_PT_LOAD) {
-				continue;
-			}
-			if (va_min > interp_ph->p_va)
-				va_min = interp_ph->p_va;
-			if (va_max < interp_ph->p_va + interp_ph->p_memsz)
-				va_max = interp_ph->p_va + interp_ph->p_memsz;
-		}
-
-		bias = get_unmapped_area(mm, va_max - va_min + 1 + PGSIZE);
-		bias = ROUNDUP(bias, PGSIZE);
-
-		for (interp_phnum = 0; interp_phnum < interp_elf->e_phnum;
-		     ++interp_phnum) {
-			off_t interp_phoff =
-			    interp_elf->e_phoff +
-			    sizeof(struct proghdr) * interp_phnum;
-			assert((ret =
-				load_icode_read(interp_fd, interp_ph,
-						sizeof(struct proghdr),
-						interp_phoff)) == 0);
-			if (interp_ph->p_type != ELF_PT_LOAD) {
-				continue;
-			}
-			assert((ret =
-				map_ph(interp_fd, interp_ph, mm, &bias,
-				       1)) == 0);
-		}
-
-		real_entry = interp_elf->e_entry + bias;
-
+    interpreter_entry = interp_elf->e_entry;
+    struct proghdr* interpreter_headers = kmalloc(sizeof(struct proghdr) * interp_elf->e_phnum);
+    load_icode_read(
+      interp_fd, interpreter_headers, sizeof(struct proghdr) * interp_elf->e_phnum,
+      interp_elf->e_phoff
+    );
+    proc_load_elf(interpreter_headers, interp_elf->e_phnum, mm, interp_fd);
 		sysfile_close(interp_fd);
-		kfree(interp_path);
+		kfree(interpreter_path);
 	}
 
 	sysfile_close(fd);
@@ -1109,13 +1036,10 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 	set_pgdir(current, mm->pgdir);
 	mp_set_mm_pagetable(mm);
 
-	if (!is_dynamic) {
-		real_entry += bias;
-	}
-#ifdef UCONFIG_BIONIC_LIBC
+#if defined(UCONFIG_BIONIC_LIBC) || defined(ARCH_AMD64)
 	if (init_new_context_dynamic(current, elf, argc, kargv, envc, kenvp,
-				     is_dynamic, real_entry, load_address,
-				     bias) < 0)
+				     elf_have_interpreter, interpreter_entry, elf_entry,
+				     bias, program_header_address) < 0)
 		goto bad_cleanup_mmap;
 #else
 	if (init_new_context(current, elf, argc, kargv, envc, kenvp) < 0)
