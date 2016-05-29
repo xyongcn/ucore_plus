@@ -108,12 +108,16 @@ struct siginfo_t {
 
 typedef void (*sighandler_t) (int);
 
+//TODO: struct sigaction is not fully checked for a architectures (i.e. AMD64
+// and ARM) to ensure it is 100% compatible with Linux. 
 struct sigaction {
-	sighandler_t sa_handler;
-	void (*sa_sigaction) (int, struct siginfo_t *, void *);
-	sigset_t sa_mask;
+  union {
+	  sighandler_t sa_handler;
+    void (*sa_sigaction) (int, struct siginfo_t *, void *);
+  };
 	int sa_flags;
 	void (*sa_restorer) (void);
+  sigset_t sa_mask;
 };
 
 typedef struct {

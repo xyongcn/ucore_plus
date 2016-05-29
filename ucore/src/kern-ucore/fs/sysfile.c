@@ -289,8 +289,14 @@ int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * linux_stat_store)
 
 int sysfile_linux_fcntl64(int fd, int cmd, int arg)
 {
-	kprintf("sysfile_linux_fcntl64:fd=%08x cmd=%08x arg=%08x\n", fd, cmd,
-		arg);
+  const static int F_DUPFD = 0;
+  if(cmd == F_DUPFD) {
+    int ret =  file_dup(fd, arg);
+    return ret;
+    //panic("fd = %d, fd = %d ret = %d", fd, arg, ret);
+  }
+	//kprintf("sysfile_linux_fcntl64:fd=%08x cmd=%08x arg=%08x\n", fd, cmd,
+	//	arg);
 	return 0;
 }
 
