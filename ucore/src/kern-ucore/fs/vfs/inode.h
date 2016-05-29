@@ -16,7 +16,7 @@ struct iobuf;
 /*
  * A struct inode is an abstract representation of a file.
  *
- * It is an interface that allows the kernel's filesystem-independent 
+ * It is an interface that allows the kernel's filesystem-independent
  * code to interact usefully with multiple sets of filesystem code.
  */
 
@@ -53,11 +53,13 @@ struct inode {
 #ifdef UCONFIG_HAVE_FATFS
 		inode_type_ffs_inode_info,
 #endif
+    inode_type_default_inode_info,
 	} in_type;
 	atomic_t ref_count;
 	atomic_t open_count;
 	struct fs *in_fs;
 	const struct inode_ops *in_ops;
+  void* private_data;
 #ifdef UCONFIG_BIONIC_LIBC
 	list_entry_t mapped_addr_list;
 #endif				//UCONFIG_BIONIC_LIBC
@@ -106,7 +108,7 @@ void inode_kill(struct inode *node);
  *                      reject illegal or undesired open modes. Note that
  *                      various operations can be performed without the
  *                      file actually being opened.
- *                      The inode need not look at O_CREAT, O_EXCL, or 
+ *                      The inode need not look at O_CREAT, O_EXCL, or
  *                      O_TRUNC, as these are handled in the VFS layer.
  *
  *                      VOP_EACHOPEN should not be called directly from
@@ -153,7 +155,7 @@ void inode_kill(struct inode *node);
  *                      DATA. The interpretation of the data is specific
  *                      to each ioctl.
  *
- *    vop_stat        - Return info about a file. The pointer is a 
+ *    vop_stat        - Return info about a file. The pointer is a
  *                      pointer to struct stat; see kern/stat.h.
  *
  *    vop_gettype     - Return type of file. The values for file types
@@ -192,7 +194,7 @@ void inode_kill(struct inode *node);
  *    vop_link        - Create hard link, with name NAME, to file FILE
  *                      in the passed directory DIR.
  *
- *    vop_unlink      - Delete non-directory object NAME from passed 
+ *    vop_unlink      - Delete non-directory object NAME from passed
  *                      directory. If NAME refers to a directory,
  *                      return EISDIR. If passed inode is not a
  *                      directory, return ENOTDIR.
@@ -325,6 +327,16 @@ static inline int inode_ref_count(struct inode *node)
 static inline int inode_open_count(struct inode *node)
 {
 	return atomic_read(&(node->open_count));
+}
+
+static inline void inode_set_private_data(struct inode *node, void* private_data)
+{
+  node->private_data = private_data;
+}
+
+static inline void* inode_get_private_data(struct inode *node)
+{
+  return node->private_data;
 }
 
 #endif /* !__KERN_FS_VFS_INODE_H__ */

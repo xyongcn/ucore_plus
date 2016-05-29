@@ -43,6 +43,16 @@ void idt_init(void)
 	lidt(&idt_pd);
 }
 
+void syscall_init()
+{
+	extern void syscall_entry();
+	//extern void fastcall_entry();
+	writemsr(MSR_EFER, readmsr(MSR_EFER) | (1 << 0));
+	writemsr(MSR_SFMASK, FL_IF); // set EFLAGS
+	writemsr(MSR_LSTAR, (uint64_t)syscall_entry); // set syscall entry
+	writemsr(MSR_STAR, ((uint64_t)(GD_UTEXT_32 | 3) << 48) | ((uint64_t)(GD_KTEXT) << 32 ));
+}
+
 static const char *trapname(int trapno)
 {
 	static const char *const excnames[] = {
@@ -146,11 +156,23 @@ static inline void print_pgfault(struct trapframe *tf)
 	if ((addr >> 32) & 0x8000) {
 		addr |= (0xFFFFLLU << 48);
 	}
+  //kprintf("page fault at\r\n");
+  print_trapframe(tf);
+  //print_stackframe();
+  //print_stackframe_ext(tf->tf_rsp, 0x1234);
 	kprintf("page fault at 0x%016llx: %c/%c [%s].\n", addr,
 		(tf->tf_err & 4) ? 'U' : 'K',
 		(tf->tf_err & 2) ? 'W' : 'R',
 		(tf->tf_err & 1) ? "protection fault" : "no page found");
 }
+
+extern uint32_t debug;
+
+void do_debug(struct trapframe *tf)
+{
+//	print_trapframe(tf);
+}
+
 
 static int pgfault_handler(struct trapframe *tf)
 {
@@ -167,6 +189,12 @@ static int pgfault_handler(struct trapframe *tf)
 		}
 		mm = current->mm;
 	}
+uintptr_t addr = rcr2();
+if (addr >= 0x20060000 && addr <= 0x00000fffefff2040)
+{
+	print_pgfault(tf);
+	do_debug(tf);
+}
 	return do_pgfault(mm, tf->tf_err, rcr2());
 }
 
@@ -175,27 +203,42 @@ static void trap_dispatch(struct trapframe *tf)
 	char c;
 	int ret;
 	int id = myid();
-
+uintptr_t addr;
 	switch (tf->tf_trapno) {
 	case T_PGFLT:
+//addr = rcr2();
+//if (addr >= 0x20060000 && addr <= 0x00000fffefff2040)
+//	kprintf("in: user rsp %p\n",tf->tf_rsp);
 		if ((ret = pgfault_handler(tf)) != 0) {
 			print_trapframe(tf);
 			if (current == NULL) {
 				panic("handle pgfault failed. %e\n", ret);
 			} else {
+        uintptr_t addr = rcr2();
 				if (trap_in_kernel(tf)) {
+          print_stackframe();
 					panic
-					    ("handle pgfault failed in kernel mode. %e\n",
-					     ret);
+					    ("%llx: handle pgfault failed in kernel mode. %e\n",
+					     addr, ret);
 				}
+				print_pgfault(tf);
+				kprintf("pgfault_handler return %d\n", ret);
 				kprintf("killed by kernel.\n");
 				do_exit(-E_KILLED);
 			}
 		}
+//if (addr >= 0x20060000 && addr <= 0x00000fffefff2040)
+//		kprintf("out :user rsp %p\n",tf->tf_rsp);
 		break;
 	case T_SYSCALL:
 	case 0x6:
 		syscall();
+		break;
+	case T_FAST_SYSCALL:
+		assert(tf->tf_rsp == mycpu()->user_rsp);
+	//	kprintf("in: user rsp %p\n",tf->tf_rsp);
+		syscall_linux();
+	//	kprintf("out :user rsp %p\n",tf->tf_rsp);
 		break;
 #ifdef UCONFIG_ENABLE_IPI
 		/* IPI */
@@ -204,8 +247,7 @@ static void trap_dispatch(struct trapframe *tf)
 		break;
 #endif
 	case T_TLBFLUSH:
-		lcr3(rcr3());	
-		break;
+		lcr3(rcr3());
 	case IRQ_OFFSET + IRQ_TIMER:
 		if(id==0){
 			ticks++;
@@ -241,6 +283,7 @@ static void trap_dispatch(struct trapframe *tf)
 		lapic_eoi();
 }
 
+int c=0;
 void trap(struct trapframe *tf)
 {
 	// used for previous projects
@@ -261,6 +304,7 @@ void trap(struct trapframe *tf)
 		// kprintf("%d %d |||\n", lapic_id, current->pid);
 
 		current->tf = otf;
+
 		if (!in_kernel) {
 			may_killed();
 			if (current->need_resched) {

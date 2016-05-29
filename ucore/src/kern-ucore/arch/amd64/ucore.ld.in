@@ -50,6 +50,30 @@ SECTIONS {
 		*(.bss)
 	}
 
+
+	/* This Part is implanted directly from arch/i386 */
+	/* Include debugging information in kernel memory */
+	.stab : {
+	    PROVIDE(__STAB_BEGIN__ = .);
+	    *(.stab);
+	    PROVIDE(__STAB_END__ = .);
+	    BYTE(0)     /* Force the linker to allocate space
+	               for this section */
+	}
+
+	.stabstr : {
+	    PROVIDE(__STABSTR_BEGIN__ = .);
+	    *(.stabstr);
+	    PROVIDE(__STABSTR_END__ = .);
+	    BYTE(0)     /* Force the linker to allocate space
+	               for this section */
+	}
+
+
+
+
+
+
 	. = ALIGN(0x1000);
 	.percpu : AT(ADDR(.percpu) - MEM_BASE){
 		PROVIDE(__percpu_start = .);
@@ -60,7 +84,7 @@ SECTIONS {
 
 	. = ALIGN(0x1000);
 	PROVIDE(end = .);
- 
+
 	/DISCARD/ : {
 		*(.eh_frame .note.GNU-stack)
 	}

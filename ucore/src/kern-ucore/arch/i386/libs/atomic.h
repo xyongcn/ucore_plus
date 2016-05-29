@@ -27,6 +27,8 @@ static inline bool atomic_dec_test_zero(atomic_t * v)
     __attribute__ ((always_inline));
 static inline int atomic_add_return(atomic_t * v, int i)
     __attribute__ ((always_inline));
+static inline int atomic_add_return_orig(atomic_t * v, int i)
+    __attribute__ ((always_inline));
 static inline int atomic_sub_return(atomic_t * v, int i)
     __attribute__ ((always_inline));
 
@@ -164,6 +166,12 @@ static inline int atomic_add_return(atomic_t * v, int i)
 	int __i = i;
 	asm volatile ("xaddl %0, %1":"+r" (i), "+m"(v->counter)::"memory");
 	return i + __i;
+}
+
+static inline int atomic_add_return_orig(atomic_t * v, int i)
+{
+	asm volatile ("xaddl %0, %1":"+r" (i), "+m"(v->counter)::"memory");
+	return i;
 }
 
 /* *

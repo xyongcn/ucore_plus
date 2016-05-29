@@ -8,6 +8,9 @@
 #include <atomic.h>
 #include <unistd.h>
 
+extern struct file_system_type sfs_fs_type;
+void sfs_init(void);
+
 #define SFS_MAGIC                                   0x2f8dbe2a	/* magic number for sfs */
 #define SFS_BLKSIZE                                 PGSIZE	/* size of block */
 #define SFS_NDIRECT                                 12	/* # of direct blocks in inode */
@@ -116,9 +119,6 @@ struct sfs_fs {
 
 struct fs;
 struct inode;
-
-void sfs_init(void);
-int sfs_mount(const char *devname);
 
 void lock_sfs_fs(struct sfs_fs *sfs);
 void lock_sfs_io(struct sfs_fs *sfs);

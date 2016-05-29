@@ -6,11 +6,8 @@
 
 void sfs_init(void)
 {
-	int ret;
-	if ((ret = register_filesystem("sfs", sfs_mount)) != 0) {
+	int ret = register_filesystem(&sfs_fs_type);
+	if (ret != 0) {
 		panic("failed: sfs: register_filesystem: %e.\n", ret);
-	}
-	if ((ret = sfs_mount("disk0")) != 0) {
-		panic("failed: sfs: sfs_mount: %e.\n", ret);
 	}
 }

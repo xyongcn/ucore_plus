@@ -4,6 +4,7 @@
 #define MSR_GS_KERNBASE 0xc0000102
 
 // SYSCALL and SYSRET registers
+#define MSR_EFER        0xc0000080
 #define MSR_STAR        0xc0000081
 #define MSR_LSTAR       0xc0000082
 #define MSR_CSTAR       0xc0000083

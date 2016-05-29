@@ -9,11 +9,20 @@
 #include <inode.h>
 #include <iobuf.h>
 #include <error.h>
+#include <stat.h>
 #include <assert.h>
 #include "ffs.h"
 #include "fatfs/ff.h"
 
-/* 
+static int ffs_mount(struct file_system_type* file_system_type, int flags,
+  const char *devname, void* data, struct fs** fs_store);
+
+struct file_system_type fat32_fs_type = {
+  .name = "fat32",
+  .mount = ffs_mount
+};
+
+/*
  * flush all dirty buffers to disk
  * return 0 if sync successful
  */
@@ -78,8 +87,24 @@ static int ffs_cleanup(struct fs *fs)
 	}
 }
 
-static int ffs_do_mount(struct device *dev, struct fs **fs_store)
+static int ffs_mount(struct file_system_type* file_system_type, int flags,
+  const char *devname, void* data, struct fs** fs_store)
 {
+  //TODO: currently the fat32 fs doesn't access the device file, instead,
+  //It uses low-level disk interface and the devno must be 3 (/dev/disk3)
+  //Checks whether devname points to a block device.
+  struct inode* dev_node = NULL;
+  if(vfs_lookup(devname, &dev_node) != 0) {
+    return -E_NOENT;
+  }
+  uint32_t node_type;
+  if(vop_gettype(dev_node, &node_type) != 0 || node_type != S_IFBLK) {
+    return -E_NOTBLK;
+  }
+
+  //Get the block device specified by devname
+  struct device* dev = vop_info(dev_node, device);
+
 	static_assert(FFS_BLKSIZE >= sizeof(struct ffs_disk_inode));
 
 	if (dev->d_blocksize != FFS_BLKSIZE) {
@@ -170,9 +195,4 @@ failed_cleanup_ffs:
 	kfree(fatfs);
 	kfree(fs);
 	return -E_NO_MEM;
-}
-
-int ffs_mount(const char *devname)
-{
-	return vfs_mount(devname, ffs_do_mount);
 }

@@ -52,17 +52,19 @@ pgd_t *const vgd = (pgd_t *) PGADDR(PGX(VPT), PGX(VPT), PGX(VPT), PGX(VPT), 0);
  * the %ss register, the CPL must equal the DPL. Thus, we must duplicate the
  * segments for the user and the kernel. Defined as follows:
  *   - 0x0 :  unused (always faults -- for trapping NULL far pointers)
- *   - 0x10:  kernel code segment
- *   - 0x20:  kernel data segment
- *   - 0x30:  kernel pls segment
- *   - 0x40:  user code segment
- *   - 0x50:  user data segment
- *   - 0x60:  defined for tss, initialized in gdt_init
+ *   - 0x08:  kernel code segment
+ *   - 0x10:  kernel data segment
+ *   - 0x18:  kernel pls segment
+ *   - 0x20:  user code segment
+ *   - 0x28:  user data segment
+ *   - 0x30:  defined for tss, initialized in gdt_init
+ *   - 0x40:  out of boundary
  * */
 static struct segdesc __gdt[SEG_COUNT] = {
 	SEG_NULL,
 	[SEG_KTEXT] = SEG(STA_X | STA_R, DPL_KERNEL),
 	[SEG_KDATA] = SEG(STA_W, DPL_KERNEL),
+	[SEG_UTEXT_32] = SEG(STA_X | STA_R, DPL_USER),
 	[SEG_UTEXT] = SEG(STA_X | STA_R, DPL_USER),
 	[SEG_UDATA] = SEG(STA_W, DPL_USER),
 	/*
@@ -128,8 +130,57 @@ void load_rsp0(uintptr_t rsp0)
 {
 	//XXX
 	mycpu()->arch_data.ts.ts_rsp0 = rsp0;
+	mycpu()->kern_rsp = rsp0;
 }
+/*
+inline void prrsp()
+{
+	void *p;
+	__asm__ __volatile("movq %%rsp, %0": "=r"(p):);
+	kprintf("RSP = 0x%x   TSS.tsp0 = 0x%x\n", p, ts.ts_rsp0);
+}
+*/
+uint64_t user_rflags;
+uint64_t user_rip;
+uint64_t user_rsp;
+uint64_t fastcall_id;
 
+void fastcall_entry() __attribute__((noreturn));
+void fastcall_entry() 
+{
+	__asm__ __volatile ("swapgs\n");
+	__asm__ __volatile (
+		"movq %%rax, %0 \n"
+		"movq %%r11, %1 \n"
+		"movq %%rcx, %2 \n"
+		"movq %%rsp, %3 \n"
+		: "=m"(fastcall_id), "=m"(user_rflags), "=m"(user_rip), "=m"(user_rsp)
+		:
+		: "rax", "rdi", "rsi", "rdx", "r10", "r8", "r9", "rcx", "r11");
+	__asm__ __volatile(
+		"movq %0, %%rsp"
+		:
+		: "m"(mycpu()->arch_data.ts.ts_rsp0)
+		: "rax", "rdi", "rsi", "rdx", "r10", "r8", "r9", "rcx", "r11");
+
+	__asm__ __volatile(
+		"int %0"
+		:
+		: "i"(T_FAST_SYSCALL)
+	);
+
+	__asm__ __volatile (
+		"movq %0, %%r11 \n"
+		"movq %1, %%rcx \n"
+		"movq %2, %%rsp \n"
+		:
+		: "m"(user_rflags), "m"(user_rip), "m"(user_rsp)
+		: "rax", "rdi", "rsi", "rdx", "r10", "r8", "r9", "rcx", "r11");
+	__asm__ __volatile ("swapgs\n");
+	__asm__ __volatile ("sysretq\n");
+	__asm__ __volatile ("hlt\n");
+//prrsp();
+}
 /**
  * set_pgdir - save the physical address of the current pgdir
  */
@@ -174,7 +225,9 @@ void gdt_init(struct cpu *c)
 	//	SEGTSS(STS_T32A, (uintptr_t) & ts, sizeof(ts), DPL_KERNEL);
 
 	memcpy(&c->arch_data.gdt, &__gdt, sizeof(__gdt));
-	c->arch_data.gdt[SEG_TSS] = 
+	struct segdesc_tss* tss_ptr = (struct segdesc_tss*)&c->arch_data.gdt[SEG_TSS];
+	//c->arch_data.gdt[SEG_TSS] = 
+	*tss_ptr =
 		SEGTSS(STS_T32A, (uintptr_t) &c->arch_data.ts,
 		sizeof(struct taskstate), DPL_KERNEL);
 

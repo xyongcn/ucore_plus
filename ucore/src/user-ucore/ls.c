@@ -39,10 +39,18 @@ static int getstat(const char *name, struct stat *stat)
 
 void lsstat(struct stat *stat, const char *filename)
 {
-	printf("   [%c]", getmode(stat->st_mode));
-	printf(" %3d(h)", stat->st_nlinks);
-	printf(" %8d(b)", stat->st_blocks);
-	printf(" %8d(s)", stat->st_size);
+  if(stat != NULL) {
+	  printf("   [%c]", getmode(stat->st_mode));
+	  printf(" %3d(h)", stat->st_nlinks);
+    printf(" %8d(b)", stat->st_blocks);
+    printf(" %8d(s)", stat->st_size);
+  }
+  else {
+    printf("   [?]");
+    printf(" ???(h)");
+    printf(" ????????(b)");
+    printf(" ????????(s)");
+  }
 	printf("   %s\n", filename);
 }
 
@@ -64,9 +72,11 @@ int lsdir(const char *path)
 	struct dirent *direntp;
 	while ((direntp = readdir(dirp)) != NULL) {
 		if ((ret = getstat(direntp->name, stat)) != 0) {
-			goto failed;
+			lsstat(NULL, direntp->name);
 		}
-		lsstat(stat, direntp->name);
+    else {
+		  lsstat(stat, direntp->name);
+    }
 	}
 	closedir(dirp);
 	return chdir(cwdbuf);

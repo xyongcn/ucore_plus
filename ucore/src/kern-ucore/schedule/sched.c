@@ -32,7 +32,7 @@ static inline void sched_class_enqueue(struct proc_struct *proc)
 		//TODO load balance
 		struct run_queue *rq = get_cpu_ptr(runqueues);
 		if(proc->flags & PF_PINCPU){
-			assert(proc->cpu_affinity >= 0 
+			assert(proc->cpu_affinity >= 0
 					&& proc->cpu_affinity < sysconf.lcpu_count);
 			rq = per_cpu_ptr(runqueues, proc->cpu_affinity);
 		}
@@ -78,7 +78,7 @@ void sched_init(void)
 	int i;
 	for (i = 1; i < sysconf.lcpu_count; i++) {
 		struct run_queue *rqi = per_cpu_ptr(runqueues, i);
-		list_add_before(&(rq0->rq_link), 
+		list_add_before(&(rq0->rq_link),
 				&(rqi->rq_link));
 		rqi->max_time_slice = rq0->max_time_slice;
 	}
@@ -189,6 +189,7 @@ void schedule(void)
 		next->runs++;
 		if (next != current)
 			proc_run(next);
+    //kprintf("shced: to %d", next->pid);
 	}
 	local_intr_restore(intr_flag);
 }

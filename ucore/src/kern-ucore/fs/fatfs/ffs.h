@@ -8,6 +8,9 @@
 #include <unistd.h>
 #include "fatfs/ff.h"
 
+extern struct file_system_type fat32_fs_type;
+void ffs_init();
+
 #define FFS_MAGIC			0x19ad6b2f	/* magic number for ffs */
 #define FFS_BLKSIZE			PGSIZE	/* size of block */
 #define FFS_NDIRECT			12	/* # of direct blocks in inode */
@@ -100,9 +103,6 @@ struct ffs_fs {
 
 struct fs;
 struct inode;
-
-void ffs_init();
-int ffs_mount(const char *devname);
 
 void lock_ffs_fs(struct ffs_fs *ffs);
 void lock_ffs_io(struct ffs_fs *ffs);

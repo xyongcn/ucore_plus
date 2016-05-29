@@ -263,6 +263,7 @@ sfs_bmap_get_nolock(struct sfs_fs *sfs, struct sfs_inode *sin, uint32_t index,
 	}
 
 out:
+//kprintf("SFS : %d %d\n", ino, sfs_block_inuse(sfs, ino));
 	assert(ino == 0 || sfs_block_inuse(sfs, ino));
 	*ino_store = ino;
 	return 0;
@@ -726,6 +727,7 @@ static int sfs_fstat(struct inode *node, struct stat *stat)
 		return ret;
 	}
 	struct sfs_disk_inode *din = vop_info(node, sfs_inode)->din;
+  stat->st_ino = vop_info(node, sfs_inode)->ino;
 	stat->st_nlinks = din->nlinks;
 	stat->st_blocks = din->blocks;
 	if (din->type != SFS_TYPE_DIR) {

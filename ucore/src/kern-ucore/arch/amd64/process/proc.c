@@ -4,6 +4,7 @@
 #include <string.h>
 #include <types.h>
 #include <stdlib.h>
+#include <elf.h>
 #include <mp.h>
 
 void forkret(void);
@@ -59,7 +60,7 @@ copy_thread(uint32_t clone_flags, struct proc_struct *proc, uintptr_t rsp,
 }
 
 // kernel_thread - create a kernel thread using "fn" function
-// NOTE: the contents of temp trapframe tf will be copied to 
+// NOTE: the contents of temp trapframe tf will be copied to
 //       proc->tf in do_fork-->copy_thread function
 int kernel_thread(int (*fn) (void *), void *arg, uint32_t clone_flags)
 {
@@ -94,30 +95,122 @@ int kernel_execve(const char *name, const char **argv, const char **kenvp)
 	return ret;
 }
 
-int
-init_new_context(struct proc_struct *proc, struct elfhdr *elf,
-		 int argc, char **kargv, int envc, char **kenvp)
+/*
+ * Initialize a new context for the program on the execve system call.
+ * The init_new_context_dynamic
+ */
+int init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int argc,
+			 char **kargv, int envc, char **kenvp,
+			 uint64_t elf_have_interpreter, uint64_t interpreter_entry,
+			 uint64_t elf_entry, uint64_t linker_base, void* program_header_address)
 {
-	uintptr_t stacktop = USTACKTOP - argc * PGSIZE;
-	char **uargv = (char **)(stacktop - argc * sizeof(char *));
-	int i;
-	for (i = 0; i < argc; i++) {
-		uargv[i] = strcpy((char *)(stacktop + i * PGSIZE), kargv[i]);
-	}
-	stacktop = (uintptr_t) uargv;
+  //Conclude this by using LD_SHOW_AUXV=1 on my laptop running Linux 4.5.4
+  const int ELF_AUXILIARY_VECTOR_COUNT = 19;
+  char* stack_top = USTACKTOP;
 
-	struct trapframe *tf = current->tf;
+  size_t stack_param_size = 0;
+  stack_param_size += sizeof(uint64_t);
+  stack_param_size += (argc + 1) * sizeof(char**);
+  stack_param_size += (envc + 1) * sizeof(char**);
+  for(int i = 0; i < argc; i++) {
+    stack_param_size += strlen(kargv[i]) + 1;
+  }
+  for(int i = 0; i < envc; i++) {
+    stack_param_size += strlen(kenvp[i]) + 1;
+  }
+  stack_param_size +=
+    ELF_AUXILIARY_VECTOR_COUNT * sizeof(struct elf64_auxiliary_vector);
+
+  stack_top -= stack_param_size;
+
+  char* stack_pos = stack_top;
+  *((uint64_t*)stack_pos) = argc;
+  stack_pos += sizeof(uint64_t);
+  char **new_argv = (char**)stack_pos;
+  stack_pos += (argc + 1) * sizeof(char**);
+  char **new_envp = (char**)stack_pos;
+  stack_pos += (envc + 1) * sizeof(char**);
+  struct elf64_auxiliary_vector* auxiliary_vector = (struct elf64_auxiliary_vector*)stack_pos;
+  stack_pos += ELF_AUXILIARY_VECTOR_COUNT * sizeof(struct elf64_auxiliary_vector);
+
+  //TODO: Seems __strcpy for amd64 has a bug, always returning 0, instead
+  //of the end of the destination string.
+  //But I don't find the exact reason so the some strlen after strcpy is used.
+  for(int i = 0; i < argc; i++) {
+    strcpy(stack_pos, kargv[i]);
+    new_argv[i] = stack_pos;
+    stack_pos += strlen(kargv[i]) + 1;
+  }
+  new_argv[argc] = NULL;
+  for(int i = 0; i < envc; i++) {
+    strcpy(stack_pos, kenvp[i]);
+    new_envp[i] = stack_pos;
+    stack_pos += (strlen(kenvp[i]) + 1);
+  }
+  new_envp[envc] = NULL;
+
+  auxiliary_vector[0].a_type = AT_IGNORE; //AT_SYSINFO_EHDR
+  //We don't have the vDSO
+  auxiliary_vector[1].a_type = AT_IGNORE; //AT_HWCAP
+  //TODO: Add hardware detection data
+  auxiliary_vector[2].a_type = AT_PAGESZ;
+  auxiliary_vector[2].a_val = PGSIZE;
+  auxiliary_vector[3].a_type = AT_CLKTCK;
+  auxiliary_vector[3].a_val = 100;
+  if(program_header_address != NULL) {
+    auxiliary_vector[4].a_type = AT_PHDR;
+    auxiliary_vector[4].a_val = program_header_address;
+  }
+  else {
+    auxiliary_vector[4].a_type = AT_IGNORE;
+  }
+  auxiliary_vector[5].a_type = AT_PHENT;
+  auxiliary_vector[5].a_val = elf->e_phentsize;
+  auxiliary_vector[6].a_type = AT_PHNUM;
+  auxiliary_vector[6].a_val = elf->e_phnum;
+  auxiliary_vector[7].a_type = AT_BASE; //The base address of the program interpreter
+  auxiliary_vector[7].a_val = linker_base; //TODO
+  auxiliary_vector[8].a_type = AT_FLAGS;
+  auxiliary_vector[8].a_val = 0;
+  auxiliary_vector[9].a_type = AT_ENTRY;
+  auxiliary_vector[9].a_val = elf_entry; //TODO
+
+  //TODO: Currently uCore doesn't support multi-user. So we're simulating
+  //The user root and the group root.
+  auxiliary_vector[10].a_type = AT_UID;
+  auxiliary_vector[11].a_type = AT_EUID;
+  auxiliary_vector[12].a_type = AT_GID;
+  auxiliary_vector[13].a_type = AT_EGID;
+  for(int i = 10; i <= 13; i++) {
+    auxiliary_vector[i].a_val = 0;
+  }
+  auxiliary_vector[14].a_type = AT_SECURE;
+  auxiliary_vector[14].a_val = 0;
+  auxiliary_vector[15].a_type = AT_RANDOM;
+  auxiliary_vector[15].a_val = rand();
+  //auxiliary_vector[16].a_type = AT_PLATFORM;
+  //auxiliary_vector[17].a_type = AT_EXECFN;
+  auxiliary_vector[16].a_type = AT_NULL;
+  auxiliary_vector[16].a_val = 0;
+  struct trapframe *tf = current->tf;
 	memset(tf, 0, sizeof(struct trapframe));
 	tf->tf_cs = USER_CS;
 	tf->tf_ds = USER_DS;
 	tf->tf_es = USER_DS;
 	tf->tf_ss = USER_DS;
-	tf->tf_rsp = stacktop;
-	tf->tf_rip = elf->e_entry;
+	tf->tf_rsp = (uint64_t)stack_top;
+  if(elf_have_interpreter) {
+	   tf->tf_rip = interpreter_entry;
+  }
+  else {
+    tf->tf_rip = elf_entry;
+  }
 	tf->tf_rflags = FL_IF;
-	tf->tf_regs.reg_rdi = argc;
-	tf->tf_regs.reg_rsi = (uintptr_t) uargv;
 
+  //Only uCore built-in utilities cares about this - C library likes uClibc only
+  //looks up data on the stack.
+	tf->tf_regs.reg_rdi = (uint64_t)argc;
+	tf->tf_regs.reg_rsi = (uintptr_t)new_argv;
 	return 0;
 }
 

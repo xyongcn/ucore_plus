@@ -23,13 +23,13 @@ static int initfd(int fd2, const char *path, uint32_t open_flags)
 void umain(int argc, char **argv)
 {
 	int fd;
-	if ((fd = initfd(0, "stdin:", O_RDONLY)) < 0) {
+	if ((fd = initfd(0, "/dev/stdin", O_RDONLY)) < 0) {
 		warn("open <stdin> failed: %e.\n", fd);
 	}
-	if ((fd = initfd(1, "stdout:", O_WRONLY)) < 0) {
+	if ((fd = initfd(1, "/dev/stdout", O_WRONLY)) < 0) {
 		warn("open <stdout> failed: %e.\n", fd);
 	}
-	if ((fd = initfd(2, "stdout:", O_WRONLY)) < 0) {
+	if ((fd = initfd(2, "/dev/stdout", O_WRONLY)) < 0) {
 		warn("open <stderr> failed: %e.\n", fd);
 	}
 	int ret = main(argc, argv);

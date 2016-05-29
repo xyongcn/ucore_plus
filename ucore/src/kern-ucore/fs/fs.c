@@ -6,15 +6,22 @@
 #include <file.h>
 #include <pipe.h>
 #include <sfs.h>
+#include <fatfs/ffs.h>
 #include <inode.h>
 #include <assert.h>
 
 void fs_init(void)
 {
 	vfs_init();
+  devfs_init();
 	dev_init();
 	pipe_init();
 	sfs_init();
+  ffs_init();
+
+  vfs_do_mount_nocheck("none", "/dev", "devfs", 0, NULL);
+  vfs_path_init_cwd("/dev");
+  vfs_do_mount_nocheck("/dev/disk2", "/", "sfs", 0, NULL);
 }
 
 void fs_cleanup(void)
