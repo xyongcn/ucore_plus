@@ -386,9 +386,22 @@ int file_dup(int fd1, int fd2)
 {
 	int ret;
 	struct file *file1, *file2;
+
+  //If fd1 is invalid, return.
 	if ((ret = fd2file(fd1, &file1)) != 0) {
 		return ret;
 	}
+
+  //If fd2 is an opened file, close it first. This is what dup2 on linux does.
+  if (testfd(fd2)) {
+    file2 = &get_filemap()[fd2];
+    if (file2->status != FD_NONE) {
+      file_close(fd2);
+    }
+  }
+  file2 = NULL;
+
+  //Now let fd2 become a duplication for fd1.
 	if ((ret = filemap_alloc(fd2, &file2)) != 0) {
 		return ret;
 	}
