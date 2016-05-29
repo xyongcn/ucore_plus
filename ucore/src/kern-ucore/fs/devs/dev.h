@@ -63,14 +63,18 @@ void *linux_file;
 
 #define dev_is_linux_dev(dev) ((dev)->linux_dentry != NULL)
 
+#ifndef __NO_UCORE_DEVICE__
 static inline void* dev_get_private_data(struct device* dev)
   __attribute__((always_inline));
 static inline void dev_set_private_data(struct device* dev, void* private_data)
   __attribute__((always_inline));
+#endif
+
 void dev_init(void);
 /* Create inode for a vfs-level device. */
 struct inode *dev_create_inode(void);
 
+#ifndef __NO_UCORE_DEVICE__
 static inline void* dev_get_private_data(struct device* dev)
 {
   return dev->private_data;
@@ -80,5 +84,6 @@ static inline void dev_set_private_data(struct device* dev, void* private_data)
 {
   dev->private_data = private_data;
 }
+#endif
 
 #endif /* !__KERN_FS_DEVS_DEV_H__ */

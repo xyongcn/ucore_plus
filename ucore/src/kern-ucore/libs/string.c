@@ -99,6 +99,8 @@ char *strcat(char *dst, const char *src)
 	return strcpy(dst + strlen(dst), src);
 }
 
+
+#ifndef UCONFIG_ARM_BOARD_GOLDFISH
 /*
  * Appends src to string dst of size siz (unlike strncat, siz is the
  * full size of dst, not space left).  At most siz-1 characters
@@ -132,6 +134,7 @@ size_t strlcat(char *dst, const char *src, size_t siz)
 
         return(dlen + (s - src));       /* count does not include NUL */
 }
+#endif
 
 /* *
  * strcmp - compares the string @s1 and @s2
