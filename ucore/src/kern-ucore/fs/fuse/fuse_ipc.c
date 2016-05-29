@@ -127,9 +127,9 @@ MALLOC_DEFINE(M_FUSEMSG, "fuse_msgbuf", "fuse message buffer");
 static uma_zone_t ticket_zone;
 
 static void
-fuse_block_sigs(sigset_t *oldset)
+fuse_block_sigs(fuse_sigset_t *oldset)
 {
-	sigset_t newset;
+	fuse_sigset_t newset;
 
 	SIGFILLSET(newset);
 	SIGDELSET(newset, SIGKILL);
@@ -139,7 +139,7 @@ fuse_block_sigs(sigset_t *oldset)
 }
 
 static void
-fuse_restore_sigs(sigset_t *oldset)
+fuse_restore_sigs(fuse_sigset_t *oldset)
 {
 
 	if (kern_sigprocmask(curthread, SIG_SETMASK, oldset, NULL, 0))
@@ -312,7 +312,7 @@ fticket_refresh(struct fuse_ticket *ftick)
 static int
 fticket_wait_answer(struct fuse_ticket *ftick)
 {
-	sigset_t tset;
+	fuse_sigset_t tset;
 	int err = 0;
 	struct fuse_data *data;
 
