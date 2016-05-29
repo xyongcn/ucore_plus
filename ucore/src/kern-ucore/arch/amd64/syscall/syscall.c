@@ -737,7 +737,6 @@ static uint64_t sys_linux_set_robust_list(uint64_t arg[])
 
 static uint64_t sys_linux_sigkill(uint64_t arg[])
 {
-  kprintf("kill %d %d\n", arg[0], arg[1]);
 	return do_sigkill((int)arg[0], (int)arg[1]);
 }
 
@@ -854,7 +853,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_shmat] unknown,
 	[__NR_shmctl] unknown,
 	[__NR_dup] unknown,
-	[__NR_dup2] unknown,
+	[__NR_dup2] sys_dup,
 	[__NR_pause] unknown,
 	[__NR_nanosleep] sys_linux_nanosleep,
 	[__NR_getitimer] unknown,
