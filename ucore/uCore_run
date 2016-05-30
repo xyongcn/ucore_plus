@@ -78,7 +78,10 @@ case $UCONFIG_ARCH in
                 fi
             fi
             # correct a bug on the args
-            exec emulator-arm -avd $AVD -no-window -qemu -kernel $BUILD_DIR/kernel.img$TEST_POSTFIX $QEMU_OPT
+            #TODO: -no-window option is removed, with this option, the virtual
+            #device cannot be shutted down normally, causing problem after
+            #several runs. This needs further research.
+            exec emulator -avd $AVD -qemu -kernel $BUILD_DIR/kernel.img$TEST_POSTFIX $QEMU_OPT
         else
             echo What kind of board for ARM is this?
             echo Consider supporting your board in uCore_run

@@ -17,7 +17,10 @@ void fs_init(void)
 	dev_init();
 	pipe_init();
 	sfs_init();
+
+#ifdef UCONFIG_HAVE_FATFS
   ffs_init();
+#endif
 
   vfs_do_mount_nocheck("none", "/dev", "devfs", 0, NULL);
   vfs_path_init_cwd("/dev");
