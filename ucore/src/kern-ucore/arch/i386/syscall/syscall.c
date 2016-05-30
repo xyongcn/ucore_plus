@@ -13,6 +13,7 @@
 #include <sysfile.h>
 #include <error.h>
 #include <kio.h>
+#include <udb.h>
 
 static uint32_t sys_exit(uint32_t arg[])
 {
@@ -368,8 +369,12 @@ static uint32_t sys_umount(uint32_t arg[])
 	return do_umount(target);
 }
 
+static int sys_debug(uint32_t arg[]) {
+    return userDebug(arg[0], arg[1], arg[2]);
+}
+
 static uint32_t(*syscalls[]) (uint32_t arg[]) = {
-[SYS_exit] sys_exit,
+		[SYS_exit] sys_exit,
 	    [SYS_fork] sys_fork,
 	    [SYS_wait] sys_wait,
 	    [SYS_exec] sys_exec,
@@ -418,7 +423,10 @@ static uint32_t(*syscalls[]) (uint32_t arg[]) = {
 	    [SYS_init_module] sys_init_module,
 	    [SYS_cleanup_module] sys_cleanup_module,
 	    [SYS_list_module] sys_list_module,
-	    [SYS_mount] sys_mount,[SYS_umount] sys_umount};
+	    [SYS_mount] sys_mount,
+		[SYS_umount] sys_umount,
+	    [SYS_debug] sys_debug
+};
 
 #define NUM_SYSCALLS        ((sizeof(syscalls)) / (sizeof(syscalls[0])))
 

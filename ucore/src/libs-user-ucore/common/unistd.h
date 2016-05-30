@@ -69,6 +69,9 @@
 #define SYS_mount           153
 #define SYS_umount			154
 
+/* zhangyk May 30 2016 */
+#define SYS_debug           155
+
 /* liucong 20121109 */
 #define SYS_rf212           199
 
