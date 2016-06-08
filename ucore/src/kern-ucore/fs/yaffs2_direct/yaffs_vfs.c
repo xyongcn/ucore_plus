@@ -214,13 +214,13 @@ static int yaffs_vfs_mount(struct file_system_type* file_system_type, int flags,
   yaffs_ucore_device_wrapper_create(dev, yfs->yaffs_name_buf);
 
   //Mount the wrapper device on yaffs.
-  kprintf("yaffs_vfs_do_mount: device=%s, yaffs_wrapper_device=%s",
+  kprintf("yaffs_vfs_do_mount: device=%s, yaffs_wrapper_device=%s\n",
     devname, yfs->yaffs_name_buf);
   int ret = yaffs_mount_common(yfs->yaffs_name_buf,0, 0, &(yfs->ydev));
 
   if(ret != 0) {
     kprintf("yaffs_vfs_do_mount: faild to mount device=%s, "
-      "yaffs_wrapper_device=%s", devname, yfs->yaffs_name_buf);
+      "yaffs_wrapper_device=%s\n", devname, yfs->yaffs_name_buf);
     kfree(fs);
     return ret;
   }

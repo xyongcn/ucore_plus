@@ -116,7 +116,8 @@ static int yaffs_ucore_device_wrapper_mark_block_bad(struct yaffs_dev *dev,unsig
   return 0;
 }
 
-struct yaffs_dev *yaffs_ucore_device_wrapper_create(struct device* device) {
+struct yaffs_dev *yaffs_ucore_device_wrapper_create(
+struct device* device, char* device_name) {
   struct yaffs_dev *ret = kmalloc(sizeof(struct yaffs_dev), 0);
   ynandif_Geometry *geometry = kmalloc(sizeof(ynandif_Geometry), 0);
   if(ret == NULL) {
@@ -141,7 +142,7 @@ struct yaffs_dev *yaffs_ucore_device_wrapper_create(struct device* device) {
   geometry->checkBlockOk = yaffs_ucore_device_wrapper_check_block_ok;
   geometry->markBlockBad = yaffs_ucore_device_wrapper_mark_block_bad;
 
-  yaffs_add_dev_from_geometry(ret, "lib", geometry);
+  yaffs_add_dev_from_geometry(ret, device_name, geometry);
   ret->os_context = device;
   return ret;
 }
