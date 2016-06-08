@@ -1,4 +1,11 @@
 /*
+ * TODO: This module is considered deprecated.
+ * The original purpose of this module is to create a RAM simulation for yaffs.
+ * yaffs is a file system designed for FlashROM.
+ * It is now suggested to create a RAM disk block device for simulation.
+ */
+
+/*
  * YAFFS: Yet Another Flash File System. A NAND-flash specific file system.
  *
  * Copyright (C) 2002-2011 Aleph One Ltd.
@@ -302,5 +309,3 @@ struct yaffs_dev *yramsim_CreateRamSim(const YCHAR *name,
 
 	return yaffs_add_dev_from_geometry(&yramsim_dev0, yramsim_name0,g);
 }
-
-
