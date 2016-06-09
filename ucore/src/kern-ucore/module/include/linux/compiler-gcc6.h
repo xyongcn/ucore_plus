@@ -1,11 +1,13 @@
-//TODO: Linux 2.6.x series doesn't support gcc5, and it won't be fixed.
-//This file is actually from linux kernel 3.18. Using it may introduce bugs.
+//TODO: Linux never has a compiler-gcc6.h. Supporting gcc6 is done by
+//deprecating all compiler-gccX.h files.
+//This file is actually from linux kernel 3.18, for supporting gcc5.
+//Using it may introduce bugs.
 
 #ifndef __LINUX_COMPILER_H
 #error "Please don't include <linux/compiler-gcc5.h> directly, include <linux/compiler.h> instead."
 #endif
 
-#warning "Compiling modules using gcc5.x, this is not officially supported by Linux 2.6.x modules"
+#warning "Compiling modules using gcc6.x, this is not officially supported by Linux 2.6.x modules"
 #warning "This can introduce unexpected bugs, so please be careful!"
 
 #define __used                          __attribute__((__used__))
