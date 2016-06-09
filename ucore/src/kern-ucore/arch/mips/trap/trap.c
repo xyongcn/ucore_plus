@@ -21,8 +21,8 @@
 
 #define GET_CAUSE_EXCODE(x)   ( ((x) & CAUSEF_EXCCODE) >> CAUSEB_EXCCODE)
 
-#define current (pls_read(current))
-#define idleproc (pls_read(idleproc))
+//#define current (pls_read(current))
+//#define idleproc (pls_read(idleproc))
 
 static void print_ticks()
 {

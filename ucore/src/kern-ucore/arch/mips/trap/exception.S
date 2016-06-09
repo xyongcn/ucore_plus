@@ -2,11 +2,11 @@
  * Entry points for exceptions
  */
 #include <asm/regdef.h>
-#include <asm/mipsregs.h> 
+#include <asm/mipsregs.h>
 #include <memlayout.h>
 .extern pls_current # current pcb proc.h
 .extern mips_trap
-   /* 
+   /*
     * Do not allow the assembler to use $1 (at), because we need to be
     * able to save it.
     */
@@ -17,7 +17,7 @@
 .global ramExcHandle_tlbmiss
 ramExcHandle_tlbmiss:
   #b ramExcHandle_tlbmiss
-  b ramExcHandle_general 
+  b ramExcHandle_general
   nop
 
 .global ramReserved
@@ -35,7 +35,7 @@ ramExcHandle_general:
    andi k0, k0, KSU_USER/* Check the we-were-in-user-mode bit */
    beq	k0, $0, 1f		/* If clear, from kernel, already have stack */
    nop				/* delay slot */
-   
+
    /* TODO */
    /* Coming from user mode - load kernel stack into sp */
    la k0, pls_current /* get address of "curkstack" */
@@ -45,7 +45,7 @@ ramExcHandle_general:
    addiu sp, k0, KSTACKSIZE
    #lw sp, 72(k0)			/* get its value */
    nop				/* delay slot for the load */
-  
+
 1:
    mfc0 k0, CP0_CAUSE /* Now, load the exception cause. */
    j common_exception		/* Skip to common code */
@@ -59,11 +59,11 @@ ramExcHandle_general_end:
 /* Common exception code                            */
 /*                                                  */
 /****************************************************/
-   
+
    .text
    .type common_exception,@function
    .ent common_exception
-common_exception:	
+common_exception:
 
    /*
     * At this point:
@@ -73,14 +73,14 @@ common_exception:
     *      sp points into the kernel stack.
     *      All other registers are untouched.
     */
-   
+
    /*
     * Allocate stack space for 37 words to hold the trap frame,
     * plus four more words for a minimal argument block.
     */
    addiu sp, sp, -164
 
-   /* 
+   /*
     * Save general registers.
     * We exclude k0/k1, which the kernel is free to clobber (and which
     * we already have clobbered), and $0, whose value is fixed.
@@ -115,7 +115,7 @@ common_exception:
 
    sw k1, 152(sp)	/* real saved sp */
    nop			/* delay slot for store */
-   
+
    mfc0 k1, CP0_EPC /* Copr.0 reg 13 == PC for exception */
    sw k1, 160(sp)	/* real saved PC */
 
@@ -188,7 +188,7 @@ common_exception:
 
    /* Something must be here or gdb doesn't find the stack frame. */
    nop
-   
+
    /*
     * Now restore stuff and return from the exception.
     * Interrupts should be off.
@@ -252,12 +252,12 @@ exception_return:
    nop
    eret
    nop
-   .end common_exception 
+   .end common_exception
 
 
 .globl forkrets
 .type forkrets, @function
-.ent forkrets 
+.ent forkrets
 forkrets:
   addiu sp, a0, -16
   b exception_return

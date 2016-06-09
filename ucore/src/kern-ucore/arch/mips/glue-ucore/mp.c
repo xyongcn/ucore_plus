@@ -1,9 +1,10 @@
-#include <glue_mp.h>
+#include "../../../../glue-kern/arch/mips/glue_mp.h"
 #include <mp.h>
 #include <proc.h>
 #include <pmm.h>
 #include <vmm.h>
 
+void *percpu_offsets[NCPU];
 PLS int pls_lapic_id;
 PLS int pls_lcpu_idx;
 PLS int pls_lcpu_count;
@@ -31,6 +32,7 @@ int mp_init(void)
 	pls_write(lapic_id, 0);
 	pls_write(lcpu_idx, 0);
 	pls_write(lcpu_count, 1);
+  percpu_offsets[0] = __percpu_start;
 
 	return 0;
 }

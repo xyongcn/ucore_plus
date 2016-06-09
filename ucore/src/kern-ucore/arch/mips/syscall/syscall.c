@@ -10,7 +10,7 @@
 #include <sysfile.h>
 #include <error.h>
 
-#define current (pls_read(current))
+//#define current (pls_read(current))
 
 extern volatile int ticks;
 

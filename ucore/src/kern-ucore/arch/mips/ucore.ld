@@ -1,4 +1,4 @@
-OUTPUT_FORMAT(elf32-littlemips)
+OUTPUT_FORMAT(elf32-tradlittlemips)
 OUTPUT_ARCH(mips:isa32)
 ENTRY(kernel_entry)
 
@@ -10,10 +10,10 @@ SECTIONS
     . = ALIGN(4);
     wrs_kernel_text_start = .; _wrs_kernel_text_start = .;
     *(.startup)
-    *(.text) 
+    *(.text)
     *(.text.*)
     *(.gnu.linkonce.t*)
-    *(.mips16.fn.*) 
+    *(.mips16.fn.*)
     *(.mips16.call.*) /* for MIPS */
     *(.rodata) *(.rodata.*) *(.gnu.linkonce.r*) *(.rodata1)
     . = ALIGN(4096);
@@ -51,6 +51,11 @@ wrs_kernel_data_end = .; _wrs_kernel_data_end = .;
   . = ALIGN(16);
 }
 . = ALIGN(16);
+.percpu : {
+    PROVIDE(__percpu_start = .);
+    *(.percpu)
+    PROVIDE(__percpu_end = .);
+}
 end = .; _end = .;
 wrs_kernel_bss_end = .; _wrs_kernel_bss_end = .;
 
@@ -61,9 +66,8 @@ wrs_kernel_bss_end = .; _wrs_kernel_bss_end = .;
   *(.debug*) */
   *(.note)    /* seen on Pentium ELF */
   *(.comment)    /* seen on PPC & SH ELF */
-  *(.reginfo)  
+  *(.reginfo)
   *(.pdr)    /* seen on MIPS ELF */
 }
 
 }
-
