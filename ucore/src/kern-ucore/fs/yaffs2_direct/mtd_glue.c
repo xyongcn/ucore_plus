@@ -3,7 +3,7 @@
  *
  *       Filename:  mtd_glue.c
  *
- *    Description:  
+ *    Description:
  *
  *        Version:  1.0
  *        Created:  04/09/2012 12:32:17 PM
@@ -55,6 +55,7 @@ int    get_mtd_partition_cnt()
   return PARTITION_CNT;
 }
 
+#ifdef HAS_NANDFLASH
 static int mtd_initialise(struct yaffs_dev *dev)
 {
   kprintf("mtd_initialise()\n");
@@ -63,6 +64,7 @@ static int mtd_initialise(struct yaffs_dev *dev)
     panic("mtd_initialise: NAND not found!");
   return YAFFS_OK;
 }
+#endif
 
 static int mtd_deinitialise(struct yaffs_dev *dev)
 {
@@ -73,7 +75,7 @@ static int mtd_deinitialise(struct yaffs_dev *dev)
 static unsigned char data_page_buf[MAX_PAGE_BUF];
 
 static int mtd_read_page(struct yaffs_dev *dev,
-					  unsigned pageId, 
+					  unsigned pageId,
 					  unsigned char *data, unsigned dataLength,
 					  unsigned char *spare, unsigned spareLength,
 					  int *eccStatus)
@@ -95,7 +97,7 @@ static int mtd_read_page(struct yaffs_dev *dev,
   return ret;
 }
 
-static int mtd_write_page(struct yaffs_dev *dev, unsigned pageId, 
+static int mtd_write_page(struct yaffs_dev *dev, unsigned pageId,
 					  const unsigned char *data, unsigned dataLength,
             const unsigned char *spare, unsigned spareLength)
 {
@@ -128,6 +130,7 @@ static int mtd_mark_block(struct yaffs_dev *dev, unsigned blockId)
 /* assume that only on nandfalsh */
 static  ynandif_Geometry geo;
 
+#ifdef HAS_NANDFLASH
 int yaffs_start_up(void)
 {
   if(!check_nandflash()){
@@ -163,7 +166,7 @@ int yaffs_start_up(void)
   geo.pagesPerBlock = chip->pages_per_blk;
   geo.inband_tags = 0;
   geo.useYaffs2 = 1;
-  
+
   for(i=0;i<PARTITION_CNT;i++){
     geo.start_block = partition[i].start_block;
     geo.end_block = partition[i].end_block;
@@ -174,6 +177,7 @@ int yaffs_start_up(void)
 
   return 0;
 }
+#endif
 
 void mtd_erase_partition(struct nand_chip*chip ,const char* name)
 {
@@ -195,5 +199,3 @@ found:
   }
   kprintf("mtd_erase_partition: '%s' erased\n", name);
 }
-
-

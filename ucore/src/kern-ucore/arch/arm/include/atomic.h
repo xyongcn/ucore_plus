@@ -35,6 +35,8 @@ static inline bool atomic_dec_test_zero(atomic_t * v)
     __attribute__ ((always_inline));
 static inline int atomic_add_return(atomic_t * v, int i)
     __attribute__ ((always_inline));
+static inline int atomic_add_return_orig(atomic_t * v, int i)
+    __attribute__ ((always_inline));
 static inline int atomic_sub_return(atomic_t * v, int i)
     __attribute__ ((always_inline));
 
@@ -71,7 +73,7 @@ static inline void atomic_set(atomic_t * v, int i)
 static inline void atomic_add(atomic_t * v, int i)
 {
 	v->counter += i;
-	//return result;  
+	//return result;
 }
 
 /* *
@@ -181,6 +183,17 @@ static inline int atomic_add_return(atomic_t * v, int i)
 	v->counter += i;
 	local_intr_restore(intr_flag);
 	return v->counter;
+}
+
+static inline int atomic_add_return_orig(atomic_t * v, int i)
+{
+  bool intr_flag;
+  int ret;
+  local_intr_save(intr_flag);
+  ret = v->counter;
+  v->counter += i;
+  local_intr_restore(intr_flag);
+  return ret;
 }
 
 /* *

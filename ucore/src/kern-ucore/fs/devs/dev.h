@@ -15,7 +15,7 @@ struct file_operations;
 /*
  * Filesystem-namespace-accessible device.
  * For user, device is a special file
- * 
+ *
  * device is a abstract structure
  * each instance should implement such operation functions:
  *		@ d_open
@@ -32,10 +32,10 @@ struct device {
 	size_t d_blocks;
 	size_t d_blocksize;
 	/* for Linux */
-	/* 
+	/*
 	   unsigned long i_rdev;
 	   mode_t i_mode;
-	   const struct file_operations *i_fops; 
+	   const struct file_operations *i_fops;
 	 */
 void *linux_file;
 	void *linux_dentry;
@@ -53,6 +53,7 @@ void *linux_file;
 	int (*d_close) (struct device * dev);
 	int (*d_io) (struct device * dev, struct iobuf * iob, bool write);
 	int (*d_ioctl) (struct device * dev, int op, void *data);
+  void* private_data;
 };
 
 #define dop_open(dev, open_flags)           ((dev)->d_open(dev, open_flags))
@@ -62,8 +63,27 @@ void *linux_file;
 
 #define dev_is_linux_dev(dev) ((dev)->linux_dentry != NULL)
 
+#ifndef __NO_UCORE_DEVICE__
+static inline void* dev_get_private_data(struct device* dev)
+  __attribute__((always_inline));
+static inline void dev_set_private_data(struct device* dev, void* private_data)
+  __attribute__((always_inline));
+#endif
+
 void dev_init(void);
 /* Create inode for a vfs-level device. */
 struct inode *dev_create_inode(void);
+
+#ifndef __NO_UCORE_DEVICE__
+static inline void* dev_get_private_data(struct device* dev)
+{
+  return dev->private_data;
+}
+
+static inline void dev_set_private_data(struct device* dev, void* private_data)
+{
+  dev->private_data = private_data;
+}
+#endif
 
 #endif /* !__KERN_FS_DEVS_DEV_H__ */

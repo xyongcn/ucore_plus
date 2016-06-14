@@ -7,35 +7,22 @@
 
 void usage(void)
 {
-	printf("usage: mount -t filesystem device\n");
-}
-
-int check(int argc, char **argv)
-{
-	if (argc != 4) {
-		return -1;
-	}
-	if (strcmp(argv[1], "-t") != 0) {
-		return -1;
-	}
-	return 0;
+	printf("usage: mount <device_file> <mountpoint> <filesystem>\n");
 }
 
 int main(int argc, char **argv)
 {
-	int ret;
-	if (check(argc, argv) != 0) {
-		usage();
-		return -1;
-	} else {
-		ret = mount(argv[3], NULL, argv[2], NULL);
-	}
+  if(argc < 4)
+  {
+    usage();
+    return -1;
+  }
 
-	if (!ret) {
+	int ret = mount(argv[1], argv[2], argv[3], 0, NULL);
+	if (ret == 0) {
 		printf("mounted file system %s on %s.\n", argv[2], argv[3]);
 	} else {
 		printf("mount failed.\n");
 	}
-
 	return ret;
 }

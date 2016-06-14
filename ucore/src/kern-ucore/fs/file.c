@@ -126,7 +126,7 @@ void filemap_dup_close(struct file *to, struct file *from)
 	to->node = node;
 }
 
-static inline int fd2file(int fd, struct file **file_store)
+inline int fd2file(int fd, struct file **file_store)
 {
 	if (testfd(fd)) {
 		struct file *file = get_filemap() + fd;
@@ -360,13 +360,48 @@ int file_getdirentry(int fd, struct dirent *direntp)
 	return ret;
 }
 
+int file_getdirentry64(int fd, struct dirent64 *direntp)
+{
+	int ret;
+	struct file *file;
+	if ((ret = fd2file(fd, &file)) != 0) {
+		return ret;
+	}
+  direntp->d_off = file->pos;
+	filemap_acquire(file);
+
+	struct iobuf __iob, *iob =
+	    iobuf_init(&__iob, direntp->d_name, sizeof(direntp->d_name),
+		       direntp->d_off);
+	if ((ret = vop_getdirentry(file->node, iob)) == 0) {
+		direntp->d_off += iobuf_used(iob);
+	}
+  direntp->d_type = 8;
+	filemap_release(file);
+  file->pos = direntp->d_off;
+	return ret;
+}
+
 int file_dup(int fd1, int fd2)
 {
 	int ret;
 	struct file *file1, *file2;
+
+  //If fd1 is invalid, return.
 	if ((ret = fd2file(fd1, &file1)) != 0) {
 		return ret;
 	}
+
+  //If fd2 is an opened file, close it first. This is what dup2 on linux does.
+  if (testfd(fd2)) {
+    file2 = &get_filemap()[fd2];
+    if (file2->status != FD_NONE) {
+      file_close(fd2);
+    }
+  }
+  file2 = NULL;
+
+  //Now let fd2 become a duplication for fd1.
 	if ((ret = filemap_alloc(fd2, &file2)) != 0) {
 		return ret;
 	}
@@ -468,7 +503,7 @@ bool __is_linux_devfile(int fd)
 /* *
  * linux_devfile_read - this function is used to read from device file
  *						such as console
- * 
+ *
  * */
 int linux_devfile_read(int fd, void *base, size_t len, size_t * copied_store)
 {
@@ -598,6 +633,7 @@ void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 		goto out_unlock;
 	}
 	uintptr_t end = start + len;
+  //kprintf("start = %llx, end = %llx, len = %llx", start, end, len);
 	struct vma_struct *vma = find_vma(mm, start);
 	if (vma == NULL || vma->vm_start >= end) {
 		vma = NULL;
@@ -609,7 +645,9 @@ void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 	} else if (vma->vm_start == start && end == vma->vm_end) {
 		vma->vm_flags = vm_flags;
 	} else {
-		assert(vma->vm_start <= start && end <= vma->vm_end);
+    if(vma->vm_start > start || end > vma->vm_end) {
+      goto out_unlock;
+    }
 		if ((subret = mm_unmap_keep_pages(mm, start, len)) != 0) {
 			goto out_unlock;
 		}
@@ -620,7 +658,8 @@ void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 		goto out_unlock;
 	}
 	if (!(flags & MAP_ANONYMOUS)) {
-		vma_mapfile(vma, fd, off << 12, NULL);
+    vma_mapfile(vma, fd, off, NULL);
+		//vma_mapfile(vma, fd, off << 12, NULL);
 	}
 	subret = 0;
 out_unlock:

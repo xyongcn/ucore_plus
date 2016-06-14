@@ -15,20 +15,21 @@
 #include <error.h>
 #include <assert.h>
 #include <kio.h>
+#include <devfs/devfs.h>
 
 /*
  * Structure for a single named device.
- * 
+ *
  * devname    - Name of device (eg, "lhd0"). Should always be set to
  *              a valid string.
  *
  * devnode    - inode of device .
  *
  * fs         - Filesystem object mounted on, or associated with, this
- *              device. NULL if there is no filesystem. 
+ *              device. NULL if there is no filesystem.
  *
  * A filesystem can be associated with a device without having been
- * mounted if the device was created that way. 
+ * mounted if the device was created that way.
  * Referencing devname, or the filesystem volume name, on a device
  * with a filesystem mounted returns the root of the filesystem.
  * Referencing devname on a mountable device with no filesystem
@@ -156,7 +157,7 @@ int vfs_get_root(const char *devname, struct inode **node_store)
 				/*
 				 * If none of the above tests matched, we didn't name
 				 * any of the names of this device, so go on to the
-				 * next one. 
+				 * next one.
 				 */
 			}
 		}
@@ -210,7 +211,8 @@ vfs_do_add(const char *devname, struct inode *devnode, struct fs *fs,
 	   bool mountable)
 {
 	assert(devname != NULL);
-	assert((devnode == NULL && !mountable)
+  //TODO: This is a temporary workaround, to mount devfs.
+	assert((devnode == NULL/* && !mountable*/)
 	       || (devnode != NULL && check_inode_type(devnode, device)));
 	if (strlen(devname) > FS_MAX_DNAME_LEN) {
 		return -E_TOO_BIG;
@@ -265,6 +267,7 @@ int vfs_add_fs(const char *devname, struct fs *fs)
  */
 int vfs_add_dev(const char *devname, struct inode *devnode, bool mountable)
 {
+  devfs_register_device(devname, devnode, mountable);
 	return vfs_do_add(devname, devnode, NULL, mountable);
 }
 
@@ -306,7 +309,12 @@ vfs_mount(const char *devname,
 	}
 	assert(vdev->devname != NULL && vdev->mountable);
 
-	struct device *dev = vop_info(vdev->devnode, device);
+  //TODO: This is a temporary workaround, to mount devfs.
+  struct device* dev = NULL;
+  if(strcmp(devname, "dev") != 0) {
+	   dev = vop_info(vdev->devnode, device);
+  }
+
 	if ((ret = mountfunc(dev, &(vdev->fs))) == 0) {
 		assert(vdev->fs != NULL);
 		kprintf("vfs: mount %s.\n", vdev->devname);

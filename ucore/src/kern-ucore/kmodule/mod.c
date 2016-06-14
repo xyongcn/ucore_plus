@@ -15,6 +15,7 @@
 #include <mod.h>
 #include <sem.h>
 #include <stdlib.h>
+#include <proc.h>
 #include <error.h>
 
 #ifndef ARCH_SHF_SMALL
@@ -818,7 +819,7 @@ static noinline struct module *load_module(void __user * umod,
 	   kprintf("load_module: bad vermagic\n");
 	   goto free_hdr;
 	   } else if (!same_magic(modmagic, vermagic, versindex)) {
-	   ; 
+	   ;
 	   // TODO: module magic is left for future use.
 	   }
 	 */

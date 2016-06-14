@@ -365,8 +365,9 @@ static uint32_t sys_mount(uint32_t arg[])
 	const char *source = (const char *)arg[0];
 	const char *target = (const char *)arg[1];
 	const char *filesystemtype = (const char *)arg[2];
-	const void *data = (const void *)arg[3];
-	return do_mount(source, filesystemtype);
+  uint32_t mountflags = arg[3];
+	const void *data = (const void *)arg[4];
+	return do_mount(source, target, filesystemtype, mountflags, data);
 }
 
 static uint32_t sys_umount(uint32_t arg[])
@@ -599,7 +600,7 @@ static uint32_t __sys_linux_ugetrlimit(uint32_t arg[])
 /*
   Clone a task - this clones the calling program thread.
   * This is called indirectly via a small wrapper
-  
+
  asmlinkage int sys_clone(unsigned long clone_flags, unsigned long newsp,
                           int __user *parent_tidptr, int tls_val,
                           int __user *child_tidptr, struct pt_regs *regs)

@@ -1,2 +1,10 @@
 set architecture i386:x86-64:intel
-target remote :1234
+target remote | exec qemu-system-x86_64 -gdb stdio -m 360M -hda obj/kernel.img -drive file=obj/sfs.img,media=disk,cache=writeback,index=2  
+symbol-file obj/kernel/kernel-amd64.elf
+file obj/kernel/kernel-amd64.elf
+define hook-stop
+x/i $pc
+end
+br  __panic
+#b syscall_linux
+b do_debug

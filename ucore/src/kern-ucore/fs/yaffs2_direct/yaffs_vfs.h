@@ -42,9 +42,6 @@ struct yaffs2_inode{
   struct yaffs_obj * obj;
 };
 
-
-int yaffs_vfs_mount(const char *devname);
-
 void yaffs_vfs_init(void);
 
 #endif

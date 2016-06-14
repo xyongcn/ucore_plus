@@ -27,6 +27,8 @@ static inline bool atomic_dec_test_zero(atomic_t * v)
     __attribute__ ((always_inline));
 static inline int atomic_add_return(atomic_t * v, int i)
     __attribute__ ((always_inline));
+static inline int atomic_add_return_orig(atomic_t * v, int i)
+    __attribute__ ((always_inline));
 static inline int atomic_sub_return(atomic_t * v, int i)
     __attribute__ ((always_inline));
 
@@ -188,6 +190,21 @@ static inline int atomic_add_return(atomic_t * v, int i)
 }
 
 /* *
+ * atomic_add_return - add integer and return the original value
+ * @i:  integer value to add
+ * @v:  pointer of type atomic_t
+ *
+ * Atomically adds @i to @v and returns the original value of v
+ * Requires Modern 486+ processor
+ * */
+static inline int atomic_add_return_orig(atomic_t * v, int i)
+{
+	asm volatile ("xaddl %0, %1":"+r" (i), "+m"(v->counter)::"memory");
+	return i;
+}
+
+
+/* *
  * atomic_sub_return - subtract integer and return
  * @v:  pointer of type atomic_t
  * @i:  integer value to subtract
@@ -317,7 +334,7 @@ static inline bool test_bit(int nr, volatile void *addr)
 //----------------------------------------------------------------
 // CAS functions
 //----------------------------------------------------------------
-static inline char CAS (volatile void * addr, volatile void * value, void * newvalue) 
+static inline char CAS (volatile void * addr, volatile void * value, void * newvalue)
 {
 	register char ret;
 	__asm__ __volatile__ (
@@ -330,7 +347,7 @@ static inline char CAS (volatile void * addr, volatile void * value, void * newv
 	return ret;
 }
 
-static inline char CAS2 (volatile void * addr, volatile void * v1, volatile long v2, void * n1, long n2) 
+static inline char CAS2 (volatile void * addr, volatile void * v1, volatile long v2, void * n1, long n2)
 {
 	register char ret;
 	__asm__ __volatile__ (

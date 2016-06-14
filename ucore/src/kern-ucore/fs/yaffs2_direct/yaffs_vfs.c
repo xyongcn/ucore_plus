@@ -3,7 +3,7 @@
  *
  *       Filename:  yaffs_vfs.c
  *
- *    Description:  
+ *    Description:
  *
  *        Version:  1.0
  *        Created:  04/10/2012 08:19:14 AM
@@ -34,12 +34,36 @@
 #include <board.h>
 #endif
 
+static int yaffs_vfs_mount(struct file_system_type* file_system_type, int flags,
+  const char *devname, void* data, struct fs** fs_store);
+
+static struct file_system_type yaffs_fs_type = {
+  .name = "yaffs",
+  .mount = yaffs_vfs_mount
+};
+
+void yaffs_vfs_init(void) {
+  yaffsfs_OSInitialisation();
+#ifndef HAS_NANDFLASH
+  int ret = register_filesystem(&yaffs_fs_type);
+  if (ret != 0) {
+    panic("failed: yaffs: register_filesystem: %e.\n", ret);
+  }
+#else
+  if(check_nandflash()) {
+    int ret = register_filesystem(&yaffs_fs_type);
+    if (ret != 0) {
+      panic("failed: yaffs: register_filesystem: %e.\n", ret);
+    }
+  }
+  else {
+    kprintf("yaffs_vfs_init: nandflash not found\n");
+  }
+#endif
+}
 
 static const struct inode_ops yaffs_node_dirops;
 static const struct inode_ops yaffs_node_fileops;
-
-
-static const char *mount_partition = "/data";
 
 #define yaffs_inode_to_obj_lv(iptr) (vop_info(node, yaffs2_inode)->obj)
 #define yaffs_inode_to_obj(iptr)\
@@ -48,12 +72,12 @@ static const char *mount_partition = "/data";
 
 static int yaffs_vfs_do_sync(struct fs *fs)
 {
-  int ret;
   kprintf("yaffs_vfs_do_sync: sync disk\n");
-  ret = yaffs_sync(mount_partition);
+  struct yaffs2_fs *yfs = fsop_info(fs, yaffs2);
+  int ret = yaffs_sync(yfs->yaffs_name_buf);
   if(ret)
-      kprintf("yaffs_vfs_do_sync: faild to sync %s\n", mount_partition);
-  return 0;
+      kprintf("yaffs_vfs_do_sync: faild to sync %s\n", yfs->yaffs_name_buf);
+  return ret;
 }
 
 static const struct inode_ops *
@@ -77,9 +101,9 @@ static void yaffs_fill_inode(struct inode *node, struct yaffs_obj* obj)
 static struct inode *yaffs_get_inode(struct fs *fs, struct yaffs_obj* obj)
 {
   struct inode *nnode;
-  /*  
-  char *namebuf = fsop_info(fs, yaffs2)->yaffs_name_buf; 
-  yaffs_get_obj_name(obj, namebuf, FS_MAX_FNAME_LEN); 
+  /*
+  char *namebuf = fsop_info(fs, yaffs2)->yaffs_name_buf;
+  yaffs_get_obj_name(obj, namebuf, FS_MAX_FNAME_LEN);
   yaffs_trace(YAFFS_TRACE_OS,
       "yaffs_get_inode %d:%s", obj->obj_id, namebuf);
   */
@@ -126,15 +150,20 @@ struct inode * yaffs_vfs_do_get_root(struct fs *fs)
 
 static int yaffs_vfs_do_unmount(struct fs *fs)
 {
-  kprintf("yaffs_vfs_do_unmount:  unmount %s\n", mount_partition);
-  int ret = yaffs_unmount(mount_partition);
-  if(ret){
-    kprintf("yaffs_vfs_do_unmount: faild to unmount %s\n", mount_partition);
+  struct yaffs2_fs *yfs = fsop_info(fs, yaffs2);
+  kprintf("yaffs_vfs_do_unmount:  unmount %s\n", yfs->yaffs_name_buf);
+  int ret = yaffs_unmount(yfs->yaffs_name_buf);
+  if(ret != 0){
+    kprintf("yaffs_vfs_do_unmount: faild to unmount %s\n", yfs->yaffs_name_buf);
     return -1;
   }
-  /* release struct fs */
+
+  //Remove the wrapper device
+  yaffs_remove_device(yfs->ydev);
+
+  //Free memory for the allocated fs object.
   kfree(fs);
-  return 0;
+  return ret;
 }
 
 static void yaffs_vfs_do_cleanup(struct fs *fs)
@@ -143,10 +172,34 @@ static void yaffs_vfs_do_cleanup(struct fs *fs)
   return;
 }
 
-
-static int
-yaffs_vfs_do_mount(struct device *dev, struct fs **fs_store)
+static char* yaffs_vfs_get_next_device_name()
 {
+  static char next_yaffs_device_name[6] = "aaaaa";
+  for(int i = 0; i < 5; i++) {
+    next_yaffs_device_name[i]++;
+    if(next_yaffs_device_name[i] != 'z' + 1) break;
+    next_yaffs_device_name[i] = 'a';
+  }
+  return next_yaffs_device_name;
+}
+
+static int yaffs_vfs_mount(struct file_system_type* file_system_type, int flags,
+  const char *devname, void* data, struct fs** fs_store)
+{
+  //Checks whether devname points to a block device.
+  struct inode* dev_node = NULL;
+  if(vfs_lookup(devname, &dev_node) != 0) {
+    return -E_NOENT;
+  }
+  uint32_t node_type;
+  if(vop_gettype(dev_node, &node_type) != 0 || node_type != S_IFBLK) {
+    return -E_NOTBLK;
+  }
+
+  //Get the block device specified by devname
+  struct device* dev = vop_info(dev_node, device);
+
+  //Allocate new fs struct
   struct fs *fs;
   if ((fs = alloc_fs(yaffs2)) == NULL){
     return -E_NO_MEM;
@@ -154,49 +207,38 @@ yaffs_vfs_do_mount(struct device *dev, struct fs **fs_store)
 
   struct yaffs2_fs *yfs = fsop_info(fs, yaffs2);
   yfs->dev = dev;
+  //Assign a yaffs device name.
+  strcpy(yfs->yaffs_name_buf, yaffs_vfs_get_next_device_name());
 
-  //TODO mount vfs here
-  kprintf("yaffs_vfs_do_mount:  mount %s", mount_partition);
-  int ret = yaffs_mount_common(mount_partition,0, 0, &(yfs->ydev));
-  if(ret)
-    panic("yaffs_vfs_do_mount: faild to mount %s", mount_partition);
+  //Create the wrapper yaffs device.
+  yaffs_ucore_device_wrapper_create(dev, yfs->yaffs_name_buf);
 
+  //Mount the wrapper device on yaffs.
+  kprintf("yaffs_vfs_do_mount: device=%s, yaffs_wrapper_device=%s\n",
+    devname, yfs->yaffs_name_buf);
+  int ret = yaffs_mount_common(yfs->yaffs_name_buf,0, 0, &(yfs->ydev));
 
+  if(ret != 0) {
+    kprintf("yaffs_vfs_do_mount: faild to mount device=%s, "
+      "yaffs_wrapper_device=%s\n", devname, yfs->yaffs_name_buf);
+    kfree(fs);
+    return ret;
+  }
+
+  //Update the new fs object.
   fs->fs_sync =  yaffs_vfs_do_sync;
   fs->fs_get_root = yaffs_vfs_do_get_root;
   fs->fs_unmount = yaffs_vfs_do_unmount;
   fs->fs_cleanup = yaffs_vfs_do_cleanup;
-
   *fs_store = fs;
+
   return 0;
 }
 
-int yaffs_vfs_mount(const char *devname)
+/*int yaffs_vfs_mount(const char *devname)
 {
   return vfs_mount(devname, yaffs_vfs_do_mount);
-}
-
-
-void
-yaffs_vfs_init(void) {
-#ifndef HAS_NANDFLASH
-  kprintf("yaffs_vfs_init: nandflash not supported, use ramsim\n.");
-  int ret;
-  if ((ret = yaffs_vfs_mount("disk1")) != 0) {
-    panic("failed: yaffs2: yaffs_vfs_mount: %e.\n", ret);
-  }
-
-#else
-  if(check_nandflash()){
-    int ret;
-    if ((ret = yaffs_vfs_mount("disk1")) != 0) {
-      panic("failed: yaffs2: yaffs_vfs_mount: %e.\n", ret);
-    }
-  }else{
-    kprintf("yaffs_vfs_init: nandflash not found\n");
-  }
-#endif
-}
+}*/
 
 static int yaffs_vop_reclaim(struct inode *node)
 {
@@ -204,7 +246,7 @@ static int yaffs_vop_reclaim(struct inode *node)
   //kprintf("TODO reclaim %d \n", obj->obj_id );
   yaffs_trace(YAFFS_TRACE_OS,
       "yaffs_vop_reclaim: %d", obj->obj_id);
-  vop_kill(node); 
+  vop_kill(node);
   return 0;
 }
 
@@ -305,7 +347,7 @@ next:
     return -E_NO_MEM;
 }
 
-static int yaffs_vop_lookup_parent(struct inode *node, char *path, 
+static int yaffs_vop_lookup_parent(struct inode *node, char *path,
     struct inode **node_store, char **endp)
 {
   struct yaffs_obj *d_obj;
@@ -379,7 +421,7 @@ int yaffs_vop_gettype(struct inode *node, uint32_t *type_store)
       return 0;
     default:
       break;
-  } 
+  }
   panic("invalid file type %d.\n", obj->variant_type);
   return -E_INVAL;
 }
@@ -399,7 +441,7 @@ int yaffs_vop_namefile(struct inode *node, struct iobuf *iob)
      return -E_NO_MEM;
 
   while (d_obj->obj_id != YAFFS_OBJECTID_ROOT) {
-      
+
     int name_len = yaffs_get_obj_name(d_obj,yaffs_get_namebuf(), FS_MAX_FNAME_LEN );
 
     if ((alen = name_len + 1) > resid) {
@@ -475,7 +517,7 @@ yaffs_vop_fstat(struct inode *node, struct stat *stat) {
 
 
 static int
-yaffs_vop_getdirentry(struct inode *node, struct iobuf *iob) 
+yaffs_vop_getdirentry(struct inode *node, struct iobuf *iob)
 {
   off_t offset = iob->io_offset;
   struct yaffs_obj *obj = yaffs_inode_to_obj(node);
@@ -515,7 +557,7 @@ yaffs_vop_rename(struct inode *node, const char *name, struct inode *new_node, c
   }
   struct yaffs_obj *olddir = yaffs_inode_to_obj(node);
   struct yaffs_obj *newdir = yaffs_inode_to_obj(new_node);
-  if(olddir->variant_type != YAFFS_OBJECT_TYPE_DIRECTORY 
+  if(olddir->variant_type != YAFFS_OBJECT_TYPE_DIRECTORY
       || newdir->variant_type != YAFFS_OBJECT_TYPE_DIRECTORY)
     return -E_NOTDIR;
 
@@ -632,8 +674,8 @@ yaffs_vop_read(struct inode *node, struct iobuf *iob) {
     return -E_INVAL;
   }
   struct yaffs_obj *obj = yaffs_inode_to_obj(node);
-  
-  loff_t maxRead ; 
+
+  loff_t maxRead ;
   if(yaffs_get_obj_length(obj) > offset)
     maxRead = yaffs_get_obj_length(obj) - offset;
   else
@@ -643,7 +685,7 @@ yaffs_vop_read(struct inode *node, struct iobuf *iob) {
   int nRead = yaffs_file_rd(obj, iob->io_base, offset, alen);
   if (nRead > 0) {
     iobuf_skip(iob, nRead);
-  } 
+  }
   return 0;
 }
 

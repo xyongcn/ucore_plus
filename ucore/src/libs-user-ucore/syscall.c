@@ -253,11 +253,10 @@ int sys_list_module()
 	return syscall(SYS_list_module);
 }
 
-int
-sys_mount(const char *source, const char *target, const char *filesystemtype,
-	  const void *data)
+int sys_mount(const char *source, const char *target,
+  const char *filesystemtype, unsigned long flags, const void *data)
 {
-	return syscall(SYS_mount, source, target, filesystemtype, data);
+	return syscall(SYS_mount, source, target, filesystemtype, flags, data);
 }
 
 int sys_umount(const char *target)
@@ -378,6 +377,23 @@ type sys_##name(type1 arg1,type2 arg2,type3 arg3, type4 arg4) {                 
   __syscall_return(type,__res);                                                     \
 }
 
+#define _syscall5(type,name,type1,arg1,type2,arg2,type3,arg3,type4,arg4,type5,arg5)           \
+type sys_##name(type1 arg1,type2 arg2,type3 arg3, type4 arg4, type5 arg5) {                                  \
+  long __res;                                                                     \
+  __asm__ __volatile__ (                                                        \
+  "mov\tr0,%1\n\t"                                                                  \
+  "mov\tr1,%2\n\t"                                                                  \
+  "mov\tr2,%3\n\t"                                                                  \
+  "mov\tr3,%4\n\t"                                                                  \
+  "mov\tr4,%5\n\t"                                                                  \
+  __syscall(name)                                                            \
+  "mov\t%0,r0"                                                                         \
+        : "=r" (__res)                                                             \
+        : "r" ((long)(arg1)),"r" ((long)(arg2)),"r" ((long)(arg3)),"r"((long)(arg4)) ,"r"((long)(arg5))     \
+        : "r0","r1","r2","r3","r4","lr");                                                       \
+  __syscall_return(type,__res);                                                     \
+}
+
 _syscall1(int, exit, int, error);
 _syscall0(int, fork);
 _syscall2(int, wait, int, pid, int *, store);
@@ -439,8 +455,8 @@ _syscall0(int, list_module);
 _syscall3(int, init_module, void *, umod, unsigned long, len, const char *,
 	  uargs);
 _syscall1(int, cleanup_module, const char *, name);
-_syscall4(int, mount, const char *, source, const char *, target, const char *,
-	  filesystemtype, const void *, data);
+_syscall5(int, mount, const char *, source, const char *, target, const char *,
+	  filesystemtype, unsigned long, flags, const void *, data);
 _syscall1(int, umount, const char *, target);
 
 int sys_send_event(int pid, int event, unsigned int timeout)

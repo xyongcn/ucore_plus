@@ -49,17 +49,15 @@
 #ifdef __ASSEMBLER__
 
 #define SEG_NULL()                              \
-    .quad 0x0, 0x0
+    .quad 0x0
 
 #define SEG_CODE(type)                          \
     .word 0x0, 0x0;                             \
-    .byte 0x0, (0x90 | (type)), 0x20, 0x0;      \
-    .word 0x0, 0x0, 0x0, 0x0
+    .byte 0x0, (0x90 | (type)), 0x20, 0x0;
 
 #define SEG_DATA(type)                          \
     .word 0x0, 0x0;                             \
-    .byte 0x0, (0x90 | (type)), 0x0, 0x0;       \
-    .word 0x0, 0x0, 0x0, 0x0
+    .byte 0x0, (0x90 | (type)), 0x0, 0x0;
 
 #else /* not __ASSEMBLER__ */
 
@@ -134,21 +132,39 @@ struct segdesc {
 	unsigned int sd_db:1;	// 0 = 16-bit segment, 1 = 32-bit segment
 	unsigned int sd_g:1;	// granularity: limit scaled by 4K when set
 	unsigned int sd_base_31_24:8;	// [24 ~ 31] bits of segment base address
+};
+
+
+/* segment descriptors */
+struct segdesc_tss {
+	unsigned int sd_lim_15_0:16;	// [0 ~ 15] bits of segment limit
+	unsigned int sd_base_15_0:16;	// [0 ~ 15] bits of segment base address
+	unsigned int sd_base_23_16:8;	// [16 ~ 23] bits of segment base address
+	unsigned int sd_type:4;	// segment type (see STS_ constants)
+	unsigned int sd_s:1;	// 0 = system, 1 = application
+	unsigned int sd_dpl:2;	// descriptor Privilege Level
+	unsigned int sd_p:1;	// present
+	unsigned int sd_lim_19_16:4;	// [16 ~ 19] bits of segment limit
+	unsigned int sd_avl:1;	// unused (available for software use)
+	unsigned int sd_l:1;	// 64-bit code segment
+	unsigned int sd_db:1;	// 0 = 16-bit segment, 1 = 32-bit segment
+	unsigned int sd_g:1;	// granularity: limit scaled by 4K when set
+	unsigned int sd_base_31_24:8;	// [24 ~ 31] bits of segment base address
 	unsigned int sd_base_63_32:32;	// [32 ~ 63] bits of segment base address
 	unsigned int sd_rsv:32;	// reserved
 };
 
 #define SEG_NULL                                            \
-    (struct segdesc) {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 #define SEG(type, dpl)                                      \
-    (struct segdesc) {                                      \
+    {                                                       \
         0, 0, 0, type, 1, dpl, 1,                           \
-        0, 0, 1, 0, 1, 0, 0, 0                              \
+        0, 0, 1, 0, 1,			                             \
     }
 
 #define SEGTSS(type, base, lim, dpl)                        \
-    (struct segdesc) {                                      \
+    (struct segdesc_tss) {                                      \
         (lim) & 0xffff, (base) & 0xffff,                    \
         ((base) >> 16) & 0xff, type, 0, dpl, 1,             \
         ((lim) >> 16) & 0xf, 0, 0, 0, 0,                    \

@@ -3,7 +3,7 @@
 
 #include <types.h>
 #include <fs.h>
-#include <proc.h>
+//#include <proc.h>
 #include <atomic.h>
 #include <assert.h>
 
@@ -48,6 +48,7 @@ int file_getdirentry(int fd, struct dirent *dirent);
 int file_dup(int fd1, int fd2);
 int file_pipe(int fd[]);
 int file_mkfifo(const char *name, uint32_t open_flags);
+int fd2file(int fd, struct file **file_store);
 
 int linux_devfile_read(int fd, void *base, size_t len, size_t * copied_store);
 int linux_devfile_write(int fd, void *base, size_t len, size_t * copied_store);
@@ -69,5 +70,11 @@ static inline int fopen_count_dec(struct file *file)
 {
 	return atomic_sub_return(&(file->open_count), 1);
 }
+
+#ifdef UCONFIG_BIONIC_LIBC
+struct file* fd2file_onfs(int fd, struct fs_struct *fs_struct);
+void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
+			  size_t off);
+#endif
 
 #endif /* !__KERN_FS_FILE_H__ */

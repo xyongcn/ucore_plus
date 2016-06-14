@@ -1,5 +1,12 @@
 /*
- * YAFFS: Yet another Flash File System . A NAND-flash specific file system. 
+ * TODO: This module is considered deprecated.
+ * The original purpose of this module is to create a RAM simulation for yaffs.
+ * yaffs is a file system designed for FlashROM.
+ * It is now suggested to create a RAM disk block device for simulation.
+ */
+
+/*
+ * YAFFS: Yet another Flash File System . A NAND-flash specific file system.
  *
  * Copyright (C) 2002-2011 Aleph One Ltd.
  *   for Toby Churchill Ltd and Brightstar Engineering
@@ -28,5 +35,3 @@ struct yaffs_dev *yramsim_CreateRamSim(const YCHAR *name,
 						u32 start_block, u32 end_block);
 
 #endif
-
-

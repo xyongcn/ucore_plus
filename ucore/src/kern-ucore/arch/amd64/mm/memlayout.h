@@ -7,21 +7,27 @@
 #define SEG_KTEXT   1
 #define SEG_KDATA   2
 //#define SEG_KPLS    3
-#define SEG_UTEXT   3
+#define SEG_UTEXT_32   3
+
+//TODO: SGE_UDATA and SEG_UTEXT are swapped so that uClibc works.
+//But this is concluded by diff 2 versions and I don't completely know
+//what I am doing.
 #define SEG_UDATA   4
+#define SEG_UTEXT   5
 //#define SEG_TLS1    6
 //#define SEG_TLS2    7
-#define SEG_TSS     5
-#define SEG_COUNT  (SEG_TSS+1)
+#define SEG_TSS     6
+#define SEG_COUNT  (SEG_TSS+2)
 
 /* global descrptor numbers */
-#define GD_KTEXT    ((SEG_KTEXT) << 4)	// kernel text
-#define GD_KDATA    ((SEG_KDATA) << 4)	// kernel data
-#define GD_UTEXT    ((SEG_UTEXT) << 4)	// user text
-#define GD_UDATA    ((SEG_UDATA) << 4)	// user data
-//#define GD_TLS1     ((SEG_TLS1) << 4)
-//#define GD_TLS2     ((SEG_TLS2) << 4)
-#define GD_TSS      ((SEG_TSS) << 4)	// task segment selector
+#define GD_KTEXT    ((SEG_KTEXT) << 3)	// kernel text
+#define GD_KDATA    ((SEG_KDATA) << 3)	// kernel data
+#define GD_UTEXT_32 ((SEG_UTEXT_32) << 3)	// user text compatiblity mode
+#define GD_UTEXT    ((SEG_UTEXT) << 3)	// user text
+#define GD_UDATA    ((SEG_UDATA) << 3)	// user data
+//#define GD_TLS1     ((SEG_TLS1) << 3)
+//#define GD_TLS2     ((SEG_TLS2) << 3)
+#define GD_TSS      ((SEG_TSS) << 3)	// task segment selector
 
 #define DPL_KERNEL  (0)
 #define DPL_USER    (3)
@@ -83,7 +89,8 @@
 #define USTACKPAGE          4096	// # of pages in user stack
 #define USTACKSIZE          (USTACKPAGE * PGSIZE)	// sizeof user stack
 
-#define USERBASE            0x0000000001000000
+#define USERBASE            0x0000000000001000
+//#define USERBASE            0x0000000000000000
 #define UTEXT               0x0000000010000000	// where user programs generally begin
 #define USTAB               USERBASE	// the location of the user STABS data structure
 
@@ -129,6 +136,18 @@ struct Page {
 	swap_entry_t index;	// stores a swapped-out page identifier
 	list_entry_t swap_link;	// swap hash link
 };
+
+#ifdef UCONFIG_BIONIC_LIBC
+struct mapped_addr {
+	struct Page *page;
+	off_t offset;
+	list_entry_t list;
+};
+
+#define le2maddr(le)	\
+		to_struct((le), struct mapped_addr, list)
+
+#endif //UCONFIG_BIONIC_LIBC
 
 /* Flags describing the status of a page frame */
 #define PG_reserved                 0	// the page descriptor is reserved for kernel or unusable

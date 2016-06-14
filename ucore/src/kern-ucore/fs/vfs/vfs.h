@@ -12,6 +12,8 @@ struct inode;			// abstract structure for an on-disk file (inode.h)
 struct device;			// abstract structure for a device (dev.h)
 struct iobuf;			// kernel or userspace I/O buffer (iobuf.h)
 
+extern struct inode* root_inode;
+
 /*
  * Abstract filesystem. (Or device accessible as a file.)
  *
@@ -24,7 +26,7 @@ struct iobuf;			// kernel or userspace I/O buffer (iobuf.h)
  *      fs_get_root   - Return root inode of filesystem.
  *      fs_unmount    - Attempt unmount of filesystem.
  *      fs_cleanup    - Cleanup of filesystem.???
- *      
+ *
  *
  * fs_get_root should increment the refcount of the inode returned.
  * It should not ever return NULL.
@@ -64,7 +66,8 @@ struct fs {
 
 struct file_system_type {
 	const char *name;
-	int (*mount) (const char *devname);
+	int (*mount) (struct file_system_type* file_system_type, int flags,
+    const char *devname, void* data, struct fs** fs_store);
 	list_entry_t file_system_type_link;
 };
 
@@ -104,7 +107,7 @@ void vfs_cleanup(void);
 void vfs_devlist_init(void);
 
 /*
- * VFS layer low-level operations. 
+ * VFS layer low-level operations.
  * See inode.h for direct operations on inodes.
  * See fs.h for direct operations on filesystems/devices.
  *
@@ -119,12 +122,13 @@ int vfs_get_curdir(struct inode **dir_store);
 int vfs_sync(void);
 int vfs_get_root(const char *devname, struct inode **root_store);
 const char *vfs_get_devname(struct fs *fs);
+int vfs_path_init_cwd(char* path);
 
 /*
  * VFS layer high-level operations on pathnames
  * Because namei may destroy pathnames, these all may too.
  *
- *    vfs_open         - Open or create a file. FLAGS/MODE per the syscall. 
+ *    vfs_open         - Open or create a file. FLAGS/MODE per the syscall.
  *    vfs_close  - Close a inode opened with vfs_open. Does not fail.
  *                 (See vfspath.c for a discussion of why.)
  *    vfs_link         - Create a hard link to a file.
@@ -158,19 +162,12 @@ int vfs_getcwd(struct iobuf *iob);
  *
  * Both of these may destroy the path passed in.
  */
+void vfs_simplify_path(char* path);
 int vfs_lookup(char *path, struct inode **node_store);
 int vfs_lookup_parent(char *path, struct inode **node_store, char **endp);
 
 /*
  * Misc
- *
- *    vfs_set_bootfs - Set the filesystem that paths beginning with a
- *                    slash are sent to. If not set, these paths fail
- *                    with ENOENT. The argument should be the device
- *                    name or volume name for the filesystem (such as
- *                    "lhd0:") but need not have the trailing colon.
- *
- *    vfs_get_bootfs - return the inode of the bootfs filesystem. 
  *
  *    vfs_add_fs     - Add a hardwired filesystem to the VFS named device
  *                    list. It will be accessible as "devname:". This is
@@ -190,7 +187,7 @@ int vfs_lookup_parent(char *path, struct inode **node_store, char **endp);
  *                    "lhd0" to vfs_mount.
  *
  *    vfs_mount      - Attempt to mount a filesystem on a device. The
- *                    device named by DEVNAME will be looked up and 
+ *                    device named by DEVNAME will be looked up and
  *                    passed, along with DATA, to the supplied function
  *                    MOUNTFUNC, which should create a struct fs and
  *                    return it in RESULT.
@@ -200,8 +197,6 @@ int vfs_lookup_parent(char *path, struct inode **node_store, char **endp);
  *
  *    vfs_unmountall - Unmount all mounted filesystems.
  */
-int vfs_set_bootfs(char *fsname);
-int vfs_get_bootfs(struct inode **node_store);
 
 int vfs_add_fs(const char *devname, struct fs *fs);
 int vfs_add_dev(const char *devname, struct inode *devnode, bool mountable);
@@ -212,10 +207,13 @@ int vfs_unmount(const char *devname);
 int vfs_unmount_all(void);
 
 void file_system_type_list_init(void);
-int register_filesystem(const char *name, int (*mount) (const char *devname));
-int unregister_filesystem(const char *name);
+int register_filesystem(struct file_system_type* fs_type);
+int unregister_filesystem(struct file_system_type* fs_type);
 
-int do_mount(const char *devname, const char *fsname);
-int do_umount(const char *devname);
+int vfs_do_mount_nocheck(const char *devname, const char* mountpoint,
+  const char *fs_name, int flags, void* data);
+int do_mount(const char *devname, const char* mountpoint, const char *fs_name,
+  unsigned long flags, void* data);
+int do_umount(const char *target);
 
 #endif /* !__KERN_FS_VFS_VFS_H__ */

@@ -29,4 +29,10 @@ struct context {
 struct arch_proc_struct {
 };
 
+//Bionic C related context initialization code
+int init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf,
+			     int argc, char **kargv, int envc, char **kenvp,
+			     uint32_t is_dynamic, uint32_t real_entry,
+			     uint32_t load_address, uint32_t linker_base);
+
 #endif /* !__KERN_PROCESS_PROC_H__ */

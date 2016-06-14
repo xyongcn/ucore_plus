@@ -5,16 +5,35 @@
 #include <dev.h>
 #include <file.h>
 #include <pipe.h>
-#include <sfs.h>
 #include <inode.h>
 #include <assert.h>
+
+#include <sfs/sfs.h>
+#include <fatfs/ffs.h>
+#include <yaffs2_direct/yaffs_vfs.h>
 
 void fs_init(void)
 {
 	vfs_init();
+  devfs_init();
 	dev_init();
 	pipe_init();
+
+#ifdef UCONFIG_HAVE_SFS
 	sfs_init();
+#endif
+
+#ifdef UCONFIG_HAVE_FATFS
+  ffs_init();
+#endif
+
+#ifdef UCONFIG_HAVE_YAFFS2
+  yaffs_vfs_init();
+#endif
+
+  vfs_do_mount_nocheck("none", "/dev", "devfs", 0, NULL);
+  vfs_path_init_cwd("/dev");
+  vfs_do_mount_nocheck("/dev/disk2", "/", "sfs", 0, NULL);
 }
 
 void fs_cleanup(void)

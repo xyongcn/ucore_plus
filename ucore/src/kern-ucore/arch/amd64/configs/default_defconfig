@@ -27,9 +27,16 @@ SCHEDULER_MLFQ=y
 #
 HAVE_SFS=y
 SFS_IMAGE_SIZE=256
-# HAVE_YAFFS2 is not set
-# HAVE_FATFS is not set
+HAVE_YAFFS2=y
+HAVE_FATFS=y
 
 #
 # Linux Device Driver Environment
 #
+
+#
+# Bionic libc porting related code.
+# amd64 support part of Bionic-specified features. And they may be useful for
+# uClibc porting. So It is enabled by default.
+#
+BIONIC_LIBC=y

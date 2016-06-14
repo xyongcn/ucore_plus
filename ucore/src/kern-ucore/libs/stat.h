@@ -8,6 +8,7 @@ struct stat {
 #else
 struct ucore_stat {
 #endif
+  uint32_t st_ino;
 	uint32_t st_mode;	// protection mode and file type
 	size_t st_nlinks;	// number of hard links
 	size_t st_blocks;	// number of blocks file is using
@@ -45,6 +46,27 @@ struct linux_stat {
 	unsigned long __unused5;
 };
 
+//TODO: Linux stat don't really have a -64 version... This needs to be fixed.
+#if defined(ARCH_AMD64)
+struct linux_stat64 {
+	uint64_t st_dev;
+	uint64_t st_ino;
+  uint64_t st_nlink;
+	uint32_t st_mode;
+	uint32_t st_uid;
+	uint32_t st_gid;
+	uint64_t st_rdev;
+	uint64_t st_size;
+	uint64_t st_blksize;
+	uint64_t st_blocks;
+	unsigned long st_atime;
+	unsigned long st_atime_nsec;
+	unsigned long st_mtime;
+	unsigned long st_mtime_nsec;
+	unsigned long st_ctime;
+	unsigned long st_ctime_nsec;
+};
+#elif defined(ARCH_ARM)
 struct linux_stat64 {
 	unsigned long long st_dev;
 	unsigned char __pad0[4];
@@ -66,6 +88,9 @@ struct linux_stat64 {
 	unsigned long st_ctime_nsec;
 	unsigned long long st_ino;
 };
+#else
+#define linux_stat64 linux_stat
+#endif //ARCH_AMD64
 
 #if 0
 #define S_IFMT          070000	// mask for type of file
@@ -119,6 +144,14 @@ struct linux_stat64 {
 #define S_IROTH 00004
 #define S_IWOTH 00002
 #define S_IXOTH 00001
+
+#define S_ISUID 0004000                 /* set user id on execution */
+#define S_ISGID 0002000                 /* set group id on execution */
+#define S_ISTXT 0001000                 /* sticky bit */
+
+#define ACCESSPERMS     (S_IRWXU|S_IRWXG|S_IRWXO)
+#define ALLPERMS        (S_ISUID|S_ISGID|S_ISTXT|S_IRWXU|S_IRWXG|S_IRWXO)
+#define DEFFILEMODE     (S_IRUSR|S_IWUSR|S_IRGRP|S_IWGRP|S_IROTH|S_IWOTH)
 
 #endif
 #endif
