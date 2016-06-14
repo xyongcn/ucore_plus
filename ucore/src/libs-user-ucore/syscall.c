@@ -280,6 +280,10 @@ int sys_rf212_reset()
 	return syscall(SYS_rf212, 0);
 }
 
+int sys_debug(uint32_t pid, uint32_t sig, uint32_t arg) {
+    return syscall(SYS_debug, pid, sig, arg);
+}
+
 //halt the system, now only used in AMD64
 int sys_halt(void)
 {

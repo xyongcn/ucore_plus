@@ -1,1 +1,1 @@
-obj-y = kdebug.o monitor.o panic.o
+obj-y = kdebug.o monitor.o panic.o udb.o

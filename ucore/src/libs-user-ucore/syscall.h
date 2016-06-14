@@ -80,4 +80,5 @@ int sys_rf212_reg(uint8_t reg, uint8_t value);
 int sys_rf212_reset();
 //halt the system
 int sys_halt();
+int sys_debug(uint32_t pid, uint32_t sig, uint32_t arg);
 #endif /* !__USER_LIBS_SYSCALL_H__ */

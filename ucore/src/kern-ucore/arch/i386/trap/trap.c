@@ -169,6 +169,8 @@ static void trap_dispatch(struct trapframe *tf)
 	int ret;
 	switch (tf->tf_trapno) {
 	case T_DEBUG:
+        udbStepTrap();
+		break;
 	case T_BRKPT:
 		debug_monitor(tf);
 		break;
