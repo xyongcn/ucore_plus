@@ -16,6 +16,7 @@
 #include <kio.h>
 #include <file.h>
 #include <time/time.h>
+#include <syscall_linux.h>
 
 static uint64_t sys_exit(uint64_t arg[])
 {
@@ -231,36 +232,6 @@ static uint64_t sys_mbox_info(uint64_t arg[])
 	return ipc_mbox_info(id, info);
 }
 
-static uint64_t sys_open(uint64_t arg[])
-{
-	const char *path = (const char *)arg[0];
-  //kprintf("opening %s\n", path);
-	uint32_t open_flags = (uint32_t) arg[1];
-	return sysfile_open(path, open_flags);
-}
-
-static uint64_t sys_close(uint64_t arg[])
-{
-	int fd = (int)arg[0];
-	return sysfile_close(fd);
-}
-
-static uint64_t sys_read(uint64_t arg[])
-{
-	int fd = (int)arg[0];
-	void *base = (void *)arg[1];
-	size_t len = (size_t) arg[2];
-	return sysfile_read(fd, base, len);
-}
-
-static uint64_t sys_write(uint64_t arg[])
-{
-	int fd = (int)arg[0];
-	void *base = (void *)arg[1];
-	size_t len = (size_t) arg[2];
-	return sysfile_write(fd, base, len);
-}
-
 static uint64_t sys_seek(uint64_t arg[])
 {
 	int fd = (int)arg[0];
@@ -354,22 +325,6 @@ static uint64_t sys_halt(uint64_t arg[])
 	panic("halt returned");
 }
 
-static uint64_t sys_mount(uint64_t arg[])
-{
-	const char *source = (const char *)arg[0];
-	const char *target = (const char *)arg[1];
-	const char *filesystemtype = (const char *)arg[2];
-  uint64_t mountflags = arg[3];
-	const void *data = (const void *)arg[4];
-	return do_mount(source, target, filesystemtype, mountflags, data);
-}
-
-static uint64_t sys_umount(uint64_t arg[])
-{
-	const char *target = (const char *)arg[0];
-	return do_umount(target);
-}
-
 static uint64_t(*syscalls[]) (uint64_t arg[]) = {
 [SYS_exit] sys_exit,
 	    [SYS_fork] sys_fork,
@@ -400,10 +355,10 @@ static uint64_t(*syscalls[]) (uint64_t arg[]) = {
 	    [SYS_mbox_recv] sys_mbox_recv,
 	    [SYS_mbox_free] sys_mbox_free,
 	    [SYS_mbox_info] sys_mbox_info,
-	    [SYS_open] sys_open,
-	    [SYS_close] sys_close,
-	    [SYS_read] sys_read,
-	    [SYS_write] sys_write,
+	    [SYS_open] syscall_linux_open,
+	    [SYS_close] syscall_linux_close,
+	    [SYS_read] syscall_linux_read,
+	    [SYS_write] syscall_linux_write,
 	    [SYS_seek] sys_seek,
 	    [SYS_fstat] sys_fstat,
 	    [SYS_fsync] sys_fsync,
@@ -418,8 +373,8 @@ static uint64_t(*syscalls[]) (uint64_t arg[]) = {
       [SYS_pipe] sys_pipe,
       [SYS_mkfifo] sys_mkfifo,
       [SYS_halt] sys_halt,
-      [SYS_mount] sys_mount,
-      [SYS_umount] sys_umount
+      [SYS_mount] syscall_linux_mount,
+      [SYS_umount] syscall_linux_umount
     };
 
 #define NUM_SYSCALLS        ((sizeof(syscalls)) / (sizeof(syscalls[0])))
@@ -820,10 +775,10 @@ void syscall_linux()
 }
 
 static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
-	[__NR_read] sys_read,
-	[__NR_write] sys_write,
-	[__NR_open] sys_open,
-	[__NR_close] sys_close,
+	[__NR_read] syscall_linux_read,
+	[__NR_write] syscall_linux_write,
+	[__NR_open] syscall_linux_open,
+	[__NR_close] syscall_linux_close,
 	[__NR_stat] sys_linux_stat,
 	[__NR_fstat] sys_linux_fstat,
 	[__NR_lstat] sys_linux_lstat,
