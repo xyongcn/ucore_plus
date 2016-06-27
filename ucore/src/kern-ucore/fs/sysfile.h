@@ -4,6 +4,8 @@
 #include <types.h>
 
 struct stat;
+struct linux_stat;
+struct linux_stat64;
 struct dirent;
 
 int sysfile_open(const char *path, uint32_t open_flags);
@@ -13,6 +15,8 @@ int sysfile_write(int fd, void *base, size_t len);
 int sysfile_seek(int fd, off_t pos, int whence);
 int sysfile_fstat(int fd, struct stat *stat);
 int sysfile_stat(const char *fn, struct stat *stat);
+int sysfile_linux_fstat(int fd, struct linux_stat __user * linux_stat_store);
+int sysfile_linux_stat(const char __user * fn, struct linux_stat *__user buf);
 int sysfile_fsync(int fd);
 int sysfile_chdir(const char *path);
 int sysfile_mkdir(const char *path);
@@ -28,5 +32,10 @@ int sysfile_mkfifo(const char *name, uint32_t open_flags);
 int sysfile_ioctl(int fd, unsigned int cmd, unsigned long arg);
 void *sysfile_linux_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 			  size_t pgoff);
+
+#ifndef __UCORE_64__
+int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * linux_stat_store);
+int sysfile_linux_stat64(const char __user * fn, struct linux_stat64 *__user buf);
+#endif
 
 #endif /* !__KERN_FS_SYSFILE_H__ */

@@ -257,6 +257,7 @@ int sysfile_linux_fstat(int fd, struct linux_stat __user * buf)
 	return ret;
 }
 
+#ifndef __UCORE_64__
 int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * linux_stat_store)
 {
   struct mm_struct *mm = current->mm;
@@ -287,6 +288,18 @@ int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * linux_stat_store)
 	return 0;
 }
 
+int sysfile_linux_stat64(const char __user * fn, struct linux_stat64 *__user buf)
+{
+	int fd = sysfile_open(fn, O_RDONLY);
+	if (fd < 0)
+		return -1;
+	int ret = sysfile_linux_fstat64(fd, buf);
+	sysfile_close(fd);
+
+	return ret;
+}
+#endif /* __UCORE_64__ */
+
 int sysfile_linux_fcntl64(int fd, int cmd, int arg)
 {
   const static int F_DUPFD = 0;
@@ -306,18 +319,6 @@ int sysfile_linux_stat(const char __user * fn, struct linux_stat *__user buf)
 	if (fd < 0)
 		return -1;
 	int ret = sysfile_linux_fstat(fd, buf);
-	sysfile_close(fd);
-
-	return ret;
-}
-
-int
-sysfile_linux_stat64(const char __user * fn, struct linux_stat64 *__user buf)
-{
-	int fd = sysfile_open(fn, O_RDONLY);
-	if (fd < 0)
-		return -1;
-	int ret = sysfile_linux_fstat64(fd, buf);
 	sysfile_close(fd);
 
 	return ret;

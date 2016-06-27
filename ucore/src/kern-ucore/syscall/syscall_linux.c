@@ -45,6 +45,29 @@ machine_word_t syscall_linux_close(machine_word_t args[])
 	return sysfile_close(fd);
 }
 
+machine_word_t syscall_linux_stat(machine_word_t args[])
+{
+	char *fn = (char *)args[0];
+	struct linux_stat *st = (struct linux_stat *)args[1];
+	return sysfile_linux_stat(fn, st);
+}
+
+machine_word_t syscall_linux_lstat(machine_word_t args[])
+{
+	char *fn = (char *)args[0];
+	struct linux_stat *st = (struct linux_stat *)args[1];
+  //TODO: lstat should be handling symbolic link in a different way than stat.
+  //This is a temporary workaround.
+	return sysfile_linux_stat(fn, st);
+}
+
+machine_word_t syscall_linux_fstat(machine_word_t args[])
+{
+	int fd = (char *)args[0];
+	struct linux_stat *st = (struct linux_stat *)args[1];
+	return sysfile_linux_fstat(fd, st);
+}
+
 machine_word_t syscall_linux_mount(machine_word_t args[])
 {
 	const char *source = (const char *)args[0];
@@ -61,3 +84,30 @@ machine_word_t syscall_linux_umount(machine_word_t args[])
   int flags = (int)args[1];
 	return do_umount(target);
 }
+
+#ifndef __UCORE_64__
+
+machine_word_t syscall_linux_stat64(machine_word_t args[])
+{
+	char *fn = (char *)args[0];
+	struct linux_stat64 *st = (struct linux_stat *)args[1];
+	return sysfile_linux_stat64(fn, st);
+}
+
+machine_word_t syscall_linux_lstat64(machine_word_t args[])
+{
+	char *fn = (char *)args[0];
+	struct linux_stat64 *st = (struct linux_stat *)args[1];
+  //TODO: lstat should be handling symbolic link in a different way than stat.
+  //This is a temporary workaround.
+	return sysfile_linux_stat64(fn, st);
+}
+
+machine_word_t syscall_linux_fstat64(machine_word_t args[])
+{
+	int fd = (char *)args[0];
+	struct linux_stat64 *st = (struct linux_stat *)args[1];
+	return sysfile_linux_fstat64(fd, st);
+}
+
+#endif /* __UCORE_64__ */

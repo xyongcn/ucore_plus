@@ -528,29 +528,6 @@ static uint64_t sys_linux_mmap(uint64_t arg[])
   	}
 }
 
-static uint64_t sys_linux_stat(uint64_t args[])
-{
-	char *fn = (char *)args[0];
-	struct linux_stat *st = (struct linux_stat *)args[1];
-	return sysfile_linux_stat64(fn, st);
-}
-
-static uint64_t sys_linux_lstat(uint64_t args[])
-{
-	char *fn = (char *)args[0];
-	struct linux_stat *st = (struct linux_stat *)args[1];
-  //TODO: lstat should be handling symbolic link in a different way than stat
-  //This is a temporary workaround.
-	return sysfile_linux_stat64(fn, st);
-}
-
-static uint64_t sys_linux_fstat(uint64_t args[])
-{
-	int fd = (char *)args[0];
-	struct linux_stat *st = (struct linux_stat *)args[1];
-	return sysfile_linux_fstat64(fd, st);
-}
-
 static uint64_t sys_linux_waitpid(uint64_t arg[])
 {
 	int pid = (int)arg[0];
@@ -779,9 +756,9 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_write] syscall_linux_write,
 	[__NR_open] syscall_linux_open,
 	[__NR_close] syscall_linux_close,
-	[__NR_stat] sys_linux_stat,
-	[__NR_fstat] sys_linux_fstat,
-	[__NR_lstat] sys_linux_lstat,
+	[__NR_stat] syscall_linux_stat,
+	[__NR_fstat] syscall_linux_fstat,
+	[__NR_lstat] syscall_linux_lstat,
 	[__NR_poll] sys_linux_poll,
 	[__NR_lseek] unknown,
 	[__NR_mmap] sys_linux_mmap,

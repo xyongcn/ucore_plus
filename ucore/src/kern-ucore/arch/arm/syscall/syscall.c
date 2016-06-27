@@ -512,22 +512,6 @@ static uint32_t __sys_linux_getdents(uint32_t arg[])
 	return count;
 }
 
-static uint32_t __sys_linux_stat(uint32_t args[])
-{
-	char *fn = (char *)args[0];
-	struct linux_stat *st = (struct linux_stat *)args[1];
-	//kprintf("TODO __sys_linux_stat, %s %d\n", fn, sizeof(struct linux_stat));
-	return sysfile_linux_stat(fn, st);
-}
-
-static uint32_t __sys_linux_fstat(uint32_t args[])
-{
-	int fd = (int)args[0];
-	struct linux_stat *st = (struct linux_stat *)args[1];
-	//kprintf("TODO __sys_linux_fstat, %d %d\n", fd, sizeof(struct linux_stat));
-	return sysfile_linux_fstat(fd, st);
-}
-
 static uint32_t __sys_linux_waitpid(uint32_t arg[])
 {
 	int pid = (int)arg[0];
@@ -661,13 +645,6 @@ static uint32_t __sys_arm_linux_set_tls(uint32_t arg[])
 	return do_set_tls(tlsp);
 }
 
-static uint32_t __sys_linux_stat64(uint32_t arg[])
-{
-	char *path = (char *)arg[0];
-	struct linux_stat64 *filestat = arg[1];
-	return sysfile_linux_stat64(path, filestat);
-}
-
 static uint32_t __sys_linux_madvise(uint32_t arg[])
 {
 	void *addr = (void *)arg[0];
@@ -688,13 +665,6 @@ static uint32_t __sys_linux_clock_gettime(uint32_t arg[])
 {
 	struct linux_timespec *time = (struct linux_timespec *)arg[1];
 	return do_clock_gettime(time);
-}
-
-static uint32_t __sys_linux_fstat64(uint32_t arg[])
-{
-	int fd = (int)arg[0];
-	struct linux_stat64 *st = (struct linux_stat64 *)arg[1];
-	return sysfile_linux_fstat64(fd, st);
 }
 
 static uint32_t __sys_linux_fcntl64(uint32_t arg[])
