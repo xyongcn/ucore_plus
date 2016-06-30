@@ -38,6 +38,14 @@ SECTIONS {
 		*(.rodata .rodata.* .gnu.linkonce.r.*)
 	}
 
+  . = ALIGN(0x1000);
+  .debug_line : {
+    PROVIDE(__DWARF_DEBUG_LINE_BEGIN__ = .);
+    *(.debug_line);
+    PROVIDE(__DWARF_DEBUG_LINE_END__ = .);
+    BYTE(0)
+  }
+
 	. = ALIGN(0x1000);
 	PROVIDE(__kern_data_start = .);
 	.data : AT(ADDR(.data) - MEM_BASE) {
@@ -50,30 +58,6 @@ SECTIONS {
 		*(.bss)
 	}
 
-
-	/* This Part is implanted directly from arch/i386 */
-	/* Include debugging information in kernel memory */
-	.stab : {
-	    PROVIDE(__STAB_BEGIN__ = .);
-	    *(.stab);
-	    PROVIDE(__STAB_END__ = .);
-	    BYTE(0)     /* Force the linker to allocate space
-	               for this section */
-	}
-
-	.stabstr : {
-	    PROVIDE(__STABSTR_BEGIN__ = .);
-	    *(.stabstr);
-	    PROVIDE(__STABSTR_END__ = .);
-	    BYTE(0)     /* Force the linker to allocate space
-	               for this section */
-	}
-
-
-
-
-
-
 	. = ALIGN(0x1000);
 	.percpu : AT(ADDR(.percpu) - MEM_BASE){
 		PROVIDE(__percpu_start = .);
@@ -81,11 +65,10 @@ SECTIONS {
 		PROVIDE(__percpu_end = .);
 	}
 
-
 	. = ALIGN(0x1000);
 	PROVIDE(end = .);
 
 	/DISCARD/ : {
-		*(.eh_frame .note.GNU-stack)
+		*(.eh_frame .note.GNU-stack .debug_info)
 	}
 }
