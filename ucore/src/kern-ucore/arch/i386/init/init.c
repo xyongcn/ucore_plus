@@ -42,6 +42,7 @@ int kern_init(void)
 
 	pic_init();		// init interrupt controller
 	idt_init();		// init interrupt descriptor table
+  pci_init();
 
 	vmm_init();		// init virtual memory management
 	sched_init();		// init scheduler
