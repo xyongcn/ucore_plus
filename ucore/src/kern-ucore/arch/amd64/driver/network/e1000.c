@@ -6,6 +6,8 @@
 #include <stddef.h>
 #include <kio.h>
 #include <pmm.h>
+#include <ethernet.h>
+#include <assert.h>
 #include "e1000.h"
 
 void e1000_write_command(struct e1000_driver* driver, uint16_t p_address, uint32_t p_value)
@@ -234,6 +236,43 @@ void e1000_create(struct e1000_driver* driver, struct pci_device_info* device_in
   e1000_txinit(driver);
 }
 
+void e1000_ethernet_driver_send_handler(
+  struct ethernet_driver* driver, uint16_t length, char* data
+) {
+  struct e1000_driver *e1000_driver =
+    (struct e1000_driver*)driver->private_data;
+  //TODO: adjust the parameter order of e1000_send_packet
+  e1000_send_packet(e1000_driver, data, length);
+}
+
+void e1000_ethernet_driver_receive_handler(
+  struct ethernet_driver* driver, uint16_t length, char* data
+) {
+  //TODO: There is no need for such function.
+}
+
+void e1000_ethernet_driver_get_mac_address_handler(
+  struct ethernet_driver* driver, char* mac_store
+) {
+  struct e1000_driver *e1000_driver =
+    (struct e1000_driver*)driver->private_data;
+  memcpy(mac_store, e1000_driver->mac, 6);
+}
+
+struct ethernet_driver* e1000_ethernet_driver_create(
+   struct pci_device_info* device
+) {
+  struct e1000_driver* e1000_driver = kmalloc(sizeof(struct e1000_driver));
+  struct ethernet_driver* ethernet_driver = kmalloc(sizeof(struct ethernet_driver));
+  ethernet_driver->private_data = e1000_driver;
+  e1000_create(e1000_driver, device);
+  ethernet_driver->send_handler = e1000_ethernet_driver_send_handler;
+  ethernet_driver->receive_handler = e1000_ethernet_driver_receive_handler;
+  ethernet_driver->get_mac_address_handler =
+    e1000_ethernet_driver_get_mac_address_handler;
+  return ethernet_driver;
+}
+
 void e1000_init()
 {
   for(list_entry_t* i = list_next(&pci_device_info_list);
@@ -255,8 +294,8 @@ void e1000_init()
       if(device_name[0] == '\0') continue;
       kprintf("E1000 : Found %s on PCI Bus 0x%02x Dev 0x%02x Func 0x%02x\n",
         device_name, device->bus, device->device, device->function);
-      struct e1000_driver *driver = kmalloc(sizeof(struct e1000_driver));
-      e1000_create(driver, device);
+      struct ethernet_driver *driver = e1000_ethernet_driver_create(device);
+      ethernet_add_driver(driver);
     }
   }
 }

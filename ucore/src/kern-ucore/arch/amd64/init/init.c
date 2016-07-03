@@ -24,7 +24,7 @@
 #include <refcache.h>
 #include <dde_kit/dde_kit.h>
 #include <pci.h>
-#include <network/e1000.h>
+#include <network.h>
 
 int kern_init(uint64_t, uint64_t) __attribute__ ((noreturn));
 
@@ -140,6 +140,7 @@ int kern_init(uint64_t mbmagic, uint64_t mbmem)
 	acpi_init();
 
   pci_init(); //Init PCI Driver
+  network_init(); //Init network subsystem
   e1000_init();
 
 	ide_init();		// init ide devices
@@ -158,15 +159,15 @@ int kern_init(uint64_t mbmagic, uint64_t mbmem)
 
 	intr_enable();		// enable irq interrupt
   extern struct e1000_driver* driver;
-  char* test_str = "\x52\x54\x00\x12\x34\x56\xFF\xFF\xFF\xFF\xFF\xFF\x08\x00I have been waiting all this time\n"
+  char* test_str = "I have been waiting all this time\n"
   "for one to wait me, one to call mine\n"
   "So when you are near, all that you holds dear\n"
   "do you fear what you will find?\n";
   kprintf("Sending data?\n");
-  int ret = e1000_send_packet(driver, test_str, 512);
+  int ret = ethernet_send_data(MAC_ADDRESS_BROADCAST, ETHER_TYPE_IPV4, 512, test_str);
   kprintf("ret = %d\n", ret);
-  ret = e1000_send_packet(driver, test_str, 512);
-  kprintf("ret = %d\n", ret);
+  //ret = ethernet_send_data(MAC_ADDRESS_BROADCAST, ETHER_TYPE_IPV4, 512, test_str);
+  //kprintf("ret = %d\n", ret);
 
 #ifdef UCONFIG_HAVE_LINUX_DDE36_BASE
 	dde_kit_init();
