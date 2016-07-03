@@ -23,6 +23,8 @@
 #include <multiboot.h>
 #include <refcache.h>
 #include <dde_kit/dde_kit.h>
+#include <pci.h>
+#include <network/e1000.h>
 
 int kern_init(uint64_t, uint64_t) __attribute__ ((noreturn));
 
@@ -114,7 +116,6 @@ int kern_init(uint64_t mbmagic, uint64_t mbmem)
 
 	idt_init();		// init interrupt descriptor table
 	pic_init();		// init interrupt controller
-  pci_init(); //Init PCI Driver
 
   syscall_init(); // init fast syscall using SYSCALL op
 
@@ -138,6 +139,9 @@ int kern_init(uint64_t mbmagic, uint64_t mbmem)
 	ioapic_init();
 	acpi_init();
 
+  pci_init(); //Init PCI Driver
+  e1000_init();
+
 	ide_init();		// init ide devices
 #ifdef UCONFIG_SWAP
 	swap_init();		// init swap
@@ -153,6 +157,16 @@ int kern_init(uint64_t mbmagic, uint64_t mbmem)
 	bootaps();
 
 	intr_enable();		// enable irq interrupt
+  extern struct e1000_driver* driver;
+  char* test_str = "\x52\x54\x00\x12\x34\x56\xFF\xFF\xFF\xFF\xFF\xFF\x08\x00I have been waiting all this time\n"
+  "for one to wait me, one to call mine\n"
+  "So when you are near, all that you holds dear\n"
+  "do you fear what you will find?\n";
+  kprintf("Sending data?\n");
+  int ret = e1000_send_packet(driver, test_str, 512);
+  kprintf("ret = %d\n", ret);
+  ret = e1000_send_packet(driver, test_str, 512);
+  kprintf("ret = %d\n", ret);
 
 #ifdef UCONFIG_HAVE_LINUX_DDE36_BASE
 	dde_kit_init();

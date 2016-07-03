@@ -3,6 +3,7 @@
 
 #include <types.h>
 #include <arch.h>
+#include <list.h>
 
 const static uint16_t PCI_ADDRESS_REGISTER = 0xCF8;
 const static uint16_t PCI_DATA_REGISTER = 0xCFC;
@@ -18,7 +19,10 @@ struct pci_device_info {
   uint8_t prog_if;
   uint8_t revision;
   uint8_t header_type;
+  list_entry_t list_entry;
 };
+
+extern list_entry_t pci_device_info_list;
 
 static inline __attribute__((always_inline))
 uint32_t pci_make_address(uint8_t bus, uint8_t device, uint8_t function, uint8_t reg);
@@ -40,6 +44,19 @@ void pci_get_device_info(
   struct pci_device_info *device_info,
   uint8_t bus, uint8_t device, uint8_t function
 );
+
+void pci_get_device_base_address(
+  struct pci_device_info *device_info,
+  int index,
+  void** address_store,
+  uint32_t* length_store,
+  bool* is_port_io_store,
+  uint8_t* type_store
+  //TODO: prefetch flag store.s
+);
+
+void pci_device_enable_bus_mastering(struct pci_device_info *device_info);
+uint8_t pci_device_get_interrupt_line(struct pci_device_info *device_info);
 
 static inline __attribute__((always_inline))
 uint32_t pci_make_address(uint8_t bus, uint8_t device, uint8_t function, uint8_t reg)
