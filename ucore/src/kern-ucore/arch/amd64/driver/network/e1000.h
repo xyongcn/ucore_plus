@@ -101,7 +101,7 @@
 #define E1000_NUM_TX_DESC 8
 
 struct e1000_rx_desc {
-  volatile void* addr;
+  volatile uint64_t addr;
   volatile uint16_t length;
   volatile uint16_t checksum;
   volatile uint8_t status;
@@ -110,7 +110,7 @@ struct e1000_rx_desc {
 } __attribute__((packed));
 
 struct e1000_tx_desc {
-  volatile void* addr;
+  volatile uint64_t addr;
   volatile uint16_t length;
   volatile uint8_t cso;
   volatile uint8_t cmd;
@@ -124,7 +124,7 @@ struct e1000_driver
 {
   uint8_t bar_type;     // Type of BOR0
   uint16_t io_base;     // IO Base Address
-  void* mem_base;   // MMIO Base Address
+  uintptr_t mem_base;   // MMIO Base Address
   bool eerprom_exists;  // A flag indicating if eeprom exists
   uint8_t mac[6];      // A buffer for storing the mack address
   struct e1000_rx_desc *rx_descs[E1000_NUM_RX_DESC]; // Receive Descriptor Buffers

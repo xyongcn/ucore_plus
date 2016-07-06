@@ -21,6 +21,7 @@
 #include <ioapic.h>
 #include <sysconf.h>
 #include <refcache.h>
+#include <interrupt_manager.h>
 
 #define TICK_NUM 30
 
@@ -270,6 +271,7 @@ uintptr_t addr;
 		/* do nothing */
 		break;
 	default:
+    if(interrupt_manager_process(tf)) break;
 		print_trapframe(tf);
 		if (current != NULL) {
 			kprintf("unhandled trap.\n");

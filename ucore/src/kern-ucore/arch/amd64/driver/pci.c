@@ -73,7 +73,7 @@ void pci_device_enable_bus_mastering(struct pci_device_info *device_info) {
 
 uint8_t pci_device_get_interrupt_line(struct pci_device_info *device_info) {
   uint32_t pci_address = pci_make_address(
-    device_info->bus, device_info->device, device_info->function, 1);
+    device_info->bus, device_info->device, device_info->function, 15);
   return pci_read_register_direct(pci_address);
 }
 

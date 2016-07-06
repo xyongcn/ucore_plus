@@ -8,6 +8,8 @@
 #include <pmm.h>
 #include <ethernet.h>
 #include <assert.h>
+#include <picirq.h>
+#include <interrupt_manager.h>
 #include "e1000.h"
 
 void e1000_write_command(struct e1000_driver* driver, uint16_t p_address, uint32_t p_value)
@@ -109,7 +111,7 @@ void e1000_rxinit(struct e1000_driver* driver)
     for(int i = 0; i < E1000_NUM_RX_DESC; i++)
     {
       driver->rx_descs[i] = (struct e1000_rx_desc *)((uint8_t *)descs + i*16);
-      driver->rx_descs[i]->addr = kmalloc(8192 + 16);
+      driver->rx_descs[i]->addr = PADDR(kmalloc(8192 + 16));
       driver->rx_descs[i]->status = 0;
     }
 
@@ -131,17 +133,17 @@ void e1000_rxinit(struct e1000_driver* driver)
 
 void e1000_txinit(struct e1000_driver* driver)
 {
-    uint8_t *  ptr;
+    uintptr_t ptr;
     struct e1000_tx_desc *descs;
     // Allocate buffer for receive descriptors. For simplicity, in my case khmalloc returns a virtual address that is identical to it physical mapped address.
     // In your case you should handle virtual and physical addresses as the addresses passed to the NIC should be physical ones
     //TODO...
-    ptr = (uint8_t *)(kmalloc(sizeof(struct e1000_tx_desc)*E1000_NUM_TX_DESC + 16));
+    ptr = (uintptr_t)(kmalloc(sizeof(struct e1000_tx_desc)*E1000_NUM_TX_DESC + 16));
 
     descs = (struct e1000_tx_desc *)ptr;
     for(int i = 0; i < E1000_NUM_TX_DESC; i++)
     {
-        driver->tx_descs[i] = (struct e1000_tx_desc *)((uint8_t*)descs + i*16);
+        driver->tx_descs[i] = &descs[i];
         driver->tx_descs[i]->addr = 0;
         driver->tx_descs[i]->cmd = 0;
         driver->tx_descs[i]->status = TSTA_DD;
@@ -175,6 +177,10 @@ void e1000_txinit(struct e1000_driver* driver)
 
 void e1000_enable_interrupt(struct e1000_driver* driver)
 {
+  //e1000_write_command(driver, REG_IMASK ,0xFFFFFFFF);
+//  e1000_write_command(driver, 0x00d8 ,0xFFFFFFFF);
+  //kprintf("IntMask = %lx\n", e1000_read_command(driver, REG_IMASK));
+  //kprintf("Thro = %lx\n", e1000_read_command(driver, 0x00C4));
     e1000_write_command(driver, REG_IMASK ,0x1F6DC);
     e1000_write_command(driver, REG_IMASK ,0xff & ~4);
     e1000_read_command(driver, 0xc0);
@@ -200,6 +206,52 @@ int e1000_send_packet(struct e1000_driver* driver, const char *p_data, uint16_t 
     return 0;
 }
 
+//TODO: Now only the interrupt of one device is handled.
+static struct e1000_driver* __driver = NULL;
+
+bool e1000_interrupt_handler(struct trapframe *tf)
+{
+  if(__driver == NULL) return;
+  uint32_t status = e1000_read_command(__driver, 0xc0);
+  if(status & 0x04) {
+    e1000_linkup(__driver);
+    return 1;
+  }
+  else if(status & 0x10) {
+    //TODO: I don't know what this means.
+    return 1;
+  }
+  else if(status & 0x80) {
+    e1000_handle_receive(__driver);
+    return 1;
+  }
+  return status != 0;
+}
+
+void e1000_handle_receive(struct e1000_driver* driver)
+{
+  uint16_t old_cur;
+  bool got_packet = false;
+
+  while((driver->rx_descs[driver->rx_cur]->status & 0x1))
+  {
+    uint8_t *buf = KADDR((uint8_t *)driver->rx_descs[driver->rx_cur]->addr);
+    uint16_t len = driver->rx_descs[driver->rx_cur]->length;
+    kprintf("Package reveived len = %d\n", len);
+
+    for(int i = 0; i < len; i++) {
+      kprintf("%2x ", buf[i]);
+    }
+    kprintf("\n");
+    //TODO: Send package to lwIP
+
+    driver->rx_descs[driver->rx_cur]->status = 0;
+    old_cur = driver->rx_cur;
+    driver->rx_cur = (driver->rx_cur + 1) % E1000_NUM_RX_DESC;
+    e1000_write_command(driver, REG_RXDESCTAIL, old_cur);
+  }
+}
+
 void e1000_create(struct e1000_driver* driver, struct pci_device_info* device_info)
 {
   bool is_port_io;
@@ -208,11 +260,16 @@ void e1000_create(struct e1000_driver* driver, struct pci_device_info* device_in
   uint32_t length;
   pci_get_device_base_address(device_info, 0, &address, &length, &is_port_io, &driver->bar_type);
 
+  //TODO: This is only tested for x86 and amd64
+#ifndef __UCORE_64__
   void* address_kern = address;
-  pmm_mmio_map_direct(boot_pgdir, address_kern, KERNBASE + address_kern, length, PTE_P | PTE_W);
+#else
+  void* address_kern = address + KERNBASE;
+#endif
+  pmm_mmio_map_direct(boot_pgdir, address, address_kern, length, PTE_P | PTE_W);
   driver->bar_type = is_port_io;
-  driver->io_base = address_kern;
-  driver->mem_base = KERNBASE + address_kern;
+  driver->io_base = address;
+  driver->mem_base = address_kern;
   // Enable bus mastering
   pci_device_enable_bus_mastering(device_info);
   e1000_detect_EEPROM(driver);
@@ -223,7 +280,7 @@ void e1000_create(struct e1000_driver* driver, struct pci_device_info* device_in
     kprintf("%02x", driver->mac[i]);
   }
   kprintf("\n");
-  kprintf("    Physics address range : %p-%p\n", address_kern, address_kern + length);
+  kprintf("    Physics address range : %p-%p\n", address, address + length);
 
 	uint32_t flags = e1000_read_command(driver, REG_RCTRL);
 	e1000_write_command(driver, REG_RCTRL, flags | RCTL_EN);
@@ -232,6 +289,15 @@ void e1000_create(struct e1000_driver* driver, struct pci_device_info* device_in
   for(int i = 0; i < 0x80; i++)
     e1000_write_command(driver, 0x5200 + i*4, 0);
   e1000_enable_interrupt(driver);
+  uint8_t irq = pci_device_get_interrupt_line(device_info);
+  kprintf("    IRQ : %d\n", irq);
+  interrupt_manager_register_handler(IRQ_OFFSET + irq, e1000_interrupt_handler);
+  interrupt_manager_register_handler(46, e1000_interrupt_handler);
+#ifndef ARCH_AMD64
+  pic_enable(irq);
+#else
+  irq_enable(irq);
+#endif
   e1000_rxinit(driver);
   e1000_txinit(driver);
 }
@@ -295,6 +361,7 @@ void e1000_init()
       kprintf("E1000 : Found %s on PCI Bus 0x%02x Dev 0x%02x Func 0x%02x\n",
         device_name, device->bus, device->device, device->function);
       struct ethernet_driver *driver = e1000_ethernet_driver_create(device);
+      __driver = driver->private_data;
       ethernet_add_driver(driver);
     }
   }

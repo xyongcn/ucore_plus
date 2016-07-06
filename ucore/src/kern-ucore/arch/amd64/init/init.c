@@ -115,7 +115,8 @@ int kern_init(uint64_t mbmagic, uint64_t mbmem)
 	//init the acpi stuff
 
 	idt_init();		// init interrupt descriptor table
-	pic_init();		// init interrupt controller
+  //Note: on amd64 I/O APIC have replaced PIC, use irq_enable instead of pic_enable
+	//pic_init();		// init interrupt controller
 
   syscall_init(); // init fast syscall using SYSCALL op
 
@@ -136,8 +137,9 @@ int kern_init(uint64_t mbmagic, uint64_t mbmem)
 	sync_init();		// init sync struct
 
 	/* ext int */
-	ioapic_init();
+  ioapic_init();
 	acpi_init();
+  interrupt_manager_init();
 
   pci_init(); //Init PCI Driver
   network_init(); //Init network subsystem
@@ -158,16 +160,6 @@ int kern_init(uint64_t mbmagic, uint64_t mbmem)
 	bootaps();
 
 	intr_enable();		// enable irq interrupt
-  extern struct e1000_driver* driver;
-  char* test_str = "I have been waiting all this time\n"
-  "for one to wait me, one to call mine\n"
-  "So when you are near, all that you holds dear\n"
-  "do you fear what you will find?\n";
-  kprintf("Sending data?\n");
-  int ret = ethernet_send_data(MAC_ADDRESS_BROADCAST, ETHER_TYPE_IPV4, 512, test_str);
-  kprintf("ret = %d\n", ret);
-  //ret = ethernet_send_data(MAC_ADDRESS_BROADCAST, ETHER_TYPE_IPV4, 512, test_str);
-  //kprintf("ret = %d\n", ret);
 
 #ifdef UCONFIG_HAVE_LINUX_DDE36_BASE
 	dde_kit_init();
