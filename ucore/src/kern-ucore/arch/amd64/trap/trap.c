@@ -312,7 +312,7 @@ void trap(struct trapframe *tf)
 			if (current->need_resched) {
 				schedule();
 			}
-		} else if (current == idleproc) {
+		} /*else if (current == idleproc)*/ {
 			schedule();
 		}
 		// kprintf("%d %d }}}\n", lapic_id, current->pid);

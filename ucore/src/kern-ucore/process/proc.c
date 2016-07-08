@@ -26,7 +26,7 @@
 #include <sysconf.h>
 #include <refcache.h>
 #include <spinlock.h>
-
+#include <network/input_thread.h>
 /* ------------- process/thread mechanism design&implementation -------------
 (an simplified Linux process/thread mechanism )
 introduction:
@@ -1918,6 +1918,11 @@ static int user_main(void *arg)
 	kprintf("user_main execve failed, no /bin/sh?.\n");
 }
 
+
+static void foo(void* arg) {
+  struct netif *netif = (struct netif*)arg;
+  dhcp_start(netif);
+}
 // init_main - the second kernel thread used to create kswapd_main & user_main kernel threads
 static int init_main(void *arg)
 {
@@ -1944,6 +1949,11 @@ static int init_main(void *arg)
 
 	unsigned int nr_process_store = nr_process;
 
+  extern struct netif *__netif;
+  ucore_kernel_thread(network_input_thread_main, NULL, 0);
+  tcpip_init(foo, __netif);
+
+  kprintf("Returns here %d\n", current->pid);
 	pid = ucore_kernel_thread(user_main, NULL, 0);
 	if (pid <= 0) {
 		panic("create user_main failed.\n");

@@ -177,13 +177,13 @@ void e1000_txinit(struct e1000_driver* driver)
 
 void e1000_enable_interrupt(struct e1000_driver* driver)
 {
-  //e1000_write_command(driver, REG_IMASK ,0xFFFFFFFF);
+  e1000_write_command(driver, REG_IMASK ,0xFFFFFFFF);
 //  e1000_write_command(driver, 0x00d8 ,0xFFFFFFFF);
   //kprintf("IntMask = %lx\n", e1000_read_command(driver, REG_IMASK));
   //kprintf("Thro = %lx\n", e1000_read_command(driver, 0x00C4));
-    e1000_write_command(driver, REG_IMASK ,0x1F6DC);
-    e1000_write_command(driver, REG_IMASK ,0xff & ~4);
-    e1000_read_command(driver, 0xc0);
+    //e1000_write_command(driver, REG_IMASK ,0x1F6DC);
+    //e1000_write_command(driver, REG_IMASK ,0xff & ~4);
+    //e1000_read_command(driver, 0xc0);
 }
 
 void e1000_linkup(struct e1000_driver *driver)
@@ -237,14 +237,7 @@ void e1000_handle_receive(struct e1000_driver* driver)
   {
     uint8_t *buf = KADDR((uint8_t *)driver->rx_descs[driver->rx_cur]->addr);
     uint16_t len = driver->rx_descs[driver->rx_cur]->length;
-    kprintf("Package reveived len = %d\n", len);
-
-    for(int i = 0; i < len; i++) {
-      kprintf("%2x ", buf[i]);
-    }
-    kprintf("\n");
-    //TODO: Send package to lwIP
-
+    driver->ethernet_driver->receive_handler(driver, len, buf);
     driver->rx_descs[driver->rx_cur]->status = 0;
     old_cur = driver->rx_cur;
     driver->rx_cur = (driver->rx_cur + 1) % E1000_NUM_RX_DESC;
@@ -311,12 +304,6 @@ void e1000_ethernet_driver_send_handler(
   e1000_send_packet(e1000_driver, data, length);
 }
 
-void e1000_ethernet_driver_receive_handler(
-  struct ethernet_driver* driver, uint16_t length, char* data
-) {
-  //TODO: There is no need for such function.
-}
-
 void e1000_ethernet_driver_get_mac_address_handler(
   struct ethernet_driver* driver, char* mac_store
 ) {
@@ -331,9 +318,9 @@ struct ethernet_driver* e1000_ethernet_driver_create(
   struct e1000_driver* e1000_driver = kmalloc(sizeof(struct e1000_driver));
   struct ethernet_driver* ethernet_driver = kmalloc(sizeof(struct ethernet_driver));
   ethernet_driver->private_data = e1000_driver;
+  e1000_driver->ethernet_driver = ethernet_driver;
   e1000_create(e1000_driver, device);
   ethernet_driver->send_handler = e1000_ethernet_driver_send_handler;
-  ethernet_driver->receive_handler = e1000_ethernet_driver_receive_handler;
   ethernet_driver->get_mac_address_handler =
     e1000_ethernet_driver_get_mac_address_handler;
   return ethernet_driver;

@@ -2,9 +2,11 @@
 #include <ethernet.h>
 #include <network/e1000.h>
 #include "lwip/init.h"
+#include "input_thread.h"
 
 void network_init()
 {
   ethernet_init();
   lwip_init();
+  network_input_thread_init();
 }

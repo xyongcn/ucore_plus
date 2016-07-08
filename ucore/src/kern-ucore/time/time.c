@@ -5,9 +5,9 @@
  * Currently only amd64 architecture is supported.
  */
 
-#if ARCH_AMD64
+#if ARCH_AMD64 || ARCH_X86
 
-#include <driver/cmos_rtc.h>
+#include <cmos_rtc.h>
 #include <assert.h>
 #include "time.h"
 

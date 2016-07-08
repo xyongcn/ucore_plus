@@ -18,6 +18,8 @@
 #include "netif/ppp/pppoe.h"
 #include "lwip/tcpip.h"
 #include "lwip/dhcp.h"
+#include "lwip/raw.h"
+#include "lwip/netifapi.h"
 
 list_entry_t ethernet_driver_list;
 
@@ -99,6 +101,88 @@ static err_t ethernet_lwip_low_level_output(struct netif *netif, struct pbuf *p)
   return ERR_OK;
 }
 
+static struct pbuf* low_level_input(struct netif *netif, uint16_t length, uint8_t* data)
+{
+  struct pbuf *p, *q;
+  u16_t len;
+
+  /* Obtain the size of the packet and put it into the "len"
+     variable. */
+  len = length;
+
+#if ETH_PAD_SIZE
+  len += ETH_PAD_SIZE; /* allow room for Ethernet padding */
+#endif
+
+  /* We allocate a pbuf chain of pbufs from the pool. */
+  p = pbuf_alloc(PBUF_RAW, len, PBUF_POOL);
+  char* current_pos = data;
+  current_pos = data;
+
+  if (p != NULL) {
+
+#if ETH_PAD_SIZE
+    pbuf_header(p, -ETH_PAD_SIZE); /* drop the padding word */
+#endif
+
+    /* We iterate over the pbuf chain until we have read the entire
+     * packet into the pbuf. */
+    for (q = p; q != NULL; q = q->next) {
+      /* Read enough bytes to fill this pbuf in the chain. The
+       * available data in the pbuf is given by the q->len
+       * variable.
+       * This does not necessarily have to be a memcpy, you can also preallocate
+       * pbufs for a DMA-enabled MAC and after receiving truncate it to the
+       * actually received size. In this case, ensure the tot_len member of the
+       * pbuf is the sum of the chained pbuf len members.
+       */
+      kprintf("Attack: len = %d", q->len);
+      memcpy(q->payload, current_pos, q->len);
+      current_pos += q->len;
+      //read data into(q->payload, q->len);
+    }
+
+    MIB2_STATS_NETIF_ADD(netif, ifinoctets, p->tot_len);
+    if (((u8_t*)p->payload)[0] & 1) {
+      /* broadcast or multicast packet*/
+      MIB2_STATS_NETIF_INC(netif, ifinnucastpkts);
+    } else {
+      /* unicast packet*/
+      MIB2_STATS_NETIF_INC(netif, ifinucastpkts);
+    }
+#if ETH_PAD_SIZE
+    pbuf_header(p, ETH_PAD_SIZE); /* reclaim the padding word */
+#endif
+
+    LINK_STATS_INC(link.recv);
+  } else {
+    LINK_STATS_INC(link.memerr);
+    LINK_STATS_INC(link.drop);
+    MIB2_STATS_NETIF_INC(netif, ifindiscards);
+  }
+
+  return p;
+}
+
+struct netif *__netif = NULL;
+
+void ethernet_receive_handler(struct ethernet_driver* driver, uint16_t length, uint8_t* data)
+{
+  kprintf("Package reveived len = %d\n", length);
+  for(int i = 0; i < length; i++) {
+    kprintf("%2x ", data[i]);
+  }
+  kprintf("\n");
+  if(__netif != NULL) {
+    struct pbuf* p = low_level_input(__netif, length, data);
+    /* if no packet could be read, silently ignore this */
+    if (p != NULL) {
+      network_input_thread_notify(__netif, p);
+    }
+  }
+}
+
+
 err_t ethernet_lwip_netif_init(struct netif *netif)
 {
   static int current_netif = 0;
@@ -162,15 +246,20 @@ err_t ethernet_lwip_netif_init(struct netif *netif)
 void ethernet_add_driver(struct ethernet_driver* driver)
 {
   list_add(&ethernet_driver_list, &driver->list_entry);
+  driver->receive_handler = ethernet_receive_handler;
   lwip_current_driver = driver;
   struct netif *netif = kmalloc(sizeof(struct netif));
   ip_addr_t ipaddr, netmask, gateway;
-  IP4_ADDR(&gateway, 192,168,3,1);
-  IP4_ADDR(&ipaddr, 192,168,3,100);
-  IP4_ADDR(&netmask, 255,255,255,0);
-  netif_add(netif, &ipaddr, &netmask, &gateway, 0, ethernet_lwip_netif_init, tcpip_input);
+  IP4_ADDR(&gateway, 0, 0, 0, 0);
+  IP4_ADDR(&ipaddr, 0, 0, 0, 0);
+  IP4_ADDR(&netmask, 0, 0, 0, 0);
+  NETIF_SET_CHECKSUM_CTRL(netif, NETIF_CHECKSUM_ENABLE_ALL);
+  netif_add(netif, &ipaddr, &netmask, &gateway, 0, ethernet_lwip_netif_init, ethernet_input);
   netif_set_link_up(netif);
   netif_set_up(netif);
-  int err = dhcp_start(netif);
-  kprintf("dhcp_start err = %d\n", err);
+  //TODO: this only works for one netif;
+  __netif = netif;
+  //netifapi_dhcp_start(__netif);
+  //int err = dhcp_start(netif);
+  //kprintf("dhcp_start err = %d\n", err);
 }

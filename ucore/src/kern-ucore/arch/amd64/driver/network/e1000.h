@@ -3,6 +3,8 @@
 
 #include <types.h>
 
+struct ethernet_driver;
+
 #define INTEL_VEND     0x8086  // Vendor ID for Intel
 #define E1000_DEV      0x100E  // Device ID for the e1000 Qemu, Bochs, and VirtualBox emmulated NICs
 #define E1000_I217     0x153A  // Device ID for Intel I217
@@ -131,6 +133,7 @@ struct e1000_driver
   struct e1000_tx_desc *tx_descs[E1000_NUM_TX_DESC]; // Transmit Descriptor Buffers
   uint16_t rx_cur;      // Current Receive Descriptor Buffer
   uint16_t tx_cur;      // Current Transmit Descriptor Buffer
+  struct ethernet_driver* ethernet_driver;
 };
 
 #endif /* __KERN_DRIVER_NETWORK_E1000_H__ */
