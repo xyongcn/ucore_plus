@@ -15,6 +15,7 @@
 #include <sysfile.h>
 #include <kio.h>
 #include <file.h>
+#include <network/socket.h>
 
 machine_word_t syscall_linux_read(machine_word_t args[])
 {
@@ -83,6 +84,46 @@ machine_word_t syscall_linux_umount(machine_word_t args[])
 	const char *target = (const char *)args[0];
   int flags = (int)args[1];
 	return do_umount(target);
+}
+
+machine_word_t syscall_linux_socket(machine_word_t args[])
+{
+	int domain = (int)args[0];
+	int type = (int)args[1];
+  int protocol = (int)args[2];
+	return socket_create(domain, type, protocol);
+}
+
+machine_word_t syscall_linux_connect(machine_word_t args[])
+{
+  int fd = (int)args[0];
+  struct linux_sockaddr *uservaddr = (struct linux_sockaddr*)args[1];
+  int addrlen = (int)args[2];
+  return socket_connect(fd, uservaddr, addrlen);
+}
+
+machine_word_t syscall_linux_sendto(machine_word_t args[])
+{
+  int fd = (int)args[0];
+  void *buff = (void*)args[1];
+  size_t size	= (size_t)args[2];
+  unsigned int flags = (unsigned int)args[3];
+  struct linux_sockaddr;
+  struct linux_sockaddr *addr = (struct linux_sockaddr*)args[4];
+  int addr_len = (int)args[5];
+  socket_sendto(fd, buff, size, flags, addr, addr_len);
+}
+
+machine_word_t syscall_linux_recvfrom(machine_word_t args[])
+{
+  int fd = (int)args[0];
+  void *ubuf = (void*)args[1];
+  size_t size	= (size_t)args[2];
+  unsigned int flags = (unsigned int)args[3];
+  struct linux_sockaddr;
+  struct linux_sockaddr *addr = (struct linux_sockaddr*)args[4];
+  int *addr_len = (int*)args[5];
+  socket_recvfrom(fd, ubuf, size, flags, addr, addr_len);
 }
 
 #ifndef __UCORE_64__

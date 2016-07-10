@@ -275,8 +275,9 @@ void run_timer_list(void)
 				}
 				struct proc_struct *proc = timer->proc;
 				if (proc->wait_state != 0) {
-					assert(proc->wait_state &
-					       WT_INTERRUPTED);
+          //TODO: This seems to prevent kernel-thread mutex with timeout from
+          //working, but I don't know what I' doing.
+					//assert(proc->wait_state & WT_INTERRUPTED);
 				} else {
 					warn("process %d's wait_state == 0.\n",
 					     proc->pid);

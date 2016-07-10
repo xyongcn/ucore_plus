@@ -11,6 +11,11 @@ machine_word_t syscall_linux_fstat(machine_word_t args[]);
 machine_word_t syscall_linux_mount(machine_word_t args[]);
 machine_word_t syscall_linux_umount(machine_word_t args[]);
 
+machine_word_t syscall_linux_socket(machine_word_t args[]);
+machine_word_t syscall_linux_connect(machine_word_t args[]);
+machine_word_t syscall_linux_sendto(machine_word_t args[]);
+machine_word_t syscall_linux_recvfrom(machine_word_t args[]);
+
 #ifndef __UCORE_64__
 machine_word_t syscall_linux_stat64(machine_word_t args[]);
 machine_word_t syscall_linux_lstat64(machine_word_t args[]);

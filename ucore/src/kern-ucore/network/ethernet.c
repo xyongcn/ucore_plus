@@ -257,6 +257,7 @@ void ethernet_add_driver(struct ethernet_driver* driver)
   netif_add(netif, &ipaddr, &netmask, &gateway, 0, ethernet_lwip_netif_init, ethernet_input);
   netif_set_link_up(netif);
   netif_set_up(netif);
+  netif_set_default(netif);
   //TODO: this only works for one netif;
   __netif = netif;
   //netifapi_dhcp_start(__netif);
