@@ -20,15 +20,16 @@
 #include "lwip/dhcp.h"
 #include "lwip/raw.h"
 #include "lwip/netifapi.h"
+#include "input_thread.h"
 
 list_entry_t ethernet_driver_list;
 
 int ethernet_driver_send_data(struct ethernet_driver* driver,
-  mac_address_t target, ether_type_t ether_type, uint16_t data_length, char* data)
+  mac_address_t target, ether_type_t ether_type, uint16_t data_length, uint8_t *data)
 {
   uint16_t total_length = sizeof(mac_address_t) * 2 + sizeof(uint16_t) + data_length;
-  char* raw_data = kmalloc(total_length);
-  char* current_pos = raw_data;
+  uint8_t* raw_data = kmalloc(total_length);
+  uint8_t* current_pos = raw_data;
   memcpy(current_pos, target, sizeof(mac_address_t));
   current_pos += sizeof(mac_address_t);
   mac_address_t source;
@@ -44,7 +45,7 @@ int ethernet_driver_send_data(struct ethernet_driver* driver,
   return 0;
 }
 
-int ethernet_send_data(mac_address_t target, ether_type_t ether_type, uint16_t data_length, char* data)
+int ethernet_send_data(mac_address_t target, ether_type_t ether_type, uint16_t data_length, uint8_t* data)
 {
   //TODO: need to handle different ethernet adapter.
   for(list_entry_t* i = list_next(&ethernet_driver_list);
@@ -75,8 +76,8 @@ static err_t ethernet_lwip_low_level_output(struct netif *netif, struct pbuf *p)
   for (struct pbuf *q = p; q != NULL; q = q->next) {
     total_length += q->len;
   }
-  char* buffer = kmalloc(total_length);
-  char* current_pos = buffer;
+  uint8_t* buffer = kmalloc(total_length);
+  uint8_t* current_pos = buffer;
   for (struct pbuf *q = p; q != NULL; q = q->next) {
     memcpy(current_pos, q->payload, q->len);
     current_pos += q->len;
@@ -128,18 +129,8 @@ static struct pbuf* low_level_input(struct netif *netif, uint16_t length, uint8_
     /* We iterate over the pbuf chain until we have read the entire
      * packet into the pbuf. */
     for (q = p; q != NULL; q = q->next) {
-      /* Read enough bytes to fill this pbuf in the chain. The
-       * available data in the pbuf is given by the q->len
-       * variable.
-       * This does not necessarily have to be a memcpy, you can also preallocate
-       * pbufs for a DMA-enabled MAC and after receiving truncate it to the
-       * actually received size. In this case, ensure the tot_len member of the
-       * pbuf is the sum of the chained pbuf len members.
-       */
-      kprintf("Attack: len = %d", q->len);
       memcpy(q->payload, current_pos, q->len);
       current_pos += q->len;
-      //read data into(q->payload, q->len);
     }
 
     MIB2_STATS_NETIF_ADD(netif, ifinoctets, p->tot_len);
@@ -164,24 +155,36 @@ static struct pbuf* low_level_input(struct netif *netif, uint16_t length, uint8_
   return p;
 }
 
-struct netif *__netif = NULL;
+void ethernet_receive_notifier(struct ethernet_driver* driver) {
+  network_input_thread_notify(driver->lwip_netif);
+}
 
-void ethernet_receive_handler(struct ethernet_driver* driver, uint16_t length, uint8_t* data)
+void ethernet_receive_data(struct ethernet_driver **driver_store, uint16_t *length, uint8_t **data)
 {
-  kprintf("Package reveived len = %d\n", length);
-  for(int i = 0; i < length; i++) {
-    kprintf("%2x ", data[i]);
-  }
-  kprintf("\n");
-  if(__netif != NULL) {
-    struct pbuf* p = low_level_input(__netif, length, data);
-    /* if no packet could be read, silently ignore this */
-    if (p != NULL) {
-      network_input_thread_notify(__netif, p);
-    }
+  //TODO: try to identify which device have data in its buffer.
+  for(list_entry_t* i = list_next(&ethernet_driver_list);
+  i != &ethernet_driver_list; i = list_next(i)) {
+    struct ethernet_driver* driver = container_of(i, struct ethernet_driver, list_entry);
+    driver->receive_handler(driver, length, data);
+    *driver_store = driver;
+    if(*data != NULL) return;
   }
 }
 
+void ethernet_lwip_process_data() {
+  struct ethernet_driver *driver;
+  uint16_t length;
+  uint8_t *data;
+  for(;;) {
+    ethernet_receive_data(&driver, &length, &data);
+    if(data == NULL) break;
+    struct pbuf *buf = low_level_input(driver->lwip_netif, length, data);
+    if(driver->lwip_netif->input(buf, driver->lwip_netif) != ERR_OK) {
+      pbuf_free(buf);
+    }
+    kfree(data);
+  }
+}
 
 err_t ethernet_lwip_netif_init(struct netif *netif)
 {
@@ -243,12 +246,14 @@ err_t ethernet_lwip_netif_init(struct netif *netif)
   return ERR_OK;
 }
 
+struct netif *__netif = NULL;
 void ethernet_add_driver(struct ethernet_driver* driver)
 {
   list_add(&ethernet_driver_list, &driver->list_entry);
-  driver->receive_handler = ethernet_receive_handler;
+  driver->receive_notifier = ethernet_receive_notifier;
   lwip_current_driver = driver;
   struct netif *netif = kmalloc(sizeof(struct netif));
+  driver->lwip_netif = netif;
   ip_addr_t ipaddr, netmask, gateway;
   IP4_ADDR(&gateway, 0, 0, 0, 0);
   IP4_ADDR(&ipaddr, 0, 0, 0, 0);
@@ -258,9 +263,5 @@ void ethernet_add_driver(struct ethernet_driver* driver)
   netif_set_link_up(netif);
   netif_set_up(netif);
   netif_set_default(netif);
-  //TODO: this only works for one netif;
   __netif = netif;
-  //netifapi_dhcp_start(__netif);
-  //int err = dhcp_start(netif);
-  //kprintf("dhcp_start err = %d\n", err);
 }

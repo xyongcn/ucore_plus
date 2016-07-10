@@ -9,6 +9,7 @@
 #include <ethernet.h>
 #include <assert.h>
 #include <picirq.h>
+#include <string.h>
 #include <interrupt_manager.h>
 #include "e1000.h"
 
@@ -207,10 +208,11 @@ int e1000_send_packet(struct e1000_driver* driver, const char *p_data, uint16_t 
 }
 
 //TODO: Now only the interrupt of one device is handled.
-static struct e1000_driver* __driver = NULL;
+static struct e1000_driver *__driver = NULL;
 
 bool e1000_interrupt_handler(struct trapframe *tf)
 {
+  //TODO: Check all e1000 network devices.
   if(__driver == NULL) return;
   uint32_t status = e1000_read_command(__driver, 0xc0);
   if(status & 0x04) {
@@ -222,26 +224,32 @@ bool e1000_interrupt_handler(struct trapframe *tf)
     return 1;
   }
   else if(status & 0x80) {
-    e1000_handle_receive(__driver);
+    //To avoid deadlock, receive will not be handled here, OS will be notified
+    //and a kernel thread will handle the input.
+    __driver->ethernet_driver->receive_notifier(__driver);
     return 1;
   }
   return status != 0;
 }
 
-void e1000_handle_receive(struct e1000_driver* driver)
+void e1000_handle_receive(struct e1000_driver* driver, uint16_t *length, uint8_t **data)
 {
   uint16_t old_cur;
-  bool got_packet = false;
-
-  while((driver->rx_descs[driver->rx_cur]->status & 0x1))
-  {
-    uint8_t *buf = KADDR((uint8_t *)driver->rx_descs[driver->rx_cur]->addr);
+  if((driver->rx_descs[driver->rx_cur]->status & 0x1)) {
+    uint8_t *buf = KADDR((uintptr_t)driver->rx_descs[driver->rx_cur]->addr);
     uint16_t len = driver->rx_descs[driver->rx_cur]->length;
-    driver->ethernet_driver->receive_handler(driver, len, buf);
+    char* copied_data = kmalloc(len);
+    memcpy(copied_data, buf, len);
+    *data = copied_data;
+    *length = len;
     driver->rx_descs[driver->rx_cur]->status = 0;
     old_cur = driver->rx_cur;
     driver->rx_cur = (driver->rx_cur + 1) % E1000_NUM_RX_DESC;
     e1000_write_command(driver, REG_RXDESCTAIL, old_cur);
+  }
+  else {
+    *length = 0;
+    *data = NULL;
   }
 }
 
@@ -261,8 +269,8 @@ void e1000_create(struct e1000_driver* driver, struct pci_device_info* device_in
 #endif
   pmm_mmio_map_direct(boot_pgdir, address, address_kern, length, PTE_P | PTE_W);
   driver->bar_type = is_port_io;
-  driver->io_base = address;
-  driver->mem_base = address_kern;
+  driver->io_base = (uint16_t)address;
+  driver->mem_base = (uintptr_t)address_kern;
   // Enable bus mastering
   pci_device_enable_bus_mastering(device_info);
   e1000_detect_EEPROM(driver);
@@ -296,7 +304,7 @@ void e1000_create(struct e1000_driver* driver, struct pci_device_info* device_in
 }
 
 void e1000_ethernet_driver_send_handler(
-  struct ethernet_driver* driver, uint16_t length, char* data
+  struct ethernet_driver* driver, uint16_t length, uint8_t *data
 ) {
   struct e1000_driver *e1000_driver =
     (struct e1000_driver*)driver->private_data;
@@ -304,8 +312,17 @@ void e1000_ethernet_driver_send_handler(
   e1000_send_packet(e1000_driver, data, length);
 }
 
+void e1000_ethernet_driver_receive_handler(
+  struct ethernet_driver* driver, uint16_t *length, uint8_t **data
+) {
+  struct e1000_driver *e1000_driver =
+    (struct e1000_driver*)driver->private_data;
+  //TODO: adjust the parameter order of e1000_send_packet
+  e1000_handle_receive(e1000_driver, length, data);
+}
+
 void e1000_ethernet_driver_get_mac_address_handler(
-  struct ethernet_driver* driver, char* mac_store
+  struct ethernet_driver* driver, uint8_t* mac_store
 ) {
   struct e1000_driver *e1000_driver =
     (struct e1000_driver*)driver->private_data;
@@ -321,6 +338,7 @@ struct ethernet_driver* e1000_ethernet_driver_create(
   e1000_driver->ethernet_driver = ethernet_driver;
   e1000_create(e1000_driver, device);
   ethernet_driver->send_handler = e1000_ethernet_driver_send_handler;
+  ethernet_driver->receive_handler = e1000_ethernet_driver_receive_handler;
   ethernet_driver->get_mac_address_handler =
     e1000_ethernet_driver_get_mac_address_handler;
   return ethernet_driver;

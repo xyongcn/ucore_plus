@@ -16,7 +16,6 @@ static void linux_sockaddr_to_lwip_sockaddr(struct linux_sockaddr *linux_sockadd
 int socket_create(int domain, int type, int protocol)
 {
   int ret = lwip_socket(domain, type, protocol);
-  kprintf("Assign socket %d\n", ret);
   return ret;
 }
 
@@ -31,15 +30,18 @@ int socket_connect(int fd, struct linux_sockaddr __user *uservaddr, int addrlen)
 
 int socket_sendto(int fd, void __user *buff, size_t len, unsigned int flags, struct linux_sockaddr __user *addr, int addr_len)
 {
-  struct sockaddr *lwip_sockaddr = kmalloc(sizeof(struct sockaddr));
-  lwip_sockaddr->sa_len = sizeof(struct sockaddr);
-  lwip_sockaddr->sa_family = (uint8_t)addr->sa_family; //This may lead to truncating, but currently there is no no sa_family >= 256
-  //Socket data handling is in a kernel thread, in whose context, userspace "addr" is not valid.
+  int ret;
   char* kernel_buff = kmalloc(len);
-  memcpy(lwip_sockaddr->sa_data, addr->sa_data, 14);
   memcpy(kernel_buff, buff, len);
-  int ret = lwip_sendto(fd, kernel_buff, len, flags, lwip_sockaddr, sizeof(struct sockaddr));
-  kfree(lwip_sockaddr);
+  if(addr == NULL) {
+    ret = lwip_send(fd, kernel_buff, len, flags);
+  }
+  else {
+    struct sockaddr *lwip_sockaddr = kmalloc(sizeof(struct sockaddr));
+    linux_sockaddr_to_lwip_sockaddr(addr, lwip_sockaddr);
+    ret = lwip_sendto(fd, kernel_buff, len, flags, lwip_sockaddr, sizeof(struct sockaddr));
+    kfree(lwip_sockaddr);
+  }
   //TODO: Not sure if lwip_sendto will free the buffer passed to it.
   kfree(kernel_buff);
   return ret;
