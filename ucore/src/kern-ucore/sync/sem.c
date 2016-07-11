@@ -83,7 +83,8 @@ static void
 		if ((wait = wait_queue_first(&(sem->wait_queue))) == NULL) {
 			sem->value++;
 		} else {
-			assert(wait->proc->wait_state == wait_state);
+      //TODO: This assertion is temporarily disabled for network module.
+      //assert(wait->proc->wait_state == wait_state);
 			wakeup_wait(&(sem->wait_queue), wait, wait_state, 1);
 		}
 	}

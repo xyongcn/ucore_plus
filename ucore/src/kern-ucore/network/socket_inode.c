@@ -18,20 +18,20 @@ static int socket_inode_read(struct inode *node, struct iobuf *iob)
 {
   panic("socket_inode_read not implemented");
   return 0;
-  //return sfs_io(node, iob, 0);
 }
 
 static int socket_inode_write(struct inode *node, struct iobuf *iob)
 {
   panic("socket_inode_write not implemented");
   return 0;
-	//return sfs_io(node, iob, 1);
 }
 
 static int socket_inode_close(struct inode *node)
 {
   struct socket_inode_private_data *private_data = (struct socket_inode_private_data*)node->private_data;
-  return lwip_close(private_data->lwip_socket);
+  int lwip_fd = private_data->lwip_socket;
+  kfree(private_data);
+  return lwip_close(lwip_fd);
 }
 
 const struct inode_ops socket_inode_ops = {
