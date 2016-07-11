@@ -33,7 +33,7 @@ void filemap_init(struct file *filemap)
 	}
 }
 
-static int filemap_alloc(int fd, struct file **file_store)
+int filemap_alloc(int fd, struct file **file_store)
 {
 	struct file *file = get_filemap();
 	if (fd == NO_FD) {

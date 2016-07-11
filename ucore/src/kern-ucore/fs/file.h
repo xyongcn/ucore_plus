@@ -28,6 +28,7 @@ struct file {
 };
 
 void filemap_init(struct file *filemap);
+int filemap_alloc(int fd, struct file **file_store);
 void filemap_open(struct file *file);
 void filemap_close(struct file *file);
 void filemap_dup(struct file *to, struct file *from);
