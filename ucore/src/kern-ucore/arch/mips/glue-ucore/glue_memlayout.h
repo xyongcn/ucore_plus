@@ -3,6 +3,8 @@
 
 /* This file contains the definitions for memory management in our OS. */
 
+#define PageIO(page)            test_bit(PG_IO, &((page)->flags))
+#define PG_IO                    6
 #define KERNBASE            0x80000000
 
 #ifdef MACH_FPGA

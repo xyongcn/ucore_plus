@@ -74,7 +74,7 @@ list_entry_t proc_list;
 static list_entry_t hash_list[HASH_LIST_SIZE];
 
 //#define current (pls_read(current))
-//extern struct proc_struct* pls_current;
+struct proc_struct* pls_current;
 
 static int nr_process = 0;
 

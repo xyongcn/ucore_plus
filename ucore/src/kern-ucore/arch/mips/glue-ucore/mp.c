@@ -4,6 +4,7 @@
 #include <pmm.h>
 #include <vmm.h>
 
+DEFINE_PERCPU_NOINIT(struct cpu, cpus);
 void *percpu_offsets[NCPU];
 PLS int pls_lapic_id;
 PLS int pls_lcpu_idx;
