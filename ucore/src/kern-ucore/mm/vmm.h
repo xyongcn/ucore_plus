@@ -79,7 +79,7 @@ struct mm_struct {
 	pgd_t *pgdir;
 #ifdef ARCH_ARM
 	//ARM PDT is 16K alignment
-	//but our allocator do not support 
+	//but our allocator do not support
 	//this sort of allocation
 	pgd_t *pgdir_alloc_addr;
 #endif
@@ -153,5 +153,14 @@ static inline int mm_count_dec(struct mm_struct *mm)
 {
 	return atomic_sub_return(&(mm->mm_count), 1);
 }
+
+struct mapped_addr {
+	struct Page *page;
+	off_t offset;
+	list_entry_t list;
+};
+
+#define le2maddr(le)	\
+		to_struct((le), struct mapped_addr, list)
 
 #endif /* !__KERN_MM_VMM_H__ */

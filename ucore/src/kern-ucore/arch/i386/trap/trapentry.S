@@ -43,4 +43,3 @@ forkrets:
     # set stack to this new process's trapframe
     movl 4(%esp), %esp
     jmp __trapret
-

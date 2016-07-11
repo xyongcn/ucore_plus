@@ -1073,7 +1073,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 	set_pgdir(current, mm->pgdir);
 	mp_set_mm_pagetable(mm);
 
-#if defined(UCONFIG_BIONIC_LIBC) || defined(ARCH_AMD64)
+#if defined(ARCH_ARM) || defined(ARCH_AMD64)
 	if (init_new_context_dynamic(current, elf, argc, kargv, envc, kenvp,
 				     elf_have_interpreter, interpreter_entry + bias, elf_entry,
 				     bias, program_header_address) < 0)

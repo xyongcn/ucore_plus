@@ -17,6 +17,8 @@
 #include <kio.h>
 #include <mp.h>
 #include <mod.h>
+#include <pci.h>
+#include <network/e1000.h>
 
 int kern_init(void) __attribute__ ((noreturn));
 
@@ -42,12 +44,16 @@ int kern_init(void)
 
 	pic_init();		// init interrupt controller
 	idt_init();		// init interrupt descriptor table
-  pci_init();
 
 	vmm_init();		// init virtual memory management
 	sched_init();		// init scheduler
 	proc_init();		// init process table
 	sync_init();		// init sync struct
+
+  interrupt_manager_init();
+  pci_init(); //init pci
+  network_init();
+  e1000_init();
 
 	ide_init();		// init ide devices
 #ifdef UCONFIG_SWAP

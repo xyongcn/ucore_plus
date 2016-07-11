@@ -195,6 +195,7 @@ static void trap_dispatch(struct trapframe *tf)
 		break;
 	case IRQ_OFFSET + IRQ_TIMER:
 		ticks++;
+    //e1000_interrupt_handler(tf);
 		assert(current != NULL);
 		run_timer_list();
 		break;
@@ -207,9 +208,11 @@ static void trap_dispatch(struct trapframe *tf)
 		break;
 	case IRQ_OFFSET + IRQ_IDE1:
 	case IRQ_OFFSET + IRQ_IDE2:
+    //if(tf->tf_trapno > IRQ_OFFSET) kprintf("t%dt", tf->tf_trapno);
 		/* do nothing */
 		break;
 	default:
+    if(interrupt_manager_process(tf)) break;
 		print_trapframe(tf);
 		if (current != NULL) {
 			kprintf("unhandled trap.\n");
@@ -217,6 +220,9 @@ static void trap_dispatch(struct trapframe *tf)
 		}
 		panic("unexpected trap in kernel.\n");
 	}
+  if(tf->tf_trapno >= IRQ_OFFSET + 8 && tf->tf_trapno < IRQ_OFFSET + 16) {
+    pic_send_end_of_interrupt(tf->tf_trapno - IRQ_OFFSET);
+  }
 }
 
 void trap(struct trapframe *tf)
