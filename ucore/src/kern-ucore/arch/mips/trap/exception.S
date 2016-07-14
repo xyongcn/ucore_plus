@@ -4,7 +4,8 @@
 #include <asm/regdef.h>
 #include <asm/mipsregs.h>
 #include <memlayout.h>
-.extern pls_current # current pcb proc.h
+/*#.extern current # current pcb proc.h*/
+.extern __percpu_cpus
 .extern mips_trap
    /*
     * Do not allow the assembler to use $1 (at), because we need to be
@@ -38,8 +39,8 @@ ramExcHandle_general:
 
    /* TODO */
    /* Coming from user mode - load kernel stack into sp */
-   la k0, pls_current /* get address of "curkstack" */
-   lw k0, 0(k0)
+   la k0, __percpu_cpus /* get address of "curkstack" */
+   lw k0, 92(k0)
    lw k0, 20(k0)
 
    addiu sp, k0, KSTACKSIZE
@@ -173,7 +174,7 @@ common_exception:
    sw $0, 12(sp)
 
   # support nested interrupt
-  la   t0, ~(ST0_KSU|ST0_EXL|ST0_IE)
+  li   t0, ~(ST0_KSU|ST0_EXL|ST0_IE)
   and t1, t1, t0
   mtc0 t1, CP0_STATUS /* Copr.0 reg 11 == status */
 

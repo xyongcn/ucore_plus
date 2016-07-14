@@ -3,6 +3,7 @@
 #include <proc.h>
 #include <pmm.h>
 #include <vmm.h>
+#include <sysconf.h>
 
 DEFINE_PERCPU_NOINIT(struct cpu, cpus);
 void *percpu_offsets[NCPU];
@@ -30,9 +31,9 @@ void mp_tlb_update(pgd_t * pgdir, uintptr_t la)
 
 int mp_init(void)
 {
-	pls_write(lapic_id, 0);
-	pls_write(lcpu_idx, 0);
-	pls_write(lcpu_count, 1);
+  sysconf.lcpu_boot = 0;
+  sysconf.lnuma_count = 0;
+  sysconf.lcpu_count = 1;
   percpu_offsets[0] = __percpu_start;
 
 	return 0;

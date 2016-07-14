@@ -1,6 +1,5 @@
 #include <network.h>
 #include <ethernet.h>
-#include <network/e1000.h>
 #include "lwip/init.h"
 #include "input_thread.h"
 

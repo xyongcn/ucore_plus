@@ -170,8 +170,7 @@ static void handle_tlbmiss(struct trapframe *tf, int write, int perm)
 	uint32_t badaddr = tf->tf_vaddr;
 	int ret = 0;
 	pte_t *pte = get_pte(current_pgdir, tf->tf_vaddr, 0);
-	if (perm || pte == NULL || ptep_invalid(pte) || (write && !ptep_u_write(pte))) {	//PTE miss, pgfault
-		//panic("unimpl");
+	if (perm || pte == NULL || ptep_invalid(pte) || (write && !ptep_u_write(pte) && !in_kernel)) {	//PTE miss, pgfault
 		//TODO
 		//tlb will not be refill in do_pgfault,
 		//so a vmm pgfault will trigger 2 exception

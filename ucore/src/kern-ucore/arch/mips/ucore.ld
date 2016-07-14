@@ -39,6 +39,12 @@ etext = .; _etext = .;
   *(.dynamic)
   *(.got2)
   *(.sdata) *(.sdata.*) *(.lit8) *(.lit4)
+  __percpu_start = .;
+  *(.percpu)
+  __percpu_end = .;
+  __DWARF_DEBUG_LINE_BEGIN__ = .;
+  *(.debug_line);
+  __DWARF_DEBUG_LINE_END__ = .;
     . = ALIGN(16);
 }
 . = ALIGN(16);
@@ -51,11 +57,7 @@ wrs_kernel_data_end = .; _wrs_kernel_data_end = .;
   . = ALIGN(16);
 }
 . = ALIGN(16);
-.percpu : {
-    PROVIDE(__percpu_start = .);
-    *(.percpu)
-    PROVIDE(__percpu_end = .);
-}
+
 end = .; _end = .;
 wrs_kernel_bss_end = .; _wrs_kernel_bss_end = .;
 

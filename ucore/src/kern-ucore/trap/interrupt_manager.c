@@ -1,3 +1,5 @@
+#if defined(ARCH_AMD64) || defined(ARCH_ARM) || defined(ARCH_X86)
+
 #include <list.h>
 #include <slab.h>
 #include <trap.h>
@@ -44,3 +46,5 @@ bool interrupt_manager_process(struct trapframe* trapframe)
   }
   return 0;
 }
+
+#endif

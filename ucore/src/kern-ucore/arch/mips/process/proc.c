@@ -73,9 +73,6 @@ list_entry_t proc_list;
 // has list for process set based on pid
 static list_entry_t hash_list[HASH_LIST_SIZE];
 
-//#define current (pls_read(current))
-struct proc_struct* pls_current;
-
 static int nr_process = 0;
 
 void kernel_thread_entry(void);
@@ -478,6 +475,7 @@ init_new_context(struct proc_struct *proc, struct elfhdr *elf,
 	tf->tf_status = status;
 	tf->tf_regs.reg_r[MIPS_REG_A0] = argc;
 	tf->tf_regs.reg_r[MIPS_REG_A1] = (uint32_t) uargv;
+  tlb_invalidate_all();
 
 	return 0;
 }

@@ -1950,10 +1950,11 @@ static int init_main(void *arg)
 	unsigned int nr_process_store = nr_process;
 
   extern struct netif *__netif;
-  ucore_kernel_thread(network_input_thread_main, NULL, 0);
-  tcpip_init(foo, __netif);
+  if(__netif != NULL) {
+    ucore_kernel_thread(network_input_thread_main, NULL, 0);
+    tcpip_init(foo, __netif);
+  }
 
-  kprintf("Returns here %d\n", current->pid);
 	pid = ucore_kernel_thread(user_main, NULL, 0);
 	if (pid <= 0) {
 		panic("create user_main failed.\n");
