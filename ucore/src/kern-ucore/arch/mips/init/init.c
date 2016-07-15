@@ -50,6 +50,9 @@ void __noreturn kern_init(void)
 
 	sched_init();
 	proc_init();		// init process table
+  network_init();
+  //Note: This only works in a modified qemu!
+  dm9000_initialize();
 	ide_init();
 	fs_init();
 	intr_enable();		// enable irq interrupt

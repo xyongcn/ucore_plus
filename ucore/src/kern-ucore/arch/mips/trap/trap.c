@@ -95,6 +95,9 @@ static void interrupt_handler(struct trapframe *tf)
 	for (i = 0; i < 8; i++) {
 		if (tf->tf_cause & (1 << (CAUSEB_IP + i))) {
 			switch (i) {
+      case 2: //D9000_IRQ
+        dm9000_interrupt_handler();
+        break;
 			case TIMER0_IRQ:
 				clock_int_handler(NULL);
 				break;

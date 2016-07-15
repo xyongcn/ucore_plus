@@ -95,7 +95,6 @@ uint32_t
     __attribute__ ((noinline)) __down(semaphore_t * sem, uint32_t wait_state,
 				      timer_t * timer)
 {
-  if(!sem->valid) print_stackframe();
 	assert(sem->valid);
 	bool intr_flag;
 	spin_lock_irqsave(&sem->lock, intr_flag);
