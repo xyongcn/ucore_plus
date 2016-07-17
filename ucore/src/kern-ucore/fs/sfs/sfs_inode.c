@@ -40,6 +40,8 @@ static const struct inode_ops *sfs_get_ops(uint16_t type)
 		return &sfs_node_dirops;
 	case SFS_TYPE_FILE:
 		return &sfs_node_fileops;
+  case SFS_TYPE_LINK:
+    return &sfs_node_fileops; //TODO: Maybe we need some different fileops.
 	}
 	panic("invalid file type %d.\n", type);
 }

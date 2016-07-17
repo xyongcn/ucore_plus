@@ -8,6 +8,10 @@
 #include <inode.h>
 #include <error.h>
 #include <assert.h>
+#include <stat.h>
+#include <slab.h>
+#include <iobuf.h>
+#include <kio.h>
 
 /*
  * Common code to pull the device name, if any, off the front of a
@@ -74,18 +78,49 @@ int vfs_lookup(char *path, struct inode **node_store)
 	int ret;
 	struct inode *node;
   //TODO: Security issue: this may lead to buffer overflow.
+  static char fullpath[1024];
   static char subpath[1024];
-	if ((ret = get_device(path, subpath, &node)) != 0) {
-		return ret;
-	}
-	if (*subpath != '\0') {
-    //panic("...");
-		ret = vop_lookup(node, subpath, node_store);
-		vop_ref_dec(node);
-		return ret;
-	}
-	*node_store = node;
-	return 0;
+  if ((ret = get_device(path, subpath, &node)) != 0) {
+    return ret;
+  }
+  for(;;) {
+    if (*subpath != '\0') {
+      ret = vop_lookup(node, subpath, node_store);
+      int node_type;
+      if(ret != 0) {
+        vop_ref_dec(node);
+        return ret;
+      }
+      ret = vop_gettype(*node_store, &node_type);
+      vop_ref_dec(node);
+      if(ret != 0) {
+        return ret;
+      }
+      if(node_type != S_IFLNK) {
+        return ret;
+      }
+      char* link_to_path = kmalloc(1024);
+      struct iobuf iobuf;
+      iobuf_init(&iobuf, link_to_path, 1024, 0);
+      vop_read(*node_store, &iobuf);
+      int link_to_path_length = iobuf_used(&iobuf);
+      link_to_path[link_to_path_length] = '\0';
+      strcpy(fullpath, subpath);
+      strcat(fullpath, "/");
+      strcat(fullpath, link_to_path);
+      kfree(link_to_path);
+      if ((ret = get_device(fullpath, subpath, &node)) != 0) {
+        return ret;
+      }
+    }
+    else {
+      *node_store = node;
+      return 0;
+    }
+  }
+  //Impossible to arrive here.
+  panic("Arriving at an impossible place.");
+  return -E_INVAL;
 }
 
 int vfs_lookup_parent(char *path, struct inode **node_store, char **endp)
