@@ -1,5 +1,7 @@
 #include <types.h>
+#include <string.h>
 #include <stdio.h>
+#include <console.h>
 #include <dev.h>
 #include <vfs.h>
 #include <iobuf.h>
@@ -9,9 +11,9 @@
 #include <assert.h>
 
 /* *
- * stdout is abstract device built on console 
+ * stdout is abstract device built on console
  * console is binding with serial, cga
- * the stdout io is simple, just write a Bit to serial or cga address 
+ * the stdout io is simple, just write a Bit to serial or cga address
  * */
 static int stdout_open(struct device *dev, uint32_t open_flags)
 {

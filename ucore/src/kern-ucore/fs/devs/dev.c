@@ -168,6 +168,7 @@ void dev_init(void)
 	init_device(null);
 	init_device(stdin);
 	init_device(stdout);
+  init_device(urandom);
   init_device(fuse);
 	init_device(disk);
 }

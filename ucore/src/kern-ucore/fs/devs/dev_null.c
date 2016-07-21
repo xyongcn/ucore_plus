@@ -3,6 +3,7 @@
  * immediate EOF on read and throws away anything written to it.
  */
 #include <types.h>
+#include <string.h>
 #include <dev.h>
 #include <vfs.h>
 #include <iobuf.h>

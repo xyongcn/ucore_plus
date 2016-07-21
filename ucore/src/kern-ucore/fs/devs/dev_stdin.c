@@ -1,5 +1,7 @@
 #include <types.h>
+#include <string.h>
 #include <stdio.h>
+#include <console.h>
 #include <wait.h>
 #include <sync.h>
 #include <proc.h>
@@ -17,9 +19,9 @@
 /* *
  * device stdin is also a abstract device built on console
  * console is binding with serial, cga
- * 
+ *
  * the physic device is now
- * 
+ *
  * stdin read:
  *		(user) call syscall:read --> (kernel) sys_read find it is a device file -->
  *		call device io --> stdin io --> stdin read from stdin buffer;
@@ -60,7 +62,7 @@ void dev_stdin_write(char c)
  *		there are two flag - p_rpos & p_wpos
  *		every read or write operation will increase them
  *		if p_rpos >= p_wpos, current process should be wait
- * */ 
+ * */
 static int dev_stdin_read(char *buf, size_t len)
 {
 	int ret = 0;
