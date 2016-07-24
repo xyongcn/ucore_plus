@@ -13,6 +13,7 @@
 #include <unistd.h>
 #include <error.h>
 #include <assert.h>
+#include <poll.h>
 
 #define STDIN_BUFSIZE               4096
 
@@ -102,6 +103,26 @@ try_again:
 	return ret;
 }
 
+static int stdin_poll(struct device *dev, wait_t *wait, int io_requests)
+{
+  if(io_requests | POLL_READ_AVAILABLE) {
+    if(p_rpos < p_wpos) {
+      return POLL_READ_AVAILABLE;
+    }
+    else {
+      if(wait == NULL) return 0;
+      //Since this "stdin" is not process independent, having 2 wait object in
+      //the queue seems to be pretty weird.
+      assert(wait_queue_empty(wait_queue));
+      wait_queue_add(wait_queue, wait);
+      return 0;
+    }
+  }
+  else {
+    return 0;
+  }
+}
+
 static int stdin_open(struct device *dev, uint32_t open_flags)
 {
 	if (open_flags != O_RDONLY) {
@@ -144,7 +165,7 @@ static void stdin_device_init(struct device *dev)
 	dev->d_close = stdin_close;
 	dev->d_io = stdin_io;
 	dev->d_ioctl = stdin_ioctl;
-
+  dev->d_poll = stdin_poll;
 	p_rpos = p_wpos = 0;
 	wait_queue_init(wait_queue);
 }

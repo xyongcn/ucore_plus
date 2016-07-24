@@ -9,6 +9,7 @@
 #include <unistd.h>
 #include <error.h>
 #include <assert.h>
+#include <poll.h>
 
 /* *
  * stdout is abstract device built on console
@@ -45,6 +46,11 @@ static int stdout_ioctl(struct device *dev, int op, void *data)
 	return -E_INVAL;
 }
 
+static int stdout_poll(struct device *dev, wait_t *wait, int io_requests)
+{
+  return io_requests & POLL_WRITE_AVAILABLE;
+}
+
 static void stdout_device_init(struct device *dev)
 {
 	memset(dev, 0, sizeof(*dev));
@@ -54,6 +60,7 @@ static void stdout_device_init(struct device *dev)
 	dev->d_close = stdout_close;
 	dev->d_io = stdout_io;
 	dev->d_ioctl = stdout_ioctl;
+  dev->d_poll = stdout_poll;
 }
 
 void dev_init_stdout(void)

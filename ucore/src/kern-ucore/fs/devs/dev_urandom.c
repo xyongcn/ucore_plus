@@ -8,6 +8,8 @@
 #include <error.h>
 #include <assert.h>
 #include <string.h>
+#include <poll.h>
+#include <wait.h>
 #include <mersenne_twister_random.h>
 
 static int urandom_open(struct device *dev, uint32_t open_flags)
@@ -40,6 +42,11 @@ static int urandom_ioctl(struct device *dev, int op, void *data)
 	return -E_INVAL;
 }
 
+static int urandom_poll(struct device *dev, wait_t *wait, int io_requests)
+{
+  return io_requests & (POLL_READ_AVAILABLE | POLL_WRITE_AVAILABLE);
+}
+
 static void urandom_device_init(struct device *dev)
 {
 	memset(dev, 0, sizeof(*dev));
@@ -49,6 +56,7 @@ static void urandom_device_init(struct device *dev)
 	dev->d_close = urandom_close;
 	dev->d_io = urandom_io;
 	dev->d_ioctl = urandom_ioctl;
+  dev->d_poll = urandom_poll;
   mersenne_twister_set_seed(4357U);
 }
 

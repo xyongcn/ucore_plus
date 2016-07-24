@@ -2,6 +2,7 @@
 #define __KERN_FS_DEVS_DEV_H__
 
 #include <types.h>
+#include <wait.h>
 
 struct inode;
 struct iobuf;
@@ -53,6 +54,7 @@ void *linux_file;
 	int (*d_close) (struct device * dev);
 	int (*d_io) (struct device * dev, struct iobuf * iob, bool write);
 	int (*d_ioctl) (struct device * dev, int op, void *data);
+  int (*d_poll) (struct device *dev, wait_t *wait, int io_requests);
   void* private_data;
 };
 
@@ -60,6 +62,7 @@ void *linux_file;
 #define dop_close(dev)                      ((dev)->d_close(dev))
 #define dop_io(dev, iob, write)             ((dev)->d_io(dev, iob, write))
 #define dop_ioctl(dev, op, data)            ((dev)->d_ioctl(dev, op, data))
+#define dop_poll(dev, wait, io_requests)    ((dev)->d_poll(dev, wait, io_requests))
 
 #define dev_is_linux_dev(dev) ((dev)->linux_dentry != NULL)
 
