@@ -15,7 +15,13 @@
 #include <sysfile.h>
 #include <kio.h>
 #include <file.h>
+#include <linux_misc_struct.h>
+#include <fd_set.h>
+#include <inode.h>
+#include <time/time.h>
 #include <network/socket.h>
+
+struct iovec;
 
 machine_word_t syscall_linux_read(machine_word_t args[])
 {
@@ -31,6 +37,22 @@ machine_word_t syscall_linux_write(machine_word_t args[])
 	void *base = (void *)args[1];
 	size_t len = (size_t)args[2];
 	return sysfile_write(fd, base, len);
+}
+
+machine_word_t syscall_linux_readv(machine_word_t args[])
+{
+  int fd = (int)args[0];
+	const struct iovec *iov = (const struct iovec*)args[1];
+	int iovcnt = (int)args[2];
+	return sysfile_readv(fd, iov, iovcnt);
+}
+
+machine_word_t syscall_linux_writev(machine_word_t args[])
+{
+  int fd = (int)args[0];
+	const struct iovec *iov = (const struct iovec*)args[1];
+	int iovcnt = (int)args[2];
+	return sysfile_writev(fd, iov, iovcnt);
 }
 
 machine_word_t syscall_linux_open(machine_word_t args[])
@@ -64,9 +86,50 @@ machine_word_t syscall_linux_lstat(machine_word_t args[])
 
 machine_word_t syscall_linux_fstat(machine_word_t args[])
 {
-	int fd = (char *)args[0];
+	int fd = (int)args[0];
 	struct linux_stat *st = (struct linux_stat *)args[1];
 	return sysfile_linux_fstat(fd, st);
+}
+
+machine_word_t syscall_linux_seek(machine_word_t args[])
+{
+  int fd = (int)args[0];
+  off_t pos = (off_t)args[1];
+  int whence = (int)args[2];
+  return sysfile_seek(fd, pos, whence);
+}
+
+machine_word_t syscall_linux_select(machine_word_t args[])
+{
+  int nfds = (int)args[0];
+  linux_fd_set_t *readfds = (linux_fd_set_t*)args[1];
+  linux_fd_set_t *writefds = (linux_fd_set_t*)args[2];
+  linux_fd_set_t *exceptfds = (linux_fd_set_t*)args[3];
+  struct linux_timeval *timeout = (struct linux_timeval*)args[4];
+  sysfile_linux_select(nfds, readfds, writefds, exceptfds, timeout);
+}
+
+machine_word_t syscall_linux_dup(machine_word_t args[])
+{
+  int fd = args[0];
+  return sysfile_dup1(fd);
+}
+
+machine_word_t syscall_linux_dup2(machine_word_t args[])
+{
+  int fd1 = args[0];
+  int fd2 = args[1];
+  return sysfile_dup(fd1, fd2);
+}
+
+machine_word_t syscall_linux_times(machine_word_t args[])
+{
+  struct linux_tms *buf = args[0];
+  buf->tms_utime = ticks;
+  buf->tms_stime = ticks;
+  buf->tms_cutime = ticks;
+  buf->tms_cstime = ticks;
+  return ticks;
 }
 
 machine_word_t syscall_linux_mount(machine_word_t args[])
@@ -124,6 +187,33 @@ machine_word_t syscall_linux_recvfrom(machine_word_t args[])
   struct linux_sockaddr *addr = (struct linux_sockaddr*)args[4];
   int *addr_len = (int*)args[5];
   socket_recvfrom(fd, ubuf, size, flags, addr, addr_len);
+}
+
+machine_word_t syscall_linux_setsockopt(machine_word_t args[])
+{
+  int fd = (int)args[0];
+  int level = (int)args[1];
+  int optname = (int)args[2];
+  char *optval = (char*)args[3];
+  int optlen = (int)args[4];
+  return socket_set_option(fd, level, optname, optval, optlen);
+}
+
+machine_word_t syscall_linux_getsockopt(machine_word_t args[])
+{
+  int fd = (int)args[0];
+  int level = (int)args[1];
+  int optname = (int)args[2];
+  char *optval = (char*)args[3];
+  int *optlen = (int*)args[4];
+  return socket_get_option(fd, level, optname, optval, optlen);
+}
+
+machine_word_t syscall_linux_gettimeofday(machine_word_t args[])
+{
+	struct linux_timeval *tv = (struct linux_timeval *)args[0];
+	struct linux_timezone *tz = (struct linux_timezone *)args[1];
+	return ucore_gettimeofday(tv, tz);
 }
 
 #ifndef __UCORE_64__

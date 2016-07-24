@@ -35,6 +35,7 @@ void wait_queue_del(wait_queue_t * queue, wait_t * wait)
 	spinlock_acquire(&queue->lock);
 	assert(!list_empty(&(wait->wait_link)) && wait->wait_queue == queue);
 	list_del_init(&(wait->wait_link));
+  wait->wait_queue = NULL;
 	spinlock_release(&queue->lock);
 }
 

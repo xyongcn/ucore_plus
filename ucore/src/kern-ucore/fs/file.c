@@ -401,7 +401,7 @@ int file_dup(int fd1, int fd2)
   }
   file2 = NULL;
 
-  //Now let fd2 become a duplication for fd1.
+  //Now let fd2 become a duplication for fd1. If fd2 is NO_FD, a new fd will be assigned.
 	if ((ret = filemap_alloc(fd2, &file2)) != 0) {
 		return ret;
 	}

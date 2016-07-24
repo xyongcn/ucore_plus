@@ -54,4 +54,13 @@ time_t time_get_current() {
   return ret;
 }
 
+#else
+
+#include <clock.h>
+#include "time.h"
+
+time_t time_get_current() {
+  return ticks;
+}
+
 #endif // ARCH_AMD64

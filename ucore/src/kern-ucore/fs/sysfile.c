@@ -12,6 +12,10 @@
 #include <unistd.h>
 #include <error.h>
 #include <assert.h>
+#include <inode.h>
+#include <fd_set.h>
+#include <poll.h>
+#include <socket.h>
 
 #define IOBUF_SIZE                          4096
 
@@ -174,30 +178,28 @@ out:
 	return ret;
 }
 
+int sysfile_readv(int fd, struct iovec __user *iov, int iovcnt)
+{
+  int bytes_read = 0;
+	for (int i = 0; i < iovcnt; ++i) {
+		int ret = sysfile_read(fd, iov[i].iov_base, iov[i].iov_len);
+		if (ret < 0) return ret;
+		bytes_read += ret;
+    if(ret < iov[i].iov_len) break;
+	}
+  return bytes_read;
+}
+
 int sysfile_writev(int fd, struct iovec __user * iov, int iovcnt)
 {
-	/* do nothing but return 0 */
-	kprintf("writev: fd=%08x iov=%08x iovcnt=%d\n", fd, iov, iovcnt);
-	struct iovec *tv;
-	int rcode = 0, count = 0, i;
-	struct mm_struct *mm = current->mm;
-	for (i = 0; i < iovcnt; ++i) {
-		char *pbase;
-		size_t plen;
-
-		copy_from_user(mm, &pbase, &(iov[i].iov_base), sizeof(char *),
-			       0);
-		copy_from_user(mm, &plen, &(iov[i].iov_len), sizeof(size_t), 0);
-
-		rcode = sysfile_write(fd, pbase, plen);
-		if (rcode < 0)
-			break;
-		count += rcode;
+  int bytes_written = 0;
+	for (int i = 0; i < iovcnt; ++i) {
+		int ret = sysfile_write(fd, iov[i].iov_base, iov[i].iov_len);
+		if (ret < 0) return ret;
+		bytes_written += ret;
+    if(ret < iov[i].iov_len) break;
 	}
-	if (count == 0)
-		return (rcode);
-	else
-		return (count);
+  return bytes_written;
 }
 
 int sysfile_seek(int fd, off_t pos, int whence)
@@ -237,7 +239,7 @@ int sysfile_linux_fstat(int fd, struct linux_stat __user * buf)
 		return -1;
 	}
 	memset(kls, 0, sizeof(struct linux_stat));
-	kls->st_ino = 1;
+	kls->st_ino = kstat->st_ino; //TODO: Some fs have no support for this.
 	/* ucore never check access permision */
 	kls->st_mode = kstat->st_mode | 0777;
 	kls->st_nlink = kstat->st_nlinks;
@@ -560,6 +562,11 @@ out:
 }
 #endif
 
+int sysfile_dup1(int fd)
+{
+  return file_dup(fd, NO_FD);
+}
+
 int sysfile_dup(int fd1, int fd2)
 {
 	return file_dup(fd1, fd2);
@@ -584,6 +591,7 @@ int sysfile_pipe(int *fd_store)
 			file_close(fd[0]), file_close(fd[1]);
 		}
 	}
+  kprintf("Creating pipe %d %d!\n", fd[0], fd[1]);
 	return ret;
 }
 
@@ -628,4 +636,171 @@ void *sysfile_linux_mmap2(void *addr, size_t len, int prot, int flags,
 	warn("mmap not implemented except ARM architecture.\n");
 #endif //UCONFIG_BIONIC_LIBC
 	return MAP_FAILED;
+}
+
+int sysfile_linux_select(int nfds, linux_fd_set_t *readfds, linux_fd_set_t *writefds,
+  linux_fd_set_t *exceptfds, struct linux_timeval *timeout)
+{
+  int ret;
+  linux_fd_set_t *lwip_wrapper_readfds = kmalloc(sizeof(linux_fd_set_t));
+  linux_fd_set_t *lwip_wrapper_writefds = kmalloc(sizeof(linux_fd_set_t));
+  linux_fd_set_t *lwip_wrapper_exceptfds = kmalloc(sizeof(linux_fd_set_t));
+  linux_fd_set_t *ucore_readfds = kmalloc(sizeof(linux_fd_set_t));
+  linux_fd_set_t *ucore_writefds = kmalloc(sizeof(linux_fd_set_t));
+  linux_fd_set_t *ucore_exceptfds = kmalloc(sizeof(linux_fd_set_t));
+  struct linux_timeval *ktimeout = kmalloc(sizeof(struct linux_timeval));
+  memset(lwip_wrapper_readfds, 0, sizeof(linux_fd_set_t));
+  memset(lwip_wrapper_writefds, 0, sizeof(linux_fd_set_t));
+  memset(lwip_wrapper_exceptfds, 0, sizeof(linux_fd_set_t));
+  memset(ucore_readfds, 0, sizeof(linux_fd_set_t));
+  memset(ucore_writefds, 0, sizeof(linux_fd_set_t));
+  memset(ucore_exceptfds, 0, sizeof(linux_fd_set_t));
+  memcpy(ktimeout, timeout, sizeof(struct linux_timeval));
+  int socket_fds = 0;
+  int other_fds = 0;
+  for(int i = 0; i < nfds; i++) {
+    struct file* file;
+    int fd_type;
+    if(readfds != NULL && linux_fd_set_is_set(readfds, i)) {
+      if (fd2file(i, &file) != 0 || vop_gettype(file->node, &fd_type) != 0) {
+        ret = -E_BADF;
+        goto out;
+      }
+      if(S_ISSOCK(fd_type)) {
+        linux_fd_set_set(lwip_wrapper_readfds, i);
+        socket_fds++;
+      }
+      else {
+        linux_fd_set_set(ucore_readfds, i);
+        other_fds++;
+      }
+    }
+    if(writefds != NULL && linux_fd_set_is_set(writefds, i)) {
+      if (fd2file(i, &file) != 0 || vop_gettype(file->node, &fd_type) != 0) {
+        ret = -E_BADF;
+        goto out;
+      }
+      if(S_ISSOCK(fd_type)) {
+        linux_fd_set_set(lwip_wrapper_writefds, i);
+        socket_fds++;
+      }
+      else {
+        linux_fd_set_set(ucore_writefds, i);
+        other_fds++;
+      }
+    }
+    if(exceptfds != NULL && linux_fd_set_is_set(exceptfds, i)) {
+      if (fd2file(i, &file) != 0 || vop_gettype(file->node, &fd_type) != 0) {
+        ret = -E_BADF;
+        goto out;
+      }
+      if(S_ISSOCK(fd_type)) {
+        linux_fd_set_set(lwip_wrapper_exceptfds, i);
+        socket_fds++;
+      }
+      else {
+        //TODO: Not implemented.
+        /*linux_fd_set_set(ucore_exceptfds, i);
+        other_fds++;*/
+      }
+    }
+  }
+  if(socket_fds == 0 && other_fds == 0) {
+    ret = 0;
+    goto out;
+  }
+  else if(socket_fds != 0 && other_fds == 0) {
+    ret = socket_lwip_select_wrapper(
+      nfds, lwip_wrapper_readfds, lwip_wrapper_writefds, lwip_wrapper_exceptfds,
+      ktimeout
+    );
+  }
+  else {
+    wait_t *wait = kmalloc(sizeof(wait_t) * other_fds);
+    for(int i = 0; i < other_fds; i++) {
+      wait_init(&wait[i], current);
+      wait[i].wait_queue = NULL;
+    }
+    int ready_fd_count = 0;
+    for(int i = 0, j = 0; i < nfds; i++) {
+      struct file* file = NULL;
+      if(fd2file(i, &file) != 0) continue;
+      struct inode* inode = file->node;
+      if(linux_fd_set_is_set(ucore_readfds, i)) {
+        if(inode->in_ops->vop_poll(inode, &wait[j], POLL_READ_AVAILABLE) == 0) {
+          //linux_fd_set_unset(ucore_readfds, i);
+        }
+        else {
+          ready_fd_count++;
+        }
+        j++;
+      }
+      else if(linux_fd_set_is_set(ucore_writefds, i)) {
+        if(inode->in_ops->vop_poll(inode, &wait[j], POLL_WRITE_AVAILABLE) == 0) {
+          //linux_fd_set_unset(ucore_writefds, i);
+        }
+        else {
+          ready_fd_count++;
+        }
+        j++;
+      }
+    }
+    volatile struct proc **lwip_notify = kmalloc(sizeof(struct proc**));
+    volatile int *lwip_ret = kmalloc(sizeof(int));
+    *lwip_notify = current;
+    *lwip_ret = 0;
+    if(socket_fds > 0) {
+      socket_lwip_select_wrapper_no_block(
+        nfds, lwip_wrapper_readfds, lwip_wrapper_writefds, lwip_wrapper_exceptfds,
+        ktimeout, lwip_notify, lwip_ret
+      );
+    }
+    if(ready_fd_count == 0 && (*lwip_ret) == 0) {
+      do_linux_sleep(timeout);
+    }
+    *lwip_notify = NULL;
+    for(int i = 0; i < other_fds; i++) {
+      if(wait[i].wait_queue != NULL) {
+        wait_queue_del(wait[i].wait_queue, &wait[i]);
+      }
+    }
+    kfree(wait);
+
+    ret = 0;
+    for(int i = 0, j = 0; i < nfds; i++) {
+      struct file* file = NULL;
+      if(fd2file(i, &file) != 0) continue;
+      struct inode* inode = file->node;
+      if(linux_fd_set_is_set(ucore_readfds, i)) {
+        if(inode->in_ops->vop_poll(inode, NULL, POLL_READ_AVAILABLE) == 0) {
+          linux_fd_set_unset(ucore_readfds, i);
+        }
+        else ret++;
+      }
+      else if(linux_fd_set_is_set(ucore_writefds, i)) {
+        if(inode->in_ops->vop_poll(inode, NULL, POLL_WRITE_AVAILABLE) == 0) {
+          linux_fd_set_unset(ucore_writefds, i);
+        }
+        else ret++;
+      }
+    }
+    if(readfds != NULL) memcpy(readfds, ucore_readfds, sizeof(linux_fd_set_t));
+    if(writefds != NULL) memcpy(writefds, ucore_writefds, sizeof(linux_fd_set_t));
+    if(exceptfds != NULL) memset(exceptfds, 0, sizeof(linux_fd_set_t));
+    if((*lwip_ret) > 0) {
+      if(readfds != NULL) linux_fd_set_or(readfds, lwip_wrapper_readfds);
+      if(writefds != NULL) linux_fd_set_or(writefds, lwip_wrapper_writefds);
+      if(exceptfds != NULL) linux_fd_set_or(exceptfds, lwip_wrapper_exceptfds);
+    }
+    ret += *lwip_ret;
+  }
+out:
+  kfree(lwip_wrapper_readfds);
+  kfree(lwip_wrapper_writefds);
+  kfree(lwip_wrapper_exceptfds);
+  kfree(ucore_readfds);
+  kfree(ucore_writefds);
+  kfree(ucore_exceptfds);
+  kfree(ktimeout);
+  return ret;
 }

@@ -2131,7 +2131,8 @@ int do_linux_usetrlimit(int res, const struct linux_rlimit *__user __limit)
 		limit.rlim_max = USTACKSIZE;
 		break;
 	default:
-		return -E_INVAL;
+		ret = -E_INVAL;
+    goto out;
 	}
 	if (__limit->rlim_cur > limit.rlim_max)
 	{
