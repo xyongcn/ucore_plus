@@ -14,5 +14,6 @@ typedef linux_fd_set_t fd_set_t;
 bool linux_fd_set_is_set(linux_fd_set_t *fd_set, uint32_t fd);
 void linux_fd_set_set(linux_fd_set_t *fd_set, uint32_t fd);
 void linux_fd_set_unset(linux_fd_set_t *fd_set, uint32_t fd);
+void linux_fd_set_or(linux_fd_set_t *fd_set, linux_fd_set_t *fd_set_other);
 
 #endif

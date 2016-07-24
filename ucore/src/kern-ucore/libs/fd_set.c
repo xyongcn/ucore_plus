@@ -24,3 +24,11 @@ void linux_fd_set_unset(linux_fd_set_t *fd_set, uint32_t fd)
   unsigned long bit = fd % long_type_bits;
   fd_set->bits[index] &= ~(1UL << bit);
 }
+
+void linux_fd_set_or(linux_fd_set_t *fd_set, linux_fd_set_t *fd_set_other)
+{
+  unsigned long size = sizeof(linux_fd_set_t) / sizeof(unsigned long);
+  for(int i = 0; i < size; i++) {
+    fd_set->bits[i] |= fd_set_other->bits[i];
+  }
+}
