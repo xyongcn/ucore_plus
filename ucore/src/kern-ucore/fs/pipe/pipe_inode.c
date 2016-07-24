@@ -7,9 +7,11 @@
 #include <pipe_state.h>
 #include <iobuf.h>
 #include <stat.h>
+#include <poll.h>
 #include <unistd.h>
 #include <error.h>
 #include <assert.h>
+#include <pipe_state.h>
 
 static int pipe_inode_open(struct inode *node, uint32_t open_flags)
 {
@@ -60,6 +62,54 @@ static int pipe_inode_write(struct inode *node, struct iobuf *iob)
 		iobuf_skip(iob, ret);
 	}
 	return 0;
+}
+
+//TODO: Should be moved to a pipe_state function.
+static int pipe_inode_poll(struct inode *node, wait_t *wait, int io_requests)
+{
+  kprintf("Entering pipe_inode_poll");
+  struct pipe_inode *pipe_inode = vop_info(node, pipe_inode);
+  struct pipe_state *state= pipe_inode->state;
+  if(pipe_inode->pin_type == PIN_WRONLY) {
+    if(io_requests | POLL_WRITE_AVAILABLE) {
+      //TODO: This is ugly, should be using pipe_state macros.
+      if (state->p_wpos - state->p_rpos >= PGSIZE - sizeof(struct pipe_state)) {
+    		if (state->isclosed) {
+    			return 0;
+    		} else {
+    			//unlock_state(state);
+          if(wait != NULL) wait_queue_add(&state->writer_queue, wait);
+          return 0;
+    		}
+    	}
+      else {
+        return POLL_WRITE_AVAILABLE;
+      }
+    }
+    else {
+      return 0;
+    }
+  }
+  else {
+    if(io_requests | POLL_READ_AVAILABLE) {
+      //lock_state(state);
+    	if (state->p_rpos == state->p_wpos) {
+    		if (state->isclosed) {
+    			return 0;
+    		} else {
+    			//unlock_state(state);
+          if(wait != NULL) wait_queue_add(&state->reader_queue, wait);
+          return 0;
+    		}
+    	}
+      else {
+        return POLL_READ_AVAILABLE;
+      }
+    }
+    else {
+      return 0;
+    }
+  }
 }
 
 static int pipe_inode_fstat(struct inode *node, struct stat *stat)
@@ -142,6 +192,7 @@ static const struct inode_ops pipe_node_ops = {
 	.vop_unlink = NULL_VOP_NOTDIR,
 	.vop_lookup = NULL_VOP_NOTDIR,
 	.vop_lookup_parent = NULL_VOP_NOTDIR,
+  .vop_poll = pipe_inode_poll,
 };
 
 static void

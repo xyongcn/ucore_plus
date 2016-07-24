@@ -247,6 +247,7 @@ struct inode_ops {
 			   struct inode ** node_store);
 	int (*vop_lookup_parent) (struct inode * node, char *path,
 				  struct inode ** node_store, char **endp);
+  int (*vop_poll) (struct inode *node, wait_t *wait, int io_requests);
 };
 
 int null_vop_pass(void);

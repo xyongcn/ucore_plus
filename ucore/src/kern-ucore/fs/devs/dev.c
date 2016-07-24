@@ -58,6 +58,15 @@ static int dev_ioctl(struct inode *node, int op, void *data)
 }
 
 /*
+ * Called for poll(). Just pass through.
+ */
+static int dev_poll(struct inode *node, wait_t *wait, int io_requests)
+{
+	struct device *dev = vop_info(node, device);
+	return dop_poll(dev, wait, io_requests);
+}
+
+/*
  * Called for fstat().
  * Set the type and the size.
  * The link count for a device is always 1.
@@ -155,6 +164,7 @@ static const struct inode_ops dev_node_ops = {
 	.vop_unlink = NULL_VOP_NOTDIR,
 	.vop_lookup = dev_lookup,
 	.vop_lookup_parent = NULL_VOP_NOTDIR,
+  .vop_poll = dev_poll,
 };
 
 #define init_device(x)                                  \

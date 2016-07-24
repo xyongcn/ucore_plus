@@ -3,6 +3,17 @@
 
 struct pipe_state;
 
+struct pipe_state {
+	off_t p_rpos;
+	off_t p_wpos;
+	uint8_t *buf;
+	bool isclosed;
+	int ref_count;
+	semaphore_t sem;
+	wait_queue_t reader_queue;
+	wait_queue_t writer_queue;
+};
+
 struct pipe_state *pipe_state_create(void);
 void pipe_state_acquire(struct pipe_state *state);
 void pipe_state_release(struct pipe_state *state);

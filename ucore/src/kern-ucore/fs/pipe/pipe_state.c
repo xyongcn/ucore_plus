@@ -12,17 +12,6 @@
 #include <error.h>
 #include <assert.h>
 
-struct pipe_state {
-	off_t p_rpos;
-	off_t p_wpos;
-	uint8_t *buf;
-	bool isclosed;
-	int ref_count;
-	semaphore_t sem;
-	wait_queue_t reader_queue;
-	wait_queue_t writer_queue;
-};
-
 #define PIPE_BUFSIZE                            (PGSIZE - sizeof(struct pipe_state))
 
 struct pipe_state *pipe_state_create(void)
