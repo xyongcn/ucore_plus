@@ -1,6 +1,8 @@
 #include <unistd.h>
 #include <proc.h>
 #include <syscall.h>
+#include <linux_unistd.h>
+#include <syscall_linux.h>
 #include <trap.h>
 #include <stdio.h>
 #include <pmm.h>
@@ -173,6 +175,54 @@ static uint32_t sys_shmem(uint32_t arg[])
 	return do_shmem(addr_store, len, mmap_flags);
 }
 
+static uint32_t (*linux_syscall_table[1000]) (uint32_t arg[]) = {
+  [__NR_exit] syscall_linux_exit,
+  [__NR_read] syscall_linux_read,
+  [__NR_write] syscall_linux_write,
+  [__NR_open] syscall_linux_open,
+  [__NR_close] syscall_linux_close,
+  [__NR_time] syscall_linux_time,
+  [__NR_brk] syscall_linux_brk,
+  [__NR_getuid] syscall_linux_getuid,
+  [__NR_ioctl] syscall_linux_ioctl,
+  [__NR_fcntl] syscall_linux_fcntl,
+  [__NR_mmap] syscall_linux_mmap,
+  [__NR_munmap] syscall_linux_munmap,
+  [__NR_stat] syscall_linux_stat,
+  [__NR_lstat] syscall_linux_lstat,
+  [__NR_fstat] syscall_linux_fstat,
+  [__NR_mprotect] syscall_linux_mprotect,
+  [__NR_getdents] syscall_linux_getdents,
+  [__NR_getdents64] syscall_linux_getdents64,
+  [__NR_stat64] syscall_linux_stat64,
+  [__NR_lstat64] syscall_linux_lstat64,
+  [__NR_fstat64] syscall_linux_fstat64,
+};
+
+void syscall_linux(void) {
+  assert(current != NULL);
+  struct trapframe *tf = current->tf;
+  uint32_t arg[6];
+  int num = tf->tf_regs.reg_r[MIPS_REG_V0] - 4000;
+  if (num >= 0 && num < 1000) {
+    if (linux_syscall_table[num] != NULL) {
+      arg[0] = tf->tf_regs.reg_r[MIPS_REG_A0];
+      arg[1] = tf->tf_regs.reg_r[MIPS_REG_A1];
+      arg[2] = tf->tf_regs.reg_r[MIPS_REG_A2];
+      arg[3] = tf->tf_regs.reg_r[MIPS_REG_A3];
+      uint32_t* stack_pointor = tf->tf_regs.reg_r[MIPS_REG_SP];
+      arg[4] = stack_pointor[4];
+      arg[5] = stack_pointor[5];
+      tf->tf_regs.reg_r[MIPS_REG_V0] = linux_syscall_table[num] (arg);
+      tf->tf_regs.reg_r[MIPS_REG_A3] = 0;
+      return;
+    }
+  }
+  print_trapframe(tf);
+  panic("Undefined Linux OABI syscall %d, pid = %d, name = %s.\n",
+      num, current->pid, current->name);
+}
+
 static int (*syscalls[]) (uint32_t arg[]) = {
 [SYS_exit] sys_exit,
 	    [SYS_fork] sys_fork,
@@ -196,7 +246,14 @@ static int (*syscalls[]) (uint32_t arg[]) = {
 	    [SYS_chdir] sys_chdir,
 	    [SYS_getcwd] sys_getcwd,
 	    [SYS_getdirentry] sys_getdirentry,
-	    [SYS_dup] sys_dup,[SYS_shmem] sys_shmem,};
+	    [SYS_dup] sys_dup,
+      [SYS_shmem] sys_shmem,
+      [SYS_mount] syscall_linux_mount,
+      [SYS_umount] syscall_linux_umount,
+};
+
+static int (*linux_syscalls[]) (uint32_t arg[]) = {
+};
 
 #define NUM_SYSCALLS        ((sizeof(syscalls)) / (sizeof(syscalls[0])))
 
@@ -206,6 +263,10 @@ void syscall(void)
 	struct trapframe *tf = current->tf;
 	uint32_t arg[5];
 	int num = tf->tf_regs.reg_r[MIPS_REG_V0];
+  if(num >= 4000 && num <= 4999) {
+    syscall_linux();
+    return;
+  }
 	//num -= T_SYSCALL;
 	//kprintf("$ %d %d\n",current->pid, num);
 	if (num >= 0 && num < NUM_SYSCALLS) {
