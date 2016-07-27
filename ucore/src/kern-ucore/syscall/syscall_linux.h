@@ -1,5 +1,7 @@
 #include <types.h>
 
+machine_word_t syscall_linux_exit(machine_word_t arg[]);
+
 machine_word_t syscall_linux_read(machine_word_t args[]);
 machine_word_t syscall_linux_write(machine_word_t args[]);
 machine_word_t syscall_linux_readv(machine_word_t args[]);
@@ -10,6 +12,16 @@ machine_word_t syscall_linux_stat(machine_word_t args[]);
 machine_word_t syscall_linux_lstat(machine_word_t args[]);
 machine_word_t syscall_linux_fstat(machine_word_t args[]);
 machine_word_t syscall_linux_seek(machine_word_t args[]);
+machine_word_t syscall_linux_getdents(machine_word_t args[]);
+machine_word_t syscall_linux_getdents64(machine_word_t args[]);
+machine_word_t syscall_linux_ioctl(machine_word_t args[]);
+machine_word_t syscall_linux_fcntl(machine_word_t args[]);
+
+machine_word_t syscall_linux_brk(machine_word_t arg[]);
+machine_word_t syscall_linux_old_mmap(machine_word_t args[]);
+machine_word_t syscall_linux_mmap(machine_word_t args[]);
+machine_word_t syscall_linux_munmap(machine_word_t args[]);
+machine_word_t syscall_linux_mprotect(machine_word_t args[]);
 
 machine_word_t syscall_linux_select(machine_word_t args[]);
 
@@ -31,6 +43,7 @@ machine_word_t syscall_linux_recvfrom(machine_word_t args[]);
 machine_word_t syscall_linux_setsockopt(machine_word_t args[]);
 machine_word_t syscall_linux_getsockopt(machine_word_t args[]);
 
+machine_word_t syscall_linux_time(machine_word_t args[]);
 machine_word_t syscall_linux_gettimeofday(machine_word_t args[]);
 machine_word_t syscall_linux_times(machine_word_t args[]);
 

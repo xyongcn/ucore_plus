@@ -1,5 +1,6 @@
 #include <proc.h>
 #include <syscall.h>
+#include <syscall_linux.h>
 #include <trap.h>
 #include <stdio.h>
 #include <pmm.h>
@@ -22,6 +23,12 @@
 #include <network/socket.h>
 
 struct iovec;
+
+machine_word_t syscall_linux_exit(machine_word_t arg[])
+{
+	int error_code = (int)arg[0];
+	return do_exit(error_code);
+}
 
 machine_word_t syscall_linux_read(machine_word_t args[])
 {
@@ -97,6 +104,131 @@ machine_word_t syscall_linux_seek(machine_word_t args[])
   off_t pos = (off_t)args[1];
   int whence = (int)args[2];
   return sysfile_seek(fd, pos, whence);
+}
+
+machine_word_t syscall_linux_getdents(machine_word_t args[])
+{
+	unsigned int fd = (unsigned int)args[0];
+	struct dirent *dir = (struct dirent *)args[1];
+	unsigned int count = (unsigned int)args[2];
+	if (count < sizeof(struct dirent))
+		return -E_INVAL;
+	int ret = sysfile_getdirentry(fd, dir, (uint32_t *)&count);
+	if (ret < 0) return ret;
+	return count;
+}
+
+machine_word_t syscall_linux_getdents64(machine_word_t args[])
+{
+  unsigned int fd = (unsigned int)args[0];
+	struct dirent64 *dir = (struct dirent64 *)args[1];
+	unsigned int count = (unsigned int)args[2];
+	if (count < sizeof(struct dirent64))
+		return -E_INVAL;
+//	kprintf("call getdirendry %d %p %p\n", fd, dir, &count);
+	int ret = sysfile_getdirentry64(fd, dir, (uint32_t *)&count);
+  if (ret < 0) return ret;
+	return count;
+}
+
+machine_word_t syscall_linux_ioctl(machine_word_t args[])
+{
+  int fd = (int)args[0];
+	//FIXME
+	if (fd < 3)
+		return 0;
+	unsigned int cmd = (unsigned int)args[1];
+	unsigned long data = (unsigned long)args[2];
+	return sysfile_ioctl(fd, cmd, data);
+}
+
+machine_word_t syscall_linux_fcntl(machine_word_t args[])
+{
+  unsigned int fd = (unsigned int)args[0];
+  unsigned int cmd = (unsigned int)args[1];
+  unsigned long arg = (unsigned long)args[2];
+	return sysfile_linux_fcntl64(fd, cmd, arg);
+}
+
+machine_word_t syscall_linux_brk(machine_word_t arg[])
+{
+  uintptr_t *brk_store = (uintptr_t*)arg[0];
+  return do_brk(brk_store);
+}
+
+machine_word_t syscall_linux_old_mmap(machine_word_t args[])
+{
+  struct mmap_arg_struct {
+       unsigned long addr;
+       unsigned long len;
+       unsigned long prot;
+       unsigned long flags;
+       unsigned long fd;
+       unsigned long offset;
+  };
+  struct mmap_arg_struct *user_args = args[0];
+  args[0] = user_args->addr;
+  args[1] = user_args->len;
+  args[2] = user_args->prot;
+  args[3] = user_args->flags;
+  args[4] = user_args->fd;
+  args[5] = user_args->offset;
+    panic("syscall_linux");
+  return syscall_linux_mmap(args);
+}
+
+machine_word_t syscall_linux_mmap(machine_word_t args[])
+{
+	void *addr = (void *)args[0];
+	size_t len = (size_t)args[1];
+	unsigned long prot = (unsigned long)args[2];
+	unsigned long flags = (unsigned long)args[3];
+	int fd = (int)args[4];
+	unsigned long off = (unsigned long)args[5];
+#ifndef UCONFIG_BIONIC_LIBC
+	kprintf
+	    ("TODO __sys_linux_mmap2 addr=%08x len=%08x prot=%08x flags=%08x fd=%d off=%08x\n",
+	     addr, len, prot, flags, fd, off);
+#endif //UCONFIG_BIONIC_LIBC
+	if (fd == -1 || flags & MAP_ANONYMOUS) {
+    kprintf("fd is -1\n");
+		//print_trapframe(current->tf);
+#ifdef UCONFIG_BIONIC_LIBC
+		if (flags & MAP_FIXED) {
+      kprintf("fixed\n");
+			return linux_regfile_mmap2(addr, len, prot, flags, fd,
+						   off);
+		}
+#endif //UCONFIG_BIONIC_LIBC
+
+		uint32_t ucoreflags = 0;
+		if (prot & PROT_WRITE)
+			ucoreflags |= MMAP_WRITE;
+		int ret = __do_linux_mmap((uintptr_t) & addr, len, ucoreflags);
+		//kprintf("@@@ ret=%d %e %08x\n", ret,ret, addr);
+		if (ret)
+			return (machine_word_t)MAP_FAILED;
+		//kprintf("__sys_linux_mmap2 ret=%08x\n", addr);
+		return (machine_word_t) addr;
+	}
+  else {
+		return (machine_word_t)sysfile_linux_mmap2(addr, len, prot, flags, fd, off);
+	}
+}
+
+machine_word_t syscall_linux_munmap(machine_word_t arg[])
+{
+	uintptr_t addr = (uintptr_t)arg[0];
+	size_t len = (size_t)arg[1];
+	return do_munmap(addr, len);
+}
+
+machine_word_t syscall_linux_mprotect(machine_word_t args[])
+{
+	void *addr = (void*)args[0];
+	size_t len = (size_t)args[1];
+	int prot = (int)args[2];
+	return do_mprotect(addr, len, prot);
 }
 
 machine_word_t syscall_linux_select(machine_word_t args[])
@@ -246,6 +378,13 @@ machine_word_t syscall_linux_getsockopt(machine_word_t args[])
   char *optval = (char*)args[3];
   int *optlen = (int*)args[4];
   return socket_get_option(fd, level, optname, optval, optlen);
+}
+
+machine_word_t syscall_linux_time(machine_word_t args[])
+{
+  time_t* time = (time_t*)args[0];
+  if(time != NULL) (*time) = time_get_current();
+  return time_get_current();
 }
 
 machine_word_t syscall_linux_gettimeofday(machine_word_t args[])
