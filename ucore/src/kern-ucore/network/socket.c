@@ -18,22 +18,13 @@ static void linux_sockaddr_to_lwip_sockaddr(struct linux_sockaddr *linux_sockadd
   memcpy(lwip_sockaddr->sa_data, linux_sockaddr->sa_data, 14);
 }
 
-static int socket_ucore_fd_to_lwip_fd(int ucore_fd, int *lwip_fd)
+static void lwip_sockaddr_to_linux_sockaddr(struct sockaddr *lwip_sockaddr, struct linux_sockaddr *linux_sockaddr)
 {
-  int ret;
-  struct file *file;
-  if ((ret = fd2file(ucore_fd, &file)) != 0) {
-    return -E_BADF;
-  }
-  int fd_type;
-  if(vop_gettype(file->node, &fd_type) != 0 || !S_ISSOCK(fd_type)) {
-    return -E_NOTSOCK;
-  }
-  *lwip_fd = ((struct socket_inode_private_data *)(file->node->private_data))->lwip_socket;
-  return 0;
+  linux_sockaddr->sa_family = lwip_sockaddr->sa_family;
+  memcpy(linux_sockaddr->sa_data, lwip_sockaddr->sa_data, 14);
 }
 
-int socket_create(int domain, int type, int protocol)
+static int wrap_lwip_socket(int lwip_fd)
 {
   int ret;
   struct file *file;
@@ -51,20 +42,108 @@ int socket_create(int domain, int type, int protocol)
   filemap_open(file);
   struct socket_inode_private_data *private_data = kmalloc(sizeof(struct socket_inode_private_data));
   node->private_data = private_data;
-  private_data->lwip_socket = lwip_socket(domain, type, protocol);
+  private_data->lwip_socket = lwip_fd;
   vop_open_inc(node);
   vop_ref_inc(node);
   return file->fd;
 }
 
+static int socket_ucore_fd_to_lwip_fd(int ucore_fd, int *lwip_fd)
+{
+  int ret;
+  struct file *file;
+  if ((ret = fd2file(ucore_fd, &file)) != 0) {
+    return -E_BADF;
+  }
+  int fd_type;
+  if(vop_gettype(file->node, &fd_type) != 0 || !S_ISSOCK(fd_type)) {
+    return -E_NOTSOCK;
+  }
+  *lwip_fd = ((struct socket_inode_private_data *)(file->node->private_data))->lwip_socket;
+  return 0;
+}
+
+int socket_create(int domain, int type, int protocol)
+{
+  int ret = lwip_socket(domain, type, protocol);
+  if(ret < 0) return ret;
+  return wrap_lwip_socket(ret);
+}
+
 int socket_connect(int fd, struct linux_sockaddr __user *uservaddr, int addrlen)
 {
   int ret, lwip_fd;
+  if(uservaddr->sa_family == 1) return -E_AFNOSUPPORT; //AF_LOCAL is not supported
   ret = socket_ucore_fd_to_lwip_fd(fd, &lwip_fd);
   if(ret != 0) return ret;
   struct sockaddr *lwip_sockaddr = kmalloc(sizeof(struct sockaddr));
   linux_sockaddr_to_lwip_sockaddr(uservaddr, lwip_sockaddr);
   ret = lwip_connect(lwip_fd, lwip_sockaddr, sizeof(struct sockaddr));
+  kfree(lwip_sockaddr);
+  return ret;
+}
+
+int socket_bind(int fd, struct linux_sockaddr __user *uservaddr, int addrlen)
+{
+  int ret, lwip_fd;
+  if(uservaddr->sa_family == 1) return -E_AFNOSUPPORT; //AF_LOCAL is not supported
+  ret = socket_ucore_fd_to_lwip_fd(fd, &lwip_fd);
+  if(ret != 0) return ret;
+  struct sockaddr *lwip_sockaddr = kmalloc(sizeof(struct sockaddr));
+  linux_sockaddr_to_lwip_sockaddr(uservaddr, lwip_sockaddr);
+  ret = lwip_bind(lwip_fd, lwip_sockaddr, sizeof(struct sockaddr));
+  kfree(lwip_sockaddr);
+  return ret;
+}
+
+int socket_listen(int fd, int backlog)
+{
+  int ret, lwip_fd;
+  ret = socket_ucore_fd_to_lwip_fd(fd, &lwip_fd);
+  if(ret != 0) return ret;
+  ret = lwip_listen(lwip_fd, backlog);
+  return ret;
+}
+
+int socket_accept(int fd, struct linux_sockaddr __user *upeer_sockaddr, int __user *upeer_addrlen)
+{
+  int ret, lwip_fd;
+  ret = socket_ucore_fd_to_lwip_fd(fd, &lwip_fd);
+  if(ret != 0) return ret;
+  int kernel_addr_len = *upeer_addrlen;
+  struct sockaddr *lwip_sockaddr = kmalloc(sizeof(struct sockaddr));
+  ret = lwip_accept(lwip_fd, lwip_sockaddr, &kernel_addr_len);
+  lwip_sockaddr_to_linux_sockaddr(lwip_sockaddr, upeer_sockaddr);
+  *upeer_addrlen = kernel_addr_len;
+  kfree(lwip_sockaddr);
+  if(ret < 0) return ret;
+  return wrap_lwip_socket(ret);
+}
+
+int socket_getsockname(int fd, struct linux_sockaddr __user *usockaddr, int __user *usockaddr_len)
+{
+  int ret, lwip_fd;
+  ret = socket_ucore_fd_to_lwip_fd(fd, &lwip_fd);
+  if(ret != 0) return ret;
+  int kernel_addr_len = *usockaddr_len;
+  struct sockaddr *lwip_sockaddr = kmalloc(sizeof(struct sockaddr));
+  ret = lwip_getsockname(lwip_fd, lwip_sockaddr, &kernel_addr_len);
+  lwip_sockaddr_to_linux_sockaddr(lwip_sockaddr, usockaddr);
+  *usockaddr_len = kernel_addr_len;
+  kfree(lwip_sockaddr);
+  return ret;
+}
+
+int socket_getpeername(int fd, struct linux_sockaddr __user *usockaddr, int __user *usockaddr_len)
+{
+  int ret, lwip_fd;
+  ret = socket_ucore_fd_to_lwip_fd(fd, &lwip_fd);
+  if(ret != 0) return ret;
+  int kernel_addr_len = *usockaddr_len;
+  struct sockaddr *lwip_sockaddr = kmalloc(sizeof(struct sockaddr));
+  ret = lwip_getpeername(lwip_fd, lwip_sockaddr, &kernel_addr_len);
+  lwip_sockaddr_to_linux_sockaddr(lwip_sockaddr, usockaddr);
+  *usockaddr_len = kernel_addr_len;
   kfree(lwip_sockaddr);
   return ret;
 }
@@ -100,6 +179,7 @@ int socket_recvfrom(int fd, void __user *ubuf, size_t size, unsigned int flags, 
     ret = lwip_recv(lwip_fd, kernel_buff, size, flags);
   }
   else {
+    //FIXME: Handle cases where linux_sockaddr is needed to copy to user!
     int kernel_addr_len = *addr_len;
     struct sockaddr *lwip_sockaddr = kmalloc(sizeof(struct sockaddr));
     linux_sockaddr_to_lwip_sockaddr(addr, lwip_sockaddr);
@@ -221,6 +301,60 @@ int socket_lwip_select_wrapper_no_block(
   thread_data[4] = (machine_word_t)timeout;
   thread_data[5] = (machine_word_t)proc_to_wakeup;
   thread_data[6] = (machine_word_t)result_store;
-  return ucore_kernel_thread(
-    socket_lwip_select_kernel_thread_entry, thread_data, CLONE_FS);
+  fd_set *lwip_readfds = kmalloc(sizeof(fd_set));
+  fd_set *lwip_writefds = kmalloc(sizeof(fd_set));
+  fd_set *lwip_exceptfds = kmalloc(sizeof(fd_set));
+  FD_ZERO(lwip_readfds);
+  FD_ZERO(lwip_writefds);
+  FD_ZERO(lwip_exceptfds);
+  for(int i = 0; i < nfds; i++) {
+    int lwip_fd;
+    if(linux_fd_set_is_set(readfds, i)) {
+      assert(socket_ucore_fd_to_lwip_fd(i, &lwip_fd) == 0);
+      FD_SET(lwip_fd, lwip_readfds);
+    }
+    if(linux_fd_set_is_set(writefds, i)) {
+      assert(socket_ucore_fd_to_lwip_fd(i, &lwip_fd) == 0);
+      FD_SET(lwip_fd, lwip_writefds);
+    }
+    if(linux_fd_set_is_set(exceptfds, i)) {
+      assert(socket_ucore_fd_to_lwip_fd(i, &lwip_fd) == 0);
+      FD_SET(lwip_fd, lwip_exceptfds);
+    }
+  }
+  *result_store = lwip_selscan(nfds, lwip_readfds, lwip_writefds, lwip_exceptfds, lwip_readfds, lwip_writefds, lwip_exceptfds);
+  if((*result_store) > 0) {
+    for(int i = 0; i < nfds; i++) {
+      int lwip_fd;
+      if(linux_fd_set_is_set(readfds, i)) {
+        assert(socket_ucore_fd_to_lwip_fd(i, &lwip_fd) == 0);
+        if(!FD_ISSET(lwip_fd, lwip_readfds)) {
+          linux_fd_set_unset(readfds, i);
+        }
+      }
+      if(linux_fd_set_is_set(writefds, i)) {
+        assert(socket_ucore_fd_to_lwip_fd(i, &lwip_fd) == 0);
+        if(!FD_ISSET(lwip_fd, lwip_writefds)) {
+          linux_fd_set_unset(writefds, i);
+        }
+      }
+      if(linux_fd_set_is_set(exceptfds, i)) {
+        assert(socket_ucore_fd_to_lwip_fd(i, &lwip_fd) == 0);
+        if(!FD_ISSET(lwip_fd, lwip_exceptfds)) {
+          linux_fd_set_unset(exceptfds, i);
+        }
+      }
+    }
+    kfree(lwip_readfds);
+    kfree(lwip_writefds);
+    kfree(lwip_exceptfds);
+    return 0;
+  }
+  else {
+    kfree(lwip_readfds);
+    kfree(lwip_writefds);
+    kfree(lwip_exceptfds);
+    return ucore_kernel_thread(
+      socket_lwip_select_kernel_thread_entry, thread_data, CLONE_FS);
+  }
 }

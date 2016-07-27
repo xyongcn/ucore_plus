@@ -165,6 +165,45 @@ machine_word_t syscall_linux_connect(machine_word_t args[])
   return socket_connect(fd, uservaddr, addrlen);
 }
 
+machine_word_t syscall_linux_bind(machine_word_t args[])
+{
+  int fd = (int)args[0];
+  struct linux_sockaddr *uservaddr = (struct linux_sockaddr*)args[1];
+  int addrlen = (int)args[2];
+  return socket_bind(fd, uservaddr, addrlen);
+}
+
+machine_word_t syscall_linux_listen(machine_word_t args[])
+{
+  int fd = (int)args[0];
+  int backlog = (int)args[1];
+  return socket_listen(fd, backlog);
+}
+
+machine_word_t syscall_linux_accept(machine_word_t args[])
+{
+  int fd = (int)args[0];
+  struct linux_sockaddr *upeer_sockaddr = (struct linux_sockaddr*)args[1];
+  int *upeer_addrlen = (int*)args[2];
+  return socket_accept(fd, upeer_sockaddr, upeer_addrlen);
+}
+
+machine_word_t syscall_linux_getsockname(machine_word_t args[])
+{
+  int fd = (int)args[0];
+  struct linux_sockaddr *usockaddr = (struct linux_sockaddr*)args[1];
+  int *usockaddr_len = (int*)args[2];
+  return socket_getsockname(fd, usockaddr, usockaddr_len);
+}
+
+machine_word_t syscall_linux_getpeername(machine_word_t args[])
+{
+  int fd = (int)args[0];
+  struct linux_sockaddr *usockaddr = (struct linux_sockaddr*)args[1];
+  int *usockaddr_len = (int*)args[2];
+  return socket_getpeername(fd, usockaddr, usockaddr_len);
+}
+
 machine_word_t syscall_linux_sendto(machine_word_t args[])
 {
   int fd = (int)args[0];
@@ -214,6 +253,84 @@ machine_word_t syscall_linux_gettimeofday(machine_word_t args[])
 	struct linux_timeval *tv = (struct linux_timeval *)args[0];
 	struct linux_timezone *tz = (struct linux_timezone *)args[1];
 	return ucore_gettimeofday(tv, tz);
+}
+
+machine_word_t syscall_linux_setsid(machine_word_t args[])
+{
+  if(current->pid == current->gid) {
+    return current->pid;
+  }
+  panic("syscall_linux_setsid not implemented!");
+}
+
+machine_word_t syscall_linux_getuid(machine_word_t args[])
+{
+  //TODO: This is a stub function. uCore now has no support for multiple user,
+  //so the UID of root is returned.
+  const static int UID_ROOT = 0;
+  return UID_ROOT;
+}
+
+machine_word_t syscall_linux_setuid(machine_word_t args[])
+{
+  //TODO: This is a stub function. uCore now has no support for multiple user.
+  const static int UID_ROOT = 0;
+  int uid = args[0];
+  if(uid != 0) return -E_INVAL;
+  return 0;
+}
+
+machine_word_t syscall_linux_getgid(machine_word_t args[])
+{
+  //TODO: This is a stub function. uCore now has no support for multiple user,
+  //so the GID of root is returned.
+  const static int GID_ROOT = 0;
+  return GID_ROOT;
+}
+
+machine_word_t syscall_linux_setgid(machine_word_t args[])
+{
+  //TODO: This is a stub function. uCore now has no support for multiple user.
+  const static int GID_ROOT = 0;
+  int gid = args[0];
+  if(gid != 0) return -E_INVAL;
+  return 0;
+}
+
+machine_word_t syscall_linux_geteuid(machine_word_t args[])
+{
+  //TODO: This is a stub function. uCore now has no support for multiple user,
+  //so the UID of root is returned.
+  const static int UID_ROOT = 0;
+  return UID_ROOT;
+}
+
+machine_word_t syscall_linux_getegid(machine_word_t args[])
+{
+  //TODO: This is a stub function. uCore now has no support for multiple user,
+  //so the UID of root is returned.
+  const static int GID_ROOT = 0;
+  return GID_ROOT;
+}
+
+machine_word_t syscall_linux_setgroups(machine_word_t args[])
+{
+  //TODO: This is a stub function. uCore now has no support for multiple user.
+  size_t size = (size_t)args[0];
+  const int *list = (const int*)args[1];
+  //panic("%d %d\n", size, list[0]);
+  return 0;
+}
+
+machine_word_t syscall_linux_uname(machine_word_t args[])
+{
+  char *system_info = args[0];
+  const char* os_name = "uCore";
+  for(int i = 0; i < 5; i++) {
+    strcpy(system_info, os_name);
+    system_info += strlen(os_name) + 1;
+  }
+  return 0;
 }
 
 #ifndef __UCORE_64__

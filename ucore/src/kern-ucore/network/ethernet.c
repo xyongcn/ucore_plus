@@ -179,8 +179,10 @@ void ethernet_lwip_process_data() {
     ethernet_receive_data(&driver, &length, &data);
     if(data == NULL) break;
     struct pbuf *buf = low_level_input(driver->lwip_netif, length, data);
-    if(driver->lwip_netif->input(buf, driver->lwip_netif) != ERR_OK) {
-      pbuf_free(buf);
+    if(buf != NULL) {
+      if(driver->lwip_netif->input(buf, driver->lwip_netif) != ERR_OK) {
+        pbuf_free(buf);
+      }
     }
     kfree(data);
   }
