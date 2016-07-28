@@ -175,12 +175,28 @@ static uint32_t sys_shmem(uint32_t arg[])
 	return do_shmem(addr_store, len, mmap_flags);
 }
 
+static uint32_t sys_mkdir(uint32_t arg[])
+{
+	const char *path = (const char *)arg[0];
+	return sysfile_mkdir(path);
+}
+
+static uint32_t sys_unlink(uint32_t arg[])
+{
+	const char *name = (const char *)arg[0];
+	return sysfile_unlink(name);
+}
+
+
 static uint32_t (*linux_syscall_table[1000]) (uint32_t arg[]) = {
   [__NR_exit] syscall_linux_exit,
+  [__NR_wait4] syscall_linux_wait4,
+  [__NR_fork] sys_fork,
   [__NR_read] syscall_linux_read,
   [__NR_write] syscall_linux_write,
   [__NR_open] syscall_linux_open,
   [__NR_close] syscall_linux_close,
+  [__NR_getpid] syscall_linux_getpid,
   [__NR_time] syscall_linux_time,
   [__NR_brk] syscall_linux_brk,
   [__NR_getuid] syscall_linux_getuid,
@@ -197,6 +213,32 @@ static uint32_t (*linux_syscall_table[1000]) (uint32_t arg[]) = {
   [__NR_stat64] syscall_linux_stat64,
   [__NR_lstat64] syscall_linux_lstat64,
   [__NR_fstat64] syscall_linux_fstat64,
+  [__NR_rt_sigaction] syscall_linux_sigaction,
+  [__NR_rt_sigreturn] syscall_linux_sigreturn,
+  [__NR_rt_sigprocmask] syscall_linux_sigprocmask,
+  [__NR_getppid] syscall_linux_getppid,
+  [__NR_getpgrp] syscall_linux_getpgrp,
+  [__NR_getcwd] syscall_linux_getcwd,
+  [__NR_geteuid] syscall_linux_geteuid,
+  [__NR_getegid] syscall_linux_getegid,
+  [__NR__newselect] syscall_linux_select,
+  [__NR_poll] syscall_linux_poll,
+  [__NR_dup] syscall_linux_dup,
+  [__NR_dup2] syscall_linux_dup2,
+  [__NR_uname] syscall_linux_uname,
+  [__NR_socket] syscall_linux_socket,
+  [__NR_connect] syscall_linux_connect,
+  [__NR_accept] syscall_linux_accept,
+  [__NR_sendto] syscall_linux_sendto,
+  [__NR_recvfrom] syscall_linux_recvfrom,
+  [__NR_send] syscall_linux_send,
+  [__NR_recv] syscall_linux_recv,
+  [__NR_bind] syscall_linux_bind,
+  [__NR_listen] syscall_linux_listen,
+  [__NR_getsockname] syscall_linux_getsockname,
+  [__NR_getpeername] syscall_linux_getpeername,
+  [__NR_setsockopt] syscall_linux_setsockopt,
+  [__NR_getsockopt] syscall_linux_getsockopt,
 };
 
 void syscall_linux(void) {
@@ -213,8 +255,10 @@ void syscall_linux(void) {
       uint32_t* stack_pointor = tf->tf_regs.reg_r[MIPS_REG_SP];
       arg[4] = stack_pointor[4];
       arg[5] = stack_pointor[5];
+      //kprintf("Syscall %d : args = %x %x %x %x %x %x\n", num, arg[0], arg[1], arg[2], arg[3], arg[4],arg[5],arg[6]);
       tf->tf_regs.reg_r[MIPS_REG_V0] = linux_syscall_table[num] (arg);
       tf->tf_regs.reg_r[MIPS_REG_A3] = 0;
+      //kprintf("Syscall ret %d : %x, pid=%d\n", num, tf->tf_regs.reg_r[MIPS_REG_V0], current->pid);
       return;
     }
   }
@@ -250,6 +294,8 @@ static int (*syscalls[]) (uint32_t arg[]) = {
       [SYS_shmem] sys_shmem,
       [SYS_mount] syscall_linux_mount,
       [SYS_umount] syscall_linux_umount,
+      [SYS_mkdir] sys_mkdir,
+      [SYS_unlink] sys_unlink,
 };
 
 static int (*linux_syscalls[]) (uint32_t arg[]) = {

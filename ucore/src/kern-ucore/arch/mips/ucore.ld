@@ -43,7 +43,6 @@ etext = .; _etext = .;
   *(.percpu)
   __percpu_end = .;
   __DWARF_DEBUG_LINE_BEGIN__ = .;
-  *(.debug_line);
   __DWARF_DEBUG_LINE_END__ = .;
     . = ALIGN(16);
 }
@@ -63,9 +62,9 @@ wrs_kernel_bss_end = .; _wrs_kernel_bss_end = .;
 
 /DISCARD/ :
 {
-  /*
-  *(.stub)
-  *(.debug*) */
+  *(.symtab)
+  *(.strtab)
+  *(.debug*)
   *(.note)    /* seen on Pentium ELF */
   *(.comment)    /* seen on PPC & SH ELF */
   *(.reginfo)

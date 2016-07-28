@@ -4,3 +4,20 @@ source src/kern-ucore/mm/Kconfig
 source src/kern-ucore/schedule/Kconfig
 source src/kern-ucore/fs/Kconfig
 source src/kern-ucore/module/Kconfig
+
+config MIPS_USE_THINPAD_SERIAL_DRIVER
+  bool "Enable Thinpad Serial Driver"
+  default n
+  help
+    In most cases, The FPGA-based processor in Thinpad is much simplier than
+    and incompatible with the one qemu simulated. Enabling this option to
+    use that simple serial driver. Note you may need to modify the source code
+    if your serial implementation is different (e.g. having different I/O map).
+
+config MIPS_ENABLE_THINPAD_FLASH_DRIVER
+  bool "Enable Simple (i.e. Thinpad) Serial Driver"
+  default n
+  help
+    Enabling this option to enable access to FlashROM through FPGA-based
+    processor in Thinpad. Note you may need to modify the source code
+    if your serial implementation is different (e.g. having different I/O map).

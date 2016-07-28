@@ -2,7 +2,7 @@
 # Toolchain setup
 #
 
-CROSS_COMPILE="mips-elf-"
+CROSS_COMPILE="mips-sde-elf-"
 ADDITIONAL_CFLAGS=""
 ADDITIONAL_LDFLAGS=""
 
@@ -20,9 +20,9 @@ SCHEDULER_MLFQ=n
 # Filesystem
 #
 HAVE_SFS=y
-SFS_IMAGE_SIZE=8
-# HAVE_YAFFS2 is not set
-# HAVE_FATFS is not set
+SFS_IMAGE_SIZE=1
+HAVE_YAFFS2=y
+HAVE_FATFS=y
 
 #
 # Linux Device Driver Environment
@@ -32,4 +32,7 @@ SFS_IMAGE_SIZE=8
 #
 # Bionic libc porting related code is currently not supported in MIPS.
 #
-BIONIC_LIBC=n
+BIONIC_LIBC=y
+
+MIPS_USE_THINPAD_SERIAL_DRIVER=y
+MIPS_ENABLE_THINPAD_FLASH_DRIVER=y

@@ -312,6 +312,7 @@ static void trap_dispatch(struct trapframe *tf)
     const uint32_t BRANCH_OPCODE_MASK = 0xFC000000;
     const uint32_t LW_OPCODE = 0x8C000000;
     const uint32_t SW_OPCODE = 0xAC000000;
+    const uint32_t SH_OPCODE = 0xA4000000;
     const uint32_t BNE_OPCODE = 0x14000000;
     bool in_branch_delay_slot = 0;
     if(tf->tf_cause & (1 << 31)) {
@@ -365,10 +366,21 @@ static void trap_dispatch(struct trapframe *tf)
       tf->tf_epc = (void*)((uint32_t)tf->tf_epc + 4);
       break;
     }
+    else if((instruction & LOAD_STORE_OPCODE_MASK) == SH_OPCODE) {
+      int rt = (instruction >> 16) & 0x1F;
+      int base = (instruction >> 21) & 0x1F;
+      int offset = instruction & 0xFFFF;
+      int base_address = base == 0 ? 0 : tf->tf_regs.reg_r[base - 1];
+      uint32_t value = rt == 0 ? 0 : tf->tf_regs.reg_r[rt - 1];
+      memcpy((void*)(base_address + offset), &value, 2);
+      tf->tf_epc = (void*)((uint32_t)tf->tf_epc + 4);
+      break;
+    }
 		if (trap_in_kernel(tf)) {
 			print_trapframe(tf);
 			panic("Alignment Error on instruction %x", instruction);
 		} else {
+      kprintf("Alignment Error on instruction %x", instruction);
 			print_trapframe(tf);
 			do_exit(-E_KILLED);
 		}
