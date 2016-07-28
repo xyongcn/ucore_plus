@@ -179,7 +179,14 @@ void dev_init(void)
 	init_device(stdin);
 	init_device(stdout);
   init_device(urandom);
+#ifdef UCONFIG_HAVE_FUSE
   init_device(fuse);
+#endif
+
+#ifdef UCONFIG_MIPS_ENABLE_THINPAD_FLASH_DRIVER
+  init_device(thinpad_flashrom);
+#endif
+
 	init_device(disk);
 }
 

@@ -105,7 +105,11 @@ int vfs_lookup(char *path, struct inode **node_store)
       vop_read(*node_store, &iobuf);
       int link_to_path_length = iobuf_used(&iobuf);
       link_to_path[link_to_path_length] = '\0';
-      strcpy(fullpath, subpath);
+      fullpath[0] = '\0';
+      if(subpath[0] != '/' && subpath[0] != '.') {
+        strcpy(fullpath, "/");
+      }
+      strcat(fullpath, subpath);
       strcat(fullpath, "/");
       strcat(fullpath, link_to_path);
       kfree(link_to_path);

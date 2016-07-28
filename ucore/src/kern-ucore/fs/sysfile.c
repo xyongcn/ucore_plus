@@ -302,17 +302,36 @@ int sysfile_linux_stat64(const char __user * fn, struct linux_stat64 *__user buf
 }
 #endif /* __UCORE_64__ */
 
+#define F_DUPFD		0	/* dup */
+#define F_GETFD		1	/* get close_on_exec */
+#define F_SETFD		2	/* set/clear close_on_exec */
+#define F_GETFL		3	/* get file->f_flags */
+#define F_SETFL		4	/* set file->f_flags */
+
 int sysfile_linux_fcntl64(int fd, int cmd, int arg)
 {
-  const static int F_DUPFD = 0;
+  //const static int F_DUPFD = 0;
   if(cmd == F_DUPFD) {
     int ret =  file_dup(fd, arg);
     return ret;
     //panic("fd = %d, fd = %d ret = %d", fd, arg, ret);
   }
-	//kprintf("sysfile_linux_fcntl64:fd=%08x cmd=%08x arg=%08x\n", fd, cmd,
-	//	arg);
-	return 0;
+  else if(cmd == F_SETFL) {
+    struct file *file;
+    if (fd2file(fd, &file) != 0) {
+      return -E_INVAL;
+    }
+    file->io_flags = arg;
+    return 0;
+  }
+  else if(cmd == F_GETFL) {
+    struct file *file;
+    if (fd2file(fd, &file) != 0) {
+      return -E_INVAL;
+    }
+    return file->io_flags;
+  }
+	return -E_INVAL;
 }
 
 int sysfile_linux_stat(const char __user * fn, struct linux_stat *__user buf)
@@ -648,14 +667,21 @@ int sysfile_linux_select(int nfds, linux_fd_set_t *readfds, linux_fd_set_t *writ
   linux_fd_set_t *ucore_readfds = kmalloc(sizeof(linux_fd_set_t));
   linux_fd_set_t *ucore_writefds = kmalloc(sizeof(linux_fd_set_t));
   linux_fd_set_t *ucore_exceptfds = kmalloc(sizeof(linux_fd_set_t));
-  struct linux_timeval *ktimeout = kmalloc(sizeof(struct linux_timeval));
+  struct linux_timeval *ktimeout;
   memset(lwip_wrapper_readfds, 0, sizeof(linux_fd_set_t));
   memset(lwip_wrapper_writefds, 0, sizeof(linux_fd_set_t));
   memset(lwip_wrapper_exceptfds, 0, sizeof(linux_fd_set_t));
   memset(ucore_readfds, 0, sizeof(linux_fd_set_t));
   memset(ucore_writefds, 0, sizeof(linux_fd_set_t));
   memset(ucore_exceptfds, 0, sizeof(linux_fd_set_t));
-  memcpy(ktimeout, timeout, sizeof(struct linux_timeval));
+  if(timeout != NULL) {
+    ktimeout = kmalloc(sizeof(struct linux_timeval));
+    memcpy(ktimeout, timeout, sizeof(struct linux_timeval));
+  }
+  else {
+    ktimeout = NULL;
+  }
+
   int socket_fds = 0;
   int other_fds = 0;
   for(int i = 0; i < nfds; i++) {
@@ -756,7 +782,17 @@ int sysfile_linux_select(int nfds, linux_fd_set_t *readfds, linux_fd_set_t *writ
       );
     }
     if(ready_fd_count == 0 && (*lwip_ret) == 0) {
-      do_linux_sleep(timeout);
+      if(timeout) {
+        do_linux_sleep(timeout);
+      }
+      else {
+        bool intr_flag;
+        local_intr_save(intr_flag);
+        current->state = PROC_SLEEPING;
+        current->wait_state = WT_INTERRUPTED;
+        local_intr_restore(intr_flag);
+        schedule();
+      }
     }
     *lwip_notify = NULL;
     for(int i = 0; i < other_fds; i++) {
@@ -801,6 +837,6 @@ out:
   kfree(ucore_readfds);
   kfree(ucore_writefds);
   kfree(ucore_exceptfds);
-  kfree(ktimeout);
+  if(ktimeout != NULL) kfree(ktimeout);
   return ret;
 }

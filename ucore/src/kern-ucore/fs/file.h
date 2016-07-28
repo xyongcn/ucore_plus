@@ -23,6 +23,7 @@ struct file {
 	bool writable;
 	int fd;
 	off_t pos;
+  int io_flags;
 	struct inode *node;
 	atomic_t open_count;
 };

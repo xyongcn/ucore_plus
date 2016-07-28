@@ -20,7 +20,7 @@ void pipe_state_release(struct pipe_state *state);
 void pipe_state_close(struct pipe_state *state);
 
 size_t pipe_state_size(struct pipe_state *state, bool write);
-size_t pipe_state_read(struct pipe_state *state, void *buf, size_t n);
-size_t pipe_state_write(struct pipe_state *state, void *buf, size_t n);
+size_t pipe_state_read(struct pipe_state *state, void *buf, size_t n, bool no_block);
+size_t pipe_state_write(struct pipe_state *state, void *buf, size_t n, bool no_block);
 
 #endif /* !__KERN_FS_PIPE_PIPE_STATE_H__ */

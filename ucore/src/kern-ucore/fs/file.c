@@ -90,6 +90,7 @@ void filemap_open(struct file *file)
 	assert((file->status == FD_INIT || file->status == FD_OPENED)
 	       && file->node != NULL);
 	file->status = FD_OPENED;
+  file->io_flags = 0;
 	fopen_count_inc(file);
 }
 
@@ -135,7 +136,7 @@ inline int fd2file(int fd, struct file **file_store)
 			return 0;
 		}
 	}
-	return -E_INVAL;
+	return -E_BADF;
 }
 
 #ifdef UCONFIG_BIONIC_LIBC
@@ -148,7 +149,7 @@ fd2file_onfs(int fd, struct fs_struct *fs_struct) {
 			return file;
 		}
 	} else {
-		panic("testfd() failed");
+		panic("testfd() failed %d", fd);
 	}
 	return NULL;
 }
@@ -225,6 +226,7 @@ int file_close(int fd)
 		return ret;
 	}
 	filemap_close(file);
+  //kprintf(" pid %d Closing fd %d\n", current->pid, fd);
 	return 0;
 }
 
@@ -245,7 +247,7 @@ int file_read(int fd, void *base, size_t len, size_t * copied_store)
 	filemap_acquire(file);
 
 	struct iobuf __iob, *iob = iobuf_init(&__iob, base, len, file->pos);
-	ret = vop_read(file->node, iob);
+	ret = vop_read(file->node, iob, file->io_flags);
 
 	size_t copied = iobuf_used(iob);
 	if (file->status == FD_OPENED) {
@@ -270,7 +272,7 @@ int file_write(int fd, void *base, size_t len, size_t * copied_store)
 	filemap_acquire(file);
 
 	struct iobuf __iob, *iob = iobuf_init(&__iob, base, len, file->pos);
-	ret = vop_write(file->node, iob);
+	ret = vop_write(file->node, iob, file->io_flags);
 
 	size_t copied = iobuf_used(iob);
 	if (file->status == FD_OPENED) {
@@ -384,6 +386,16 @@ int file_getdirentry64(int fd, struct dirent64 *direntp)
 
 int file_dup(int fd1, int fd2)
 {
+  if(fd1 == 4 && fd2 == 3) {
+    kprintf("pid = %d\n", current->pid);
+    for(int i = 0; i < 10; i++) {
+      struct file *file = get_filemap() + i;
+      if(file->node)
+      kprintf("%d %x %x status = %d count=%d\n type=%d", i, file, file->node, file->status, fopen_count(file)
+    ,file->node->in_type);
+    }
+    //panic("dup : %d %d\n", fd1, fd2);
+  }
 	int ret;
 	struct file *file1, *file2;
 
@@ -403,6 +415,7 @@ int file_dup(int fd1, int fd2)
 
   //Now let fd2 become a duplication for fd1. If fd2 is NO_FD, a new fd will be assigned.
 	if ((ret = filemap_alloc(fd2, &file2)) != 0) {
+    kprintf("Cannot assign fd2\n");
 		return ret;
 	}
 	filemap_dup(file2, file1);

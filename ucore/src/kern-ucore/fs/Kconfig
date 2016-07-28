@@ -30,4 +30,12 @@ config HAVE_FATFS
   bool "Enable Fat32"
   default n
 
+config HAVE_FUSE
+  bool "Enable FUSE (Under development, not usable yet.)"
+  help
+    When selected, this option will enable FUSE (Filesystem in USErspace),
+    However, this is a porting project from FreeBSD, and is not finished yet.
+    So enable it only when you are working on it.
+  default n
+
 endmenu

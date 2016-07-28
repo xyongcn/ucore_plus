@@ -119,7 +119,7 @@ size_t pipe_state_size(struct pipe_state *state, bool write)
 	return size;
 }
 
-size_t pipe_state_read(struct pipe_state * state, void *buf, size_t n)
+size_t pipe_state_read(struct pipe_state * state, void *buf, size_t n, bool no_block)
 {
 	size_t ret = 0;
 try_again:
@@ -129,10 +129,13 @@ try_again:
 			goto out_unlock;
 		} else {
 			unlock_state(state);
-			if (!wait_writer(state)) {
-				goto out;
-			}
-			goto try_again;
+      if(!no_block) {
+			  if (!wait_writer(state)) {
+				  goto out;
+			  }
+			  goto try_again;
+      }
+      else goto out;
 		}
 	}
 	for (; ret < n && !is_empty(state); ret++, state->p_rpos++) {
@@ -149,7 +152,7 @@ out:
 	return ret;
 }
 
-size_t pipe_state_write(struct pipe_state * state, void *buf, size_t n)
+size_t pipe_state_write(struct pipe_state * state, void *buf, size_t n, bool no_block)
 {
 	size_t ret = 0, step;
 try_again:
@@ -161,10 +164,13 @@ try_again:
 		if (is_full(state)) {
 			wakeup_reader(state);
 			unlock_state(state);
-			if (!wait_reader(state)) {
-				goto out;
-			}
-			goto try_again;
+      if(!no_block) {
+			  if (!wait_reader(state)) {
+				  goto out;
+			  }
+			  goto try_again;
+      }
+      else goto out;
 		}
 		state->buf[state->p_wpos % PIPE_BUFSIZE] =
 		    *(uint8_t *) (buf + ret);
