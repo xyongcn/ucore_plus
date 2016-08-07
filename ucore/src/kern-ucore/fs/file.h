@@ -16,12 +16,8 @@ struct ucore_file {
 #else
 struct file {
 #endif
-	enum {
-		FD_NONE, FD_INIT, FD_OPENED, FD_CLOSED,
-	} status;
 	bool readable;
 	bool writable;
-	int fd;
 	off_t pos;
   int io_flags;
 	struct inode *node;
@@ -65,7 +61,12 @@ static inline int fopen_count_inc(struct file *file)
 
 static inline int fopen_count_dec(struct file *file)
 {
-	return atomic_sub_return(&(file->open_count), 1);
+	int ret = atomic_sub_return(&(file->open_count), 1);
+  if(ret == 0) {
+    vfs_close(file->node);
+    kernel_file_pool_free(file);
+  }
+  return ret;
 }
 
 #ifdef UCONFIG_BIONIC_LIBC

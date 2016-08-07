@@ -20,24 +20,17 @@
 
 void filemap_acquire(struct file *file)
 {
-	//assert(file->status == FD_OPENED || file->status == FD_CLOSED);
 	fopen_count_inc(file);
 }
 
 void filemap_release(struct file *file)
 {
-	//assert(file->status == FD_OPENED || file->status == FD_CLOSED);
 	assert(fopen_count(file) > 0);
-	if (fopen_count_dec(file) == 0) {
-		//filemap_free(file);
-    vfs_close(file->node);
-    kernel_file_pool_free(file);
-	}
+	fopen_count_dec(file);
 }
 
 int file_init(struct file *file)
 {
-  file->status = FD_NONE;
   file->readable = 0;
   file->writable = 0;
   file->pos = 0;
@@ -121,6 +114,7 @@ int file_open(char *path, uint32_t open_flags)
 
   //Try to allocate a new kernel struct file object.
 	struct file *file = kernel_file_pool_allocate();
+  file_init(file);
   if(file == NULL) {
     return -E_NO_MEM;
   }
@@ -219,9 +213,7 @@ int file_write(int fd, void *base, size_t len, size_t * copied_store)
 	ret = vop_write(file->node, iob, file->io_flags);
 
 	size_t copied = iobuf_used(iob);
-	if (file->status == FD_OPENED) {
-		file->pos += copied;
-	}
+	file->pos += copied;
 	*copied_store = copied;
 	filemap_release(file);
 	return ret;
@@ -359,7 +351,8 @@ int file_dup(int fd1, int fd2)
   //Now let fd2 become a duplication for fd1.
   file_desc_table_associate(desc_table, fd2, file);
 
-	return file2->fd;
+  //fd2 is returned.
+	return fd2;
 }
 
 int file_pipe(int fd[])
@@ -627,7 +620,9 @@ void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 		goto out_unlock;
 	}
 	if (!(flags & MAP_ANONYMOUS)) {
-    vma_mapfile(vma, fd, off, NULL);
+    struct file_desc_table *desc_table = fs_get_desc_table(current->fs_struct);
+    struct file* file = file_desc_table_get_file(desc_table, fd);
+    vma_mapfile(vma, file, off, current->fs_struct);
 		//vma_mapfile(vma, fd, off << 12, NULL);
 	}
 	subret = 0;
@@ -650,9 +645,7 @@ int filestruct_read(struct file *file, void *base, size_t len)
 	struct iobuf __iob, *iob = iobuf_init(&__iob, base, len, file->pos);
 	vop_read(file->node, iob);
 	size_t copied = iobuf_used(iob);
-	if (file->status == FD_OPENED) {
-		file->pos += copied;
-	}
+	file->pos += copied;
 	return copied;
 }
 
