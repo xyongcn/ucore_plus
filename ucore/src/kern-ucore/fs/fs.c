@@ -5,6 +5,8 @@
 #include <dev.h>
 #include <file.h>
 #include <pipe.h>
+#include <kernel_file_pool.h>
+#include <file_desc_table.h>
 #include <inode.h>
 #include <assert.h>
 
@@ -14,6 +16,7 @@
 
 void fs_init(void)
 {
+  kernel_file_pool_init();
 	vfs_init();
   devfs_init();
 	dev_init();
@@ -55,16 +58,18 @@ void unlock_fs(struct fs_struct *fs_struct)
 struct fs_struct *fs_create(void)
 {
 	static_assert((int)FS_STRUCT_NENTRY > 128);
-	struct fs_struct *fs_struct;
-	if ((fs_struct =
-	     kmalloc(sizeof(struct fs_struct) + FS_STRUCT_BUFSIZE)) != NULL) {
-		fs_struct->pwd = NULL;
-		fs_struct->filemap = (void *)(fs_struct + 1);
-		atomic_set(&(fs_struct->fs_count), 0);
-		sem_init(&(fs_struct->fs_sem), 1);
-		filemap_init(fs_struct->filemap);
-	}
+	struct fs_struct *fs_struct = kmalloc(sizeof(struct fs_struct));
+  //TODO: This function needs to be rewritten.
+	fs_struct->pwd = NULL;
+  file_desc_table_init(&fs_struct->desc_table, 1024);
+	atomic_set(&(fs_struct->fs_count), 0);
+	sem_init(&(fs_struct->fs_sem), 1);
 	return fs_struct;
+}
+
+struct file_desc_table* fs_get_desc_table(struct fs_struct *fs_struct)
+{
+  return &fs_struct->desc_table;
 }
 
 void fs_destroy(struct fs_struct *fs_struct)
@@ -73,20 +78,11 @@ void fs_destroy(struct fs_struct *fs_struct)
 	if (fs_struct->pwd != NULL) {
 		vop_ref_dec(fs_struct->pwd);
 	}
-	int i;
-	struct file *file = fs_struct->filemap;
-	for (i = 0; i < FS_STRUCT_NENTRY; i++, file++) {
-		if (file->status == FD_OPENED) {
-			filemap_close(file);
-		}
-		if (file->status != FD_NONE)
-			kprintf("file->fd:%d\n", file->fd);
-		assert(file->status == FD_NONE);
-	}
+	file_desc_table_uninit(&fs_struct->desc_table);
 	kfree(fs_struct);
 }
 
-void fs_closeall(struct fs_struct *fs_struct)
+/*void fs_closeall(struct fs_struct *fs_struct)
 {
 	assert(fs_struct != NULL && fs_count(fs_struct) > 0);
 	int i;
@@ -96,7 +92,7 @@ void fs_closeall(struct fs_struct *fs_struct)
 			filemap_close(file);
 		}
 	}
-}
+}*/
 
 int dup_fs(struct fs_struct *to, struct fs_struct *from)
 {
@@ -105,11 +101,12 @@ int dup_fs(struct fs_struct *to, struct fs_struct *from)
 	if ((to->pwd = from->pwd) != NULL) {
 		vop_ref_inc(to->pwd);
 	}
-	int i;
+  file_desc_table_copy(&to->desc_table, &from->desc_table);
+	/*int i;
 	struct file *to_file = to->filemap, *from_file = from->filemap;
 	for (i = 0; i < FS_STRUCT_NENTRY; i++, to_file++, from_file++) {
 		if (from_file->status == FD_OPENED) {
-			/* alloc_fd first */
+			// alloc_fd first
 			to_file->status = FD_INIT;
 			filemap_dup(to_file, from_file);
 		}
@@ -117,6 +114,6 @@ int dup_fs(struct fs_struct *to, struct fs_struct *from)
 			to_file->status = from_file->status;
 			filemap_dup_close(to_file, from_file);
 		}
-	}
+	}*/
 	return 0;
 }
