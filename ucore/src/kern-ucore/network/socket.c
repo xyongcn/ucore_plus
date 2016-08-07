@@ -4,6 +4,8 @@
 #include <file.h>
 #include <error.h>
 #include <stat.h>
+#include <kernel_file_pool.h>
+#include <file_desc_table.h>
 #include "lwip/sockets.h"
 #include "socket_inode.h"
 #include "socket.h"
@@ -26,11 +28,18 @@ static void lwip_sockaddr_to_linux_sockaddr(struct sockaddr *lwip_sockaddr, stru
 
 static int wrap_lwip_socket(int lwip_fd)
 {
+  struct file_desc_table *desc_table = fs_get_desc_table(current->fs_struct);
   int ret;
-  struct file *file;
-  if ((ret = filemap_alloc(NO_FD, &file)) < 0) {
-    return -E_BADF;
+  struct file *file = kernel_file_pool_allocate();
+  if(file == NULL) {
+    return -E_NFILE;
   }
+  ret = file_desc_table_get_unused(desc_table);
+  if(ret == -1) {
+    kernel_file_pool_free(file);
+    return -E_MFILE;
+  }
+  file_init(file);
   struct inode *node = NULL;
   node = alloc_inode(default_inode);
   assert(node != NULL);
@@ -39,13 +48,13 @@ static int wrap_lwip_socket(int lwip_fd)
   file->node = node;
   file->readable = 1;
   file->writable = 1;
-  filemap_open(file);
+  file_desc_table_associate(desc_table, ret, file);
   struct socket_inode_private_data *private_data = kmalloc(sizeof(struct socket_inode_private_data));
   node->private_data = private_data;
   private_data->lwip_socket = lwip_fd;
   vop_open_inc(node);
   vop_ref_inc(node);
-  return file->fd;
+  return ret;
 }
 
 static int socket_ucore_fd_to_lwip_fd(int ucore_fd, int *lwip_fd)
@@ -65,6 +74,19 @@ static int socket_ucore_fd_to_lwip_fd(int ucore_fd, int *lwip_fd)
 
 int socket_create(int domain, int type, int protocol)
 {
+#ifdef ARCH_MIPS
+  //MIPS is the only architecture that has an reversed definition of SOCK_DGRAM
+  //and SOCK_STREAM, so this work-around is used. See
+  //http://lxr.free-electrons.com/source/arch/mips/include/asm/socket.h and
+  //http://lxr.free-electrons.com/source/include/linux/net.h for
+  //for further information.
+  if(type == SOCK_DGRAM) {
+    type = SOCK_STREAM;
+  }
+  else if(type == SOCK_STREAM) {
+    type = SOCK_DGRAM;
+  }
+#endif
   int ret = lwip_socket(domain, type, protocol);
   if(ret < 0) return ret;
   return wrap_lwip_socket(ret);
