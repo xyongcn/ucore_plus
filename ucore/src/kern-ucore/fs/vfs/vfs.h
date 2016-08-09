@@ -213,7 +213,7 @@ int unregister_filesystem(struct file_system_type* fs_type);
 int vfs_do_mount_nocheck(const char *devname, const char* mountpoint,
   const char *fs_name, int flags, void* data);
 int do_mount(const char *devname, const char* mountpoint, const char *fs_name,
-  unsigned long flags, void* data);
+  unsigned long flags, const void* data);
 int do_umount(const char *target);
 
 #endif /* !__KERN_FS_VFS_VFS_H__ */

@@ -1,8 +1,9 @@
+#include <kio.h>
+#include <stdio.h>
+#include <string.h>
 #include <proc.h>
 #include <syscall.h>
-#include <syscall_linux.h>
 #include <trap.h>
-#include <stdio.h>
 #include <pmm.h>
 #include <vmm.h>
 #include <clock.h>
@@ -10,17 +11,17 @@
 #include <assert.h>
 #include <sem.h>
 #include <event.h>
-#include <mbox.h>
 #include <stat.h>
 #include <dirent.h>
 #include <sysfile.h>
-#include <kio.h>
 #include <file.h>
+#include <vfs.h>
 #include <linux_misc_struct.h>
 #include <fd_set.h>
 #include <inode.h>
 #include <time/time.h>
 #include <network/socket.h>
+#include <syscall_linux.h>
 
 struct iovec;
 
@@ -29,6 +30,53 @@ machine_word_t syscall_linux_exit(machine_word_t arg[])
 	int error_code = (int)arg[0];
 	return do_exit(error_code);
 }
+
+machine_word_t syscall_linux_wait4(machine_word_t args[])
+{
+	int pid = (int)args[0];
+	int *store = (int*)args[1];
+	int options = (int)args[2];
+	void *rusage = (void *)args[3];
+	if (options && rusage)
+		return -E_INVAL;
+	return do_linux_waitpid(pid, store);
+}
+
+machine_word_t syscall_linux_getpid(machine_word_t args[])
+{
+	return current->pid;
+}
+
+machine_word_t syscall_linux_getppid(machine_word_t args[])
+{
+	struct proc_struct *parent = current->parent;
+	if (!parent)
+		return 0;
+	return parent->pid;
+}
+
+machine_word_t syscall_linux_getpgrp(machine_word_t args[])
+{
+  return current->gid;
+}
+
+machine_word_t syscall_linux_sigaction(machine_word_t arg[])
+{
+	return do_sigaction((int)arg[0], (const struct sigaction *)arg[1],
+			    (struct sigaction *)arg[2]);
+}
+
+machine_word_t syscall_linux_sigreturn(machine_word_t arg[])
+{
+  return do_sigreturn();
+}
+
+machine_word_t syscall_linux_sigprocmask(machine_word_t arg[])
+{
+	return do_sigprocmask((int)arg[0], (const sigset_t *)arg[1],
+			      (sigset_t *) arg[2]);
+}
+
 
 machine_word_t syscall_linux_read(machine_word_t args[])
 {
@@ -106,6 +154,15 @@ machine_word_t syscall_linux_seek(machine_word_t args[])
   return sysfile_seek(fd, pos, whence);
 }
 
+machine_word_t syscall_linux_getcwd(machine_word_t args[])
+{
+	char *buf = (char *)args[0];
+	size_t len = (size_t)args[1];
+	int ret = sysfile_getcwd(buf, len);
+  if(ret < 0) return ret;
+  return strlen(buf) + 1;
+}
+
 machine_word_t syscall_linux_getdents(machine_word_t args[])
 {
 	unsigned int fd = (unsigned int)args[0];
@@ -134,11 +191,11 @@ machine_word_t syscall_linux_getdents64(machine_word_t args[])
 machine_word_t syscall_linux_ioctl(machine_word_t args[])
 {
   int fd = (int)args[0];
-	//FIXME
-	if (fd < 3)
-		return 0;
 	unsigned int cmd = (unsigned int)args[1];
 	unsigned long data = (unsigned long)args[2];
+  if (fd < 3) {
+    return 0;
+  }
 	return sysfile_ioctl(fd, cmd, data);
 }
 
@@ -150,13 +207,13 @@ machine_word_t syscall_linux_fcntl(machine_word_t args[])
 	return sysfile_linux_fcntl64(fd, cmd, arg);
 }
 
-machine_word_t syscall_linux_brk(machine_word_t arg[])
+machine_word_t syscall_linux_brk(machine_word_t args[])
 {
-  uintptr_t *brk_store = (uintptr_t*)arg[0];
-  return do_brk(brk_store);
+  uintptr_t brk_store = (uintptr_t)args[0];
+  return do_linux_brk(brk_store);
 }
 
-machine_word_t syscall_linux_old_mmap(machine_word_t args[])
+/*machine_word_t syscall_linux_old_mmap(machine_word_t args[])
 {
   struct mmap_arg_struct {
        unsigned long addr;
@@ -173,9 +230,8 @@ machine_word_t syscall_linux_old_mmap(machine_word_t args[])
   args[3] = user_args->flags;
   args[4] = user_args->fd;
   args[5] = user_args->offset;
-    panic("syscall_linux");
   return syscall_linux_mmap(args);
-}
+}*/
 
 machine_word_t syscall_linux_mmap(machine_word_t args[])
 {
@@ -191,11 +247,8 @@ machine_word_t syscall_linux_mmap(machine_word_t args[])
 	     addr, len, prot, flags, fd, off);
 #endif //UCONFIG_BIONIC_LIBC
 	if (fd == -1 || flags & MAP_ANONYMOUS) {
-    kprintf("fd is -1\n");
-		//print_trapframe(current->tf);
 #ifdef UCONFIG_BIONIC_LIBC
 		if (flags & MAP_FIXED) {
-      kprintf("fixed\n");
 			return linux_regfile_mmap2(addr, len, prot, flags, fd,
 						   off);
 		}
@@ -231,6 +284,21 @@ machine_word_t syscall_linux_mprotect(machine_word_t args[])
 	return do_mprotect(addr, len, prot);
 }
 
+machine_word_t syscall_linux_poll(machine_word_t args[])
+{
+  struct linux_pollfd {
+  	int fd;			/* file descriptor */
+  	short events;		/* requested events */
+  	short revents;		/* returned events */
+  };
+  //TODO: This is a stub, try to reimplement.
+	struct linux_pollfd *fd = (struct linux_pollfd *)args[0]; // can be hacked
+	int nfds = (int)args[1];
+	int timeout = (int)args[2];	//ms
+	fd->revents = fd->events;
+	return nfds;
+}
+
 machine_word_t syscall_linux_select(machine_word_t args[])
 {
   int nfds = (int)args[0];
@@ -238,7 +306,7 @@ machine_word_t syscall_linux_select(machine_word_t args[])
   linux_fd_set_t *writefds = (linux_fd_set_t*)args[2];
   linux_fd_set_t *exceptfds = (linux_fd_set_t*)args[3];
   struct linux_timeval *timeout = (struct linux_timeval*)args[4];
-  sysfile_linux_select(nfds, readfds, writefds, exceptfds, timeout);
+  return sysfile_linux_select(nfds, readfds, writefds, exceptfds, timeout);
 }
 
 machine_word_t syscall_linux_dup(machine_word_t args[])
@@ -336,16 +404,34 @@ machine_word_t syscall_linux_getpeername(machine_word_t args[])
   return socket_getpeername(fd, usockaddr, usockaddr_len);
 }
 
+machine_word_t syscall_linux_send(machine_word_t args[])
+{
+  int fd = (int)args[0];
+  void *buff = (void*)args[1];
+  size_t size	= (size_t)args[2];
+  unsigned int flags = (unsigned int)args[3];
+    kprintf("syscall_linux_sendto, length = %d\n", size);
+  return socket_sendto(fd, buff, size, flags, NULL, 0);
+}
+
 machine_word_t syscall_linux_sendto(machine_word_t args[])
 {
   int fd = (int)args[0];
   void *buff = (void*)args[1];
   size_t size	= (size_t)args[2];
   unsigned int flags = (unsigned int)args[3];
-  struct linux_sockaddr;
   struct linux_sockaddr *addr = (struct linux_sockaddr*)args[4];
   int addr_len = (int)args[5];
-  socket_sendto(fd, buff, size, flags, addr, addr_len);
+  return socket_sendto(fd, buff, size, flags, addr, addr_len);
+}
+
+machine_word_t syscall_linux_recv(machine_word_t args[])
+{
+  int fd = (int)args[0];
+  void *ubuf = (void*)args[1];
+  size_t size	= (size_t)args[2];
+  unsigned int flags = (unsigned int)args[3];
+  return socket_recvfrom(fd, ubuf, size, flags, NULL, NULL);
 }
 
 machine_word_t syscall_linux_recvfrom(machine_word_t args[])
@@ -354,10 +440,9 @@ machine_word_t syscall_linux_recvfrom(machine_word_t args[])
   void *ubuf = (void*)args[1];
   size_t size	= (size_t)args[2];
   unsigned int flags = (unsigned int)args[3];
-  struct linux_sockaddr;
   struct linux_sockaddr *addr = (struct linux_sockaddr*)args[4];
   int *addr_len = (int*)args[5];
-  socket_recvfrom(fd, ubuf, size, flags, addr, addr_len);
+  return socket_recvfrom(fd, ubuf, size, flags, addr, addr_len);
 }
 
 machine_word_t syscall_linux_setsockopt(machine_word_t args[])
@@ -415,7 +500,7 @@ machine_word_t syscall_linux_setuid(machine_word_t args[])
   //TODO: This is a stub function. uCore now has no support for multiple user.
   const static int UID_ROOT = 0;
   int uid = args[0];
-  if(uid != 0) return -E_INVAL;
+  if(uid != UID_ROOT) return -E_INVAL;
   return 0;
 }
 
@@ -432,7 +517,7 @@ machine_word_t syscall_linux_setgid(machine_word_t args[])
   //TODO: This is a stub function. uCore now has no support for multiple user.
   const static int GID_ROOT = 0;
   int gid = args[0];
-  if(gid != 0) return -E_INVAL;
+  if(gid != GID_ROOT) return -E_INVAL;
   return 0;
 }
 

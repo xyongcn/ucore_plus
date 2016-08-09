@@ -190,7 +190,7 @@ int vfs_do_umount(const char* target, unsigned long flags)
  *
  */
 int do_mount(const char *devname, const char* mountpoint, const char *fs_name,
-  unsigned long flags, void* data)
+  unsigned long flags, const void* data)
 {
   int ret;
   struct inode* mountpoint_inode;

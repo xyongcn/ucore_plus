@@ -1,6 +1,14 @@
 #include <types.h>
 
-machine_word_t syscall_linux_exit(machine_word_t arg[]);
+machine_word_t syscall_linux_exit(machine_word_t args[]);
+machine_word_t syscall_linux_wait4(machine_word_t args[]);
+machine_word_t syscall_linux_getpid(machine_word_t args[]);
+machine_word_t syscall_linux_getppid(machine_word_t args[]);
+machine_word_t syscall_linux_getpgrp(machine_word_t args[]);
+
+machine_word_t syscall_linux_sigaction(machine_word_t args[]);
+machine_word_t syscall_linux_sigreturn(machine_word_t args[]);
+machine_word_t syscall_linux_sigprocmask(machine_word_t args[]);
 
 machine_word_t syscall_linux_read(machine_word_t args[]);
 machine_word_t syscall_linux_write(machine_word_t args[]);
@@ -12,17 +20,19 @@ machine_word_t syscall_linux_stat(machine_word_t args[]);
 machine_word_t syscall_linux_lstat(machine_word_t args[]);
 machine_word_t syscall_linux_fstat(machine_word_t args[]);
 machine_word_t syscall_linux_seek(machine_word_t args[]);
+machine_word_t syscall_linux_getcwd(machine_word_t args[]);
 machine_word_t syscall_linux_getdents(machine_word_t args[]);
 machine_word_t syscall_linux_getdents64(machine_word_t args[]);
 machine_word_t syscall_linux_ioctl(machine_word_t args[]);
 machine_word_t syscall_linux_fcntl(machine_word_t args[]);
 
-machine_word_t syscall_linux_brk(machine_word_t arg[]);
+machine_word_t syscall_linux_brk(machine_word_t args[]);
 machine_word_t syscall_linux_old_mmap(machine_word_t args[]);
 machine_word_t syscall_linux_mmap(machine_word_t args[]);
 machine_word_t syscall_linux_munmap(machine_word_t args[]);
 machine_word_t syscall_linux_mprotect(machine_word_t args[]);
 
+machine_word_t syscall_linux_poll(machine_word_t args[]);
 machine_word_t syscall_linux_select(machine_word_t args[]);
 
 machine_word_t syscall_linux_dup(machine_word_t args[]);
@@ -38,7 +48,9 @@ machine_word_t syscall_linux_listen(machine_word_t args[]);
 machine_word_t syscall_linux_accept(machine_word_t args[]);
 machine_word_t syscall_linux_getsockname(machine_word_t args[]);
 machine_word_t syscall_linux_getpeername(machine_word_t args[]);
+machine_word_t syscall_linux_send(machine_word_t args[]);
 machine_word_t syscall_linux_sendto(machine_word_t args[]);
+machine_word_t syscall_linux_recv(machine_word_t args[]);
 machine_word_t syscall_linux_recvfrom(machine_word_t args[]);
 machine_word_t syscall_linux_setsockopt(machine_word_t args[]);
 machine_word_t syscall_linux_getsockopt(machine_word_t args[]);

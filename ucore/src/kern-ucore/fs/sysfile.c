@@ -178,7 +178,7 @@ out:
 	return ret;
 }
 
-int sysfile_readv(int fd, struct iovec __user *iov, int iovcnt)
+int sysfile_readv(int fd, const struct iovec __user *iov, int iovcnt)
 {
   int bytes_read = 0;
 	for (int i = 0; i < iovcnt; ++i) {
@@ -190,7 +190,7 @@ int sysfile_readv(int fd, struct iovec __user *iov, int iovcnt)
   return bytes_read;
 }
 
-int sysfile_writev(int fd, struct iovec __user * iov, int iovcnt)
+int sysfile_writev(int fd, const struct iovec __user * iov, int iovcnt)
 {
   int bytes_written = 0;
 	for (int i = 0; i < iovcnt; ++i) {
