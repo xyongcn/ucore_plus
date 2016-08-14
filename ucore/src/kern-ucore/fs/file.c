@@ -161,6 +161,9 @@ int file_open(char *path, uint32_t open_flags)
 int file_close(int fd)
 {
   struct file_desc_table *desc_table = fs_get_desc_table(current->fs_struct);
+  if(file_desc_table_get_file(desc_table, fd) == NULL) {
+    return -E_BADF;
+  }
 	int ret;
 	struct file *file;
 	if ((ret = fd2file(fd, &file)) != 0) {
@@ -366,8 +369,8 @@ int file_pipe(int fd[])
     ret = -E_NFILE;
     goto failed_cleanup;
   }
-  file_init(&file[0]);
-  file_init(&file[1]);
+  file_init(file[0]);
+  file_init(file[1]);
   if ((ret = pipe_open(&(file[0]->node), &(file[1]->node))) != 0) {
     ret = -E_INVAL;
     goto failed_cleanup;

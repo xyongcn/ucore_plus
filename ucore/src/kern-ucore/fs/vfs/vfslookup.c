@@ -100,11 +100,8 @@ int vfs_lookup(char *path, struct inode **node_store)
         return ret;
       }
       char* link_to_path = kmalloc(1024);
-      struct iobuf iobuf;
-      iobuf_init(&iobuf, link_to_path, 1024, 0);
-      vop_read(*node_store, &iobuf);
-      int link_to_path_length = iobuf_used(&iobuf);
-      link_to_path[link_to_path_length] = '\0';
+      vop_readlink(*node_store, link_to_path);
+      int link_to_path_length = strlen(link_to_path);
       fullpath[0] = '\0';
       if(subpath[0] != '/' && subpath[0] != '.') {
         strcpy(fullpath, "/");

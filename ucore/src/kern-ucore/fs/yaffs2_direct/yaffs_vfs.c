@@ -64,6 +64,7 @@ void yaffs_vfs_init(void) {
 
 static const struct inode_ops yaffs_node_dirops;
 static const struct inode_ops yaffs_node_fileops;
+static const struct inode_ops yaffs_node_symlinkops;
 
 #define yaffs_inode_to_obj_lv(iptr) (vop_info(node, yaffs2_inode)->obj)
 #define yaffs_inode_to_obj(iptr)\
@@ -87,6 +88,8 @@ yaffs_get_ops(int type) {
         return &yaffs_node_dirops;
     case YAFFS_OBJECT_TYPE_FILE:
         return &yaffs_node_fileops;
+    case YAFFS_OBJECT_TYPE_SYMLINK:
+        return &yaffs_node_symlinkops;
     }
     panic("invalid file type %d.\n", type);
 }
@@ -262,6 +265,26 @@ yaffs_lookup_subpath(char *path) {
   }
   return path;
 }
+
+static int yaffs_vop_readlink(struct inode *node, char *buffer)
+{
+	unsigned char *alias;
+	int ret;
+
+  struct yaffs_obj *obj = yaffs_inode_to_obj(node);
+
+	alias = yaffs_get_symlink_alias(obj);
+
+	if (!alias) {
+    panic("!ALIAS");
+		return -ENOMEM;
+  }
+
+  strcpy(buffer, alias);
+	kfree(alias);
+  return 0;
+}
+
 
 static int yaffs_vop_lookup(struct inode *node, char *path, struct inode **node_store)
 {
@@ -509,6 +532,7 @@ yaffs_vop_fstat(struct inode *node, struct stat *stat) {
     unsigned int blksize  = obj->my_dev->data_bytes_per_chunk;
 	  stat->st_size = yaffs_get_obj_length(obj);
 	  stat->st_blocks = (stat->st_size + blksize -1)/blksize;
+    stat->st_ino = obj->obj_id;
 
     return 0;
 }
@@ -743,6 +767,32 @@ static const struct inode_ops yaffs_node_fileops = {
   .vop_link                       = NULL_VOP_NOTDIR,
   .vop_rename                     = yaffs_vop_rename,
   .vop_readlink                   = NULL_VOP_NOTDIR,
+  .vop_symlink                    = NULL_VOP_NOTDIR,
+  .vop_namefile                   = NULL_VOP_NOTDIR,
+  .vop_getdirentry                = NULL_VOP_NOTDIR,
+  .vop_reclaim                    = yaffs_vop_reclaim,
+  .vop_ioctl                      = NULL_VOP_INVAL,
+  .vop_gettype                    = yaffs_vop_gettype,
+  .vop_tryseek                    = yaffs_vop_tryseek,
+  .vop_truncate                   = yaffs_vop_truncfile,
+  .vop_create                     = NULL_VOP_NOTDIR,
+  .vop_unlink                     = NULL_VOP_NOTDIR,
+  .vop_lookup                     = NULL_VOP_NOTDIR,
+  .vop_lookup_parent              = NULL_VOP_NOTDIR,
+};
+
+static const struct inode_ops yaffs_node_symlinkops = {
+  .vop_magic                      = VOP_MAGIC,
+  .vop_open                       = yaffs_vop_openfile,
+  .vop_close                      = yaffs_vop_close,
+  .vop_read                       = yaffs_vop_read,
+  .vop_write                      = yaffs_vop_write,
+  .vop_fstat                      = yaffs_vop_fstat,
+  .vop_fsync                      = yaffs_vop_fsync,
+  .vop_mkdir                      = NULL_VOP_NOTDIR,
+  .vop_link                       = NULL_VOP_NOTDIR,
+  .vop_rename                     = yaffs_vop_rename,
+  .vop_readlink                   = yaffs_vop_readlink,
   .vop_symlink                    = NULL_VOP_NOTDIR,
   .vop_namefile                   = NULL_VOP_NOTDIR,
   .vop_getdirentry                = NULL_VOP_NOTDIR,

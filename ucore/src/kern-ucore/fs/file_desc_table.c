@@ -61,7 +61,7 @@ static struct file* file_desc_table_expand(struct file_desc_table *table)
 
 struct file* file_desc_table_get_file(struct file_desc_table *table, int file_desc)
 {
-  if(file_desc >= table->capacity) return NULL;
+  if(file_desc < 0 || file_desc >= table->capacity) return NULL;
   return table->entries[file_desc].opened_file;
 }
 
