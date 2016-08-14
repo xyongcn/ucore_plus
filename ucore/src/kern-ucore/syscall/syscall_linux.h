@@ -20,11 +20,14 @@ machine_word_t syscall_linux_stat(machine_word_t args[]);
 machine_word_t syscall_linux_lstat(machine_word_t args[]);
 machine_word_t syscall_linux_fstat(machine_word_t args[]);
 machine_word_t syscall_linux_seek(machine_word_t args[]);
+machine_word_t syscall_linux_mkdir(machine_word_t args[]);
+machine_word_t syscall_linux_chdir(machine_word_t args[]);
 machine_word_t syscall_linux_getcwd(machine_word_t args[]);
 machine_word_t syscall_linux_getdents(machine_word_t args[]);
 machine_word_t syscall_linux_getdents64(machine_word_t args[]);
 machine_word_t syscall_linux_ioctl(machine_word_t args[]);
 machine_word_t syscall_linux_fcntl(machine_word_t args[]);
+machine_word_t syscall_linux_pipe(machine_word_t args[]);
 
 machine_word_t syscall_linux_brk(machine_word_t args[]);
 machine_word_t syscall_linux_old_mmap(machine_word_t args[]);
@@ -68,6 +71,9 @@ machine_word_t syscall_linux_setgid(machine_word_t args[]);
 machine_word_t syscall_linux_geteuid(machine_word_t args[]);
 machine_word_t syscall_linux_getegid(machine_word_t args[]);
 machine_word_t syscall_linux_setgroups(machine_word_t args[]);
+
+machine_word_t syscall_linux_getrlimit(machine_word_t args[]);
+machine_word_t syscall_linux_setrlimit(machine_word_t args[]);
 
 machine_word_t syscall_linux_uname(machine_word_t args[]);
 

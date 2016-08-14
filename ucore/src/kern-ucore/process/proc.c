@@ -857,6 +857,15 @@ int program_count, struct mm_struct *mm, int fd, off_t bias)
     char *start = program_header->p_va + bias;
     char *end = program_header->p_va + bias + program_header->p_memsz;
 
+    if((uintptr_t)end % program_header->p_align != 0) {
+      end = ((uintptr_t)end / program_header->p_align + 1) * program_header->p_align;
+    }
+    if(bias == 0) {
+      if (mm->brk_start < end) {
+        mm->brk_start = end;
+      }
+    }
+
     //TODO: Not certain if this may introduce a bug if end % PGSIZE == 0.
     start = ROUNDDOWN(start, PGSIZE);
     end = ROUNDUP(end, PGSIZE);
@@ -1073,7 +1082,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 	set_pgdir(current, mm->pgdir);
 	mp_set_mm_pagetable(mm);
 
-#if defined(ARCH_ARM) || defined(ARCH_AMD64)
+#if defined(ARCH_ARM) || defined(ARCH_AMD64) || defined(ARCH_MIPS)
 	if (init_new_context_dynamic(current, elf, argc, kargv, envc, kenvp,
 				     elf_have_interpreter, interpreter_entry + bias, elf_entry,
 				     bias, program_header_address) < 0)

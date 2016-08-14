@@ -1,3 +1,6 @@
+#ifndef __LIBS_MMIO_H__
+#define __LIBS_MMIO_H__
+
 /*
  * MMIO (Memory-mapped I/O) library. What those functions do are simply
  * memory access, with the "volatile" keyword to prevent any possible
@@ -34,12 +37,14 @@ static void mmio_write16(volatile uint16_t* address, uint16_t value)
   (*address) = value;
 }
 
-void mmio_write32(volatile uint32_t* address, uint32_t value)
+static void mmio_write32(volatile uint32_t* address, uint32_t value)
 {
   (*address) = value;
 }
 
-void mmio_write64(volatile uint64_t* address, uint64_t value)
+static void mmio_write64(volatile uint64_t* address, uint64_t value)
 {
   (*address) = value;
 }
+
+#endif /* __LIBS_MMIO_H__ */

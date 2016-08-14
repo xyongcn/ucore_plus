@@ -154,6 +154,18 @@ machine_word_t syscall_linux_seek(machine_word_t args[])
   return sysfile_seek(fd, pos, whence);
 }
 
+machine_word_t syscall_linux_mkdir(machine_word_t args[])
+{
+	const char *path = (const char*)args[0];
+	return sysfile_mkdir(path);
+}
+
+machine_word_t syscall_linux_chdir(machine_word_t args[])
+{
+  const char *path = (const char*)args[0];
+  return sysfile_chdir(path);
+}
+
 machine_word_t syscall_linux_getcwd(machine_word_t args[])
 {
 	char *buf = (char *)args[0];
@@ -205,6 +217,12 @@ machine_word_t syscall_linux_fcntl(machine_word_t args[])
   unsigned int cmd = (unsigned int)args[1];
   unsigned long arg = (unsigned long)args[2];
 	return sysfile_linux_fcntl64(fd, cmd, arg);
+}
+
+machine_word_t syscall_linux_pipe(machine_word_t args[])
+{
+	int *fd_store = (int *)args[0];
+	return sysfile_pipe(fd_store) ? -1 : 0;
 }
 
 machine_word_t syscall_linux_brk(machine_word_t args[])
@@ -410,7 +428,6 @@ machine_word_t syscall_linux_send(machine_word_t args[])
   void *buff = (void*)args[1];
   size_t size	= (size_t)args[2];
   unsigned int flags = (unsigned int)args[3];
-    kprintf("syscall_linux_sendto, length = %d\n", size);
   return socket_sendto(fd, buff, size, flags, NULL, 0);
 }
 
@@ -544,6 +561,20 @@ machine_word_t syscall_linux_setgroups(machine_word_t args[])
   const int *list = (const int*)args[1];
   //panic("%d %d\n", size, list[0]);
   return 0;
+}
+
+machine_word_t syscall_linux_getrlimit(machine_word_t args[])
+{
+	int res = (int)args[0];
+	struct linux_rlimit *lim = (struct linux_rlimit*)args[1];
+	return do_linux_ugetrlimit(res, lim);
+}
+
+machine_word_t syscall_linux_setrlimit(machine_word_t args[])
+{
+	int res = (int)args[0];
+	struct linux_rlimit *lim = (struct linux_rlimit*)args[1];
+	return do_linux_usetrlimit(res, lim);
 }
 
 machine_word_t syscall_linux_uname(machine_word_t args[])
