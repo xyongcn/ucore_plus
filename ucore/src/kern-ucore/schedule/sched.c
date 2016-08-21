@@ -39,6 +39,7 @@ static inline void sched_class_enqueue(struct proc_struct *proc)
 		//XXX lock
 		sched_class->enqueue(rq, proc);
 	}
+  else panic("sched");
 }
 
 static inline void sched_class_dequeue(struct proc_struct *proc)
@@ -182,6 +183,12 @@ void schedule(void)
 		}
 
 		next = sched_class_pick_next();
+    /*if(next == NULL) {
+      kprintf("Nxt = null\n");
+    }
+    else {
+      kprintf("Nxt = %d\n", next->pid);
+    }*/
 		if (next != NULL)
 			sched_class_dequeue(next);
 		else

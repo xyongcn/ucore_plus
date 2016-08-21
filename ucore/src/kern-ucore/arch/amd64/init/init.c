@@ -140,6 +140,7 @@ int kern_init(uint64_t mbmagic, uint64_t mbmem)
   ioapic_init();
 	acpi_init();
   interrupt_manager_init();
+  ptrace_init();
 
   pci_init(); //Init PCI Driver
   network_init(); //Init network subsystem

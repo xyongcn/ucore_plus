@@ -1262,6 +1262,7 @@ int do_execve(const char *filename, const char **argv, const char **envp)
 
 	put_kargv(argc, kargv);
 	put_kargv(envc, kenvp);
+  ptrace_execve_hook();
 	return 0;
 
 execve_exit:
@@ -1380,7 +1381,7 @@ repeat:
 			do {
 				if (proc->parent == cproc) {
 					haskid = 1;
-					if (proc->state == PROC_ZOMBIE) {
+					if (proc->state == PROC_ZOMBIE || proc->state == PROC_STOPPED) {
 						goto found;
 					}
 					break;
@@ -1395,7 +1396,7 @@ repeat:
 			proc = cproc->cptr;
 			for (; proc != NULL; proc = proc->optr) {
 				haskid = 1;
-				if (proc->state == PROC_ZOMBIE) {
+				if (proc->state == PROC_ZOMBIE || proc->state == PROC_STOPPED) {
 					goto found;
 				}
 			}
@@ -1419,21 +1420,26 @@ found:
 		panic("wait idleproc or initproc.\n");
 	}
 	int exit_code = proc->exit_code;
-	int return_pid = proc->pid;
-	local_intr_save(intr_flag);
-	{
-		unhash_proc(proc);
-		remove_links(proc);
-	}
-	local_intr_restore(intr_flag);
-	put_kstack(proc);
-	kfree(proc);
+  int return_pid = proc->pid;
+  if(proc->state == PROC_ZOMBIE) {
+  	local_intr_save(intr_flag);
+  	{
+  		unhash_proc(proc);
+  		remove_links(proc);
+  	}
+  	local_intr_restore(intr_flag);
+  	put_kstack(proc);
+  	kfree(proc);
+  }
 
 	int ret = 0;
 	if (code_store != NULL) {
 		lock_mm(mm);
 		{
 			int status = exit_code << 8;
+      if(proc->state == PROC_STOPPED) {
+        status |= 0x7F;
+      }
 			if (!copy_to_user(mm, code_store, &status, sizeof(int))) {
 				ret = -E_INVAL;
 			}

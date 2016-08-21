@@ -33,19 +33,19 @@ static int dev_close(struct inode *node)
 /*
  * Called for read. Hand off to dop_io.
  */
-static int dev_read(struct inode *node, struct iobuf *iob)
+static int dev_read(struct inode *node, struct iobuf *iob, int io_flags)
 {
 	struct device *dev = vop_info(node, device);
-	return dop_io(dev, iob, 0);
+	return dop_io(dev, iob, 0, io_flags);
 }
 
 /*
  * Called for write. Hand off to dop_io.
  */
-static int dev_write(struct inode *node, struct iobuf *iob)
+static int dev_write(struct inode *node, struct iobuf *iob, int io_flags)
 {
 	struct device *dev = vop_info(node, device);
-	return dop_io(dev, iob, 1);
+	return dop_io(dev, iob, 1, io_flags);
 }
 
 /*

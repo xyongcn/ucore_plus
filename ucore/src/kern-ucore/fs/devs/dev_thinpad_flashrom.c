@@ -87,7 +87,7 @@ static void disk_io_in_sector(struct device *dev, struct iobuf *iob, bool write,
 
 static int disk_io(struct device *dev, struct iobuf *iob, bool write)
 {
-  kprintf("Thinpad I/O, size = %x, write = %d\n", iob->io_resid, write);
+  //kprintf("Thinpad I/O, size = %x, write = %d\n", iob->io_resid, write);
 	off_t offset = iob->io_offset;
 	int resid = iob->io_resid;
   // don't allow I/O that isn't block-aligned
@@ -99,7 +99,7 @@ static int disk_io(struct device *dev, struct iobuf *iob, bool write)
     if(io_bytes > resid) io_bytes = resid;
     resid -= io_bytes;
     offset += io_bytes;
-    kprintf("Thinpad I/O sub, size = %x\n", io_bytes);
+    //kprintf("Thinpad I/O sub, size = %x\n", io_bytes);
     disk_io_in_sector(dev, iob, write, io_bytes);
   }
 	return 0;

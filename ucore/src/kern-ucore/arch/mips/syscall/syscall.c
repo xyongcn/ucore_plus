@@ -196,12 +196,26 @@ static uint32_t (*linux_syscall_table[1000]) (uint32_t arg[]) = {
   [__NR_write] syscall_linux_write,
   [__NR_open] syscall_linux_open,
   [__NR_close] syscall_linux_close,
-  [__NR_getpid] syscall_linux_getpid,
+  [__NR_execve] sys_exec,
+  [__NR_chdir] syscall_linux_chdir,
   [__NR_time] syscall_linux_time,
+  [__NR_lseek] syscall_linux_seek,
+  [__NR_getpid] syscall_linux_getpid,
+  [__NR_mount] syscall_linux_mount,
+  [__NR_umount] syscall_linux_umount,
+  [__NR_setuid] syscall_linux_setuid,
+  [__NR_getuid] syscall_linux_getuid,
+  [__NR_mkdir] syscall_linux_mkdir,
+  [__NR_dup] syscall_linux_dup,
+  [__NR_pipe] syscall_linux_pipe,
+  [__NR_times] syscall_linux_times,
   [__NR_brk] syscall_linux_brk,
   [__NR_getuid] syscall_linux_getuid,
   [__NR_ioctl] syscall_linux_ioctl,
   [__NR_fcntl] syscall_linux_fcntl,
+  [__NR_setrlimit] syscall_linux_setrlimit,
+  [__NR_getrlimit] syscall_linux_getrlimit,
+  [__NR_gettimeofday] syscall_linux_gettimeofday,
   [__NR_mmap] syscall_linux_mmap,
   [__NR_munmap] syscall_linux_munmap,
   [__NR_stat] syscall_linux_stat,
@@ -216,14 +230,18 @@ static uint32_t (*linux_syscall_table[1000]) (uint32_t arg[]) = {
   [__NR_rt_sigaction] syscall_linux_sigaction,
   [__NR_rt_sigreturn] syscall_linux_sigreturn,
   [__NR_rt_sigprocmask] syscall_linux_sigprocmask,
+  [__NR_readv] syscall_linux_readv,
+  [__NR_writev] syscall_linux_writev,
   [__NR_getppid] syscall_linux_getppid,
   [__NR_getpgrp] syscall_linux_getpgrp,
   [__NR_getcwd] syscall_linux_getcwd,
   [__NR_geteuid] syscall_linux_geteuid,
   [__NR_getegid] syscall_linux_getegid,
+  [__NR_getgid] syscall_linux_getgid,
+  [__NR_setgid] syscall_linux_setgid,
+  [__NR_setgroups] syscall_linux_setgroups,
   [__NR__newselect] syscall_linux_select,
   [__NR_poll] syscall_linux_poll,
-  [__NR_dup] syscall_linux_dup,
   [__NR_dup2] syscall_linux_dup2,
   [__NR_uname] syscall_linux_uname,
   [__NR_socket] syscall_linux_socket,
@@ -239,6 +257,9 @@ static uint32_t (*linux_syscall_table[1000]) (uint32_t arg[]) = {
   [__NR_getpeername] syscall_linux_getpeername,
   [__NR_setsockopt] syscall_linux_setsockopt,
   [__NR_getsockopt] syscall_linux_getsockopt,
+  [__NR_setsid] syscall_linux_setsid,
+  [__NR_nanosleep] syscall_linux_nanosleep,
+  [__NR_ptrace] syscall_linux_ptrace,
 };
 
 void syscall_linux(void) {
@@ -255,10 +276,30 @@ void syscall_linux(void) {
       uint32_t* stack_pointor = tf->tf_regs.reg_r[MIPS_REG_SP];
       arg[4] = stack_pointor[4];
       arg[5] = stack_pointor[5];
-      //kprintf("Syscall %d : args = %x %x %x %x %x %x\n", num, arg[0], arg[1], arg[2], arg[3], arg[4],arg[5],arg[6]);
-      tf->tf_regs.reg_r[MIPS_REG_V0] = linux_syscall_table[num] (arg);
-      tf->tf_regs.reg_r[MIPS_REG_A3] = 0;
-      //kprintf("Syscall ret %d : %x, pid=%d\n", num, tf->tf_regs.reg_r[MIPS_REG_V0], current->pid);
+      //kprintf("MIPS_sys $%d $%d\n", current->pid, num);
+      //TODO: 0 indicates that syscall always suceeded, not reasonable but seems
+      //It works. Need to be set before syscall because fork won't return.
+      if(num == __NR_pipe) {
+        int fd[2];
+        if(file_pipe(fd) != 0) {
+          tf->tf_regs.reg_r[MIPS_REG_A3] = 1;
+        }
+        else {
+          tf->tf_regs.reg_r[MIPS_REG_A3] = 0;
+          tf->tf_regs.reg_r[MIPS_REG_V0] = fd[0];
+          tf->tf_regs.reg_r[MIPS_REG_V1] = fd[1];
+          kprintf("pipe %d %d\n",  fd[0],  fd[1]);
+        }
+      }
+      else {
+        tf->tf_regs.reg_r[MIPS_REG_A3] = 0;
+        tf->tf_regs.reg_r[MIPS_REG_V0] = linux_syscall_table[num] (arg);
+      }
+      /*if(num == __NR_read || num == __NR_write) {
+        if(((int)tf->tf_regs.reg_r[MIPS_REG_V0]) < 0) {
+          tf->tf_regs.reg_r[MIPS_REG_A3] = 1;
+        }
+      }*/
       return;
     }
   }

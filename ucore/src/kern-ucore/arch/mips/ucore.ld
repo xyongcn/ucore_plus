@@ -46,6 +46,8 @@ etext = .; _etext = .;
   __DWARF_DEBUG_LINE_END__ = .;
     . = ALIGN(16);
 }
+initrd_begin = .;
+initrd_end = .;
 . = ALIGN(16);
 edata = .; _edata = .;
 wrs_kernel_data_end = .; _wrs_kernel_data_end = .;

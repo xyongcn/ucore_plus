@@ -32,6 +32,9 @@ $(KERNEL_ELF): $(LINK_FILE) $(KERNEL_BUILTIN) $(RAMDISK_OBJ) $(MIPS_S_OBJ)
 	$(CROSS_COMPILE)as -EL -g -mips32 $(KTREE_OBJ_ROOT)/initrd_piggy.S -o $(KTREE_OBJ_ROOT)/initrd.img.o
 	$(Q)$(TARGET_LD) $(TARGET_LDFLAGS) -T $(LINK_FILE) $(KERNEL_BUILTIN) $(RAMDISK_OBJ) $(MIPS_S_OBJ) $(KTREE_OBJ_ROOT)/initrd.img.o -o $@
 
+#$(RAMDISK_OBJ)
+#$(KTREE_OBJ_ROOT)/initrd.img.o
+
 $(BOOTSECT): $(OBJPATH_ROOT)
 	$(Q)$(MAKE) -C $(BLTREE) -f $(BLTREE)/Makefile all
 

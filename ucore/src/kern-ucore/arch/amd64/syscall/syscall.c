@@ -415,119 +415,6 @@ static uint64_t sys_linux_ioctl(uint64_t arg[])
 	return sysfile_ioctl(fd, cmd, data);
 }
 
-static uint64_t sys_getrlimit(uint64_t arg[])
-{
-	int res = (int)arg[0];
-	struct linux_rlimit *lim = (struct linux_rlimit *)arg[1];
-	return do_linux_ugetrlimit(res, lim);
-}
-
-static uint64_t sys_setrlimit(uint64_t arg[])
-{
-	int res = (int)arg[0];
-	struct linux_rlimit *lim = (struct linux_rlimit *)arg[1];
-	return do_linux_usetrlimit(res, lim);
-}
-
-static uint64_t sys_linux_getcwd(uint64_t arg[])
-{
-	char *buf = (char *)arg[0];
-	size_t len = (size_t) arg[1];
-	int ret = sysfile_getcwd(buf, len);
-  if(ret < 0) return ret;
-  return strlen(buf) + 1;
-}
-
-static uint64_t sys_linux_brk(uint64_t arg[])
-{
-	uintptr_t brk = (uintptr_t) arg[0];
-	return do_linux_brk(brk);
-}
-
-static uint64_t sys_linux_sigaction(uint64_t arg[])
-{
-	return do_sigaction((int)arg[0], (const struct sigaction *)arg[1],
-			    (struct sigaction *)arg[2]);
-}
-
-static uint64_t sys_linux_sigreturn(uint64_t arg[])
-{
-  return do_sigreturn();
-}
-
-static uint64_t sys_linux_sigprocmask(uint64_t arg[])
-{
-	return do_sigprocmask((int)arg[0], (const sigset_t *)arg[1],
-			      (sigset_t *) arg[2]);
-}
-
-static uint64_t sys_linux_fcntl(uint64_t arg[])
-{
-	return sysfile_linux_fcntl64(arg[0], arg[1], arg[2]);
-}
-
-static uint64_t sys_linux_getdents(uint64_t arg[])
-{
-	unsigned int fd = (unsigned int)arg[0];
-	struct dirent *dir = (struct dirent *)arg[1];
-	unsigned int count = (unsigned int)arg[2];
-	if (count < sizeof(struct dirent))
-		return -E_INVAL;
-	int ret = sysfile_getdirentry(fd, dir, (uint32_t *)&count);
-	if (ret < 0) return ret;
-	return count;
-}
-
-static uint64_t sys_linux_getdents64(uint64_t arg[])
-{
-  unsigned int fd = (unsigned int)arg[0];
-	struct dirent64 *dir = (struct dirent64 *)arg[1];
-	unsigned int count = (unsigned int)arg[2];
-	if (count < sizeof(struct dirent64))
-		return -E_INVAL;
-//	kprintf("call getdirendry %d %p %p\n", fd, dir, &count);
-	int ret = sysfile_getdirentry64(fd, dir, (uint32_t *)&count);
-  if (ret < 0) return ret;
-	return count;
-}
-
-static uint64_t sys_linux_mmap(uint64_t arg[])
-{
-  void *addr = (void *)arg[0];
-  size_t len = arg[1];
-  int prot = (int)arg[2];
-  int flags = (int)arg[3];
-  int fd = (int)arg[4];
-  size_t off = (size_t) arg[5];
-  #ifndef UCONFIG_BIONIC_LIBC
-  	kprintf
-  	    ("TODO sys_linux_mmap2 addr=%llx len=%llx prot=%llx flags=%llx fd=%d off=%llx\n",
-  	     addr, len, prot, flags, fd, off);
-  #endif //UCONFIG_BIONIC_LIBC
-  	if (fd == -1 || flags & MAP_ANONYMOUS) {
-      //kprintf("Trying anonymous map.\r\n");
-  		//print_trapframe(current->tf);
-  #ifdef UCONFIG_BIONIC_LIBC
-  		if (flags & MAP_FIXED) {
-  			uint64_t ret = linux_regfile_mmap2(addr, len, prot, flags, fd,
-  						   off);
-        return (uint64_t)ret;
-  		}
-  #endif //UCONFIG_BIONIC_LIBC
-
-  		uint64_t ucoreflags = 0;
-  		if (prot & PROT_WRITE)
-  			ucoreflags |= MMAP_WRITE;
-  		int ret = __do_linux_mmap((uintptr_t) & addr, len, ucoreflags);
-  		if (ret) {
-  			return (uint64_t)MAP_FAILED;
-      }
-  		return (uint64_t) addr;
-  	} else {
-  		return (uint64_t)sysfile_linux_mmap2(addr, len, prot, flags, fd, off);
-  	}
-}
-
 static uint64_t sys_linux_waitpid(uint64_t arg[])
 {
 	int pid = (int)arg[0];
@@ -643,18 +530,6 @@ static uint64_t sys_linux_arch_prctl(uint64_t arg[])
   return 0;
 }
 
-static uint64_t sys_linux_mprotect(uint64_t arg[])
-{
-
-	void *addr = (void *)arg[0];
-	size_t len = arg[1];
-	int prot = arg[2];
-
-	//kprintf("mprotect addr=0x%08x len=%08x prot=%08x\n", addr, len, prot);
-
-	return do_mprotect(addr, len, prot);
-}
-
 static uint64_t sys_linux_set_tid_address(uint64_t arg[])
 {
   //TODO: This is a stub function.
@@ -741,8 +616,8 @@ void syscall_linux()
 			arg[4] = tf->tf_regs.reg_r8;
 			arg[5] = tf->tf_regs.reg_r9;
 			tf->tf_regs.reg_rax = syscalls_linux[num] (arg);
-      //kprintf("LINUX syscall ret %d, returning %llx rip = %lx\r\n", num, tf->tf_regs.reg_rax, tf->tf_rip);
-			return;
+      //if (num == __NR_ptrace) kprintf("LINUX syscall ret %d, returning %llx rip = %lx\r\n", num, tf->tf_regs.reg_rax, tf->tf_rip);
+      return;
 		}
 	}
 	print_trapframe(tf);
@@ -761,13 +636,13 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_lstat] syscall_linux_lstat,
 	[__NR_poll] sys_linux_poll,
 	[__NR_lseek] syscall_linux_seek,
-	[__NR_mmap] sys_linux_mmap,
-	[__NR_mprotect] sys_linux_mprotect,
+	[__NR_mmap] syscall_linux_mmap,
+	[__NR_mprotect] syscall_linux_mprotect,
 	[__NR_munmap] sys_munmap,
-	[__NR_brk] sys_linux_brk,
-	[__NR_rt_sigaction] sys_linux_sigaction,
-	[__NR_rt_sigprocmask] sys_linux_sigprocmask,
-	[__NR_rt_sigreturn] sys_linux_sigreturn,
+	[__NR_brk] syscall_linux_brk,
+	[__NR_rt_sigaction] syscall_linux_sigaction,
+	[__NR_rt_sigprocmask] syscall_linux_sigprocmask,
+	[__NR_rt_sigreturn] syscall_linux_sigreturn,
 	[__NR_ioctl] sys_linux_ioctl,
 	[__NR_pread64] unknown,
 	[__NR_pwrite64] unknown,
@@ -795,16 +670,16 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_sendfile] unknown,
 	[__NR_socket] syscall_linux_socket,
 	[__NR_connect] syscall_linux_connect,
-	[__NR_accept] unknown,
+	[__NR_accept] syscall_linux_accept,
 	[__NR_sendto] syscall_linux_sendto,
 	[__NR_recvfrom] syscall_linux_recvfrom,
 	[__NR_sendmsg] unknown,
 	[__NR_recvmsg] unknown,
 	[__NR_shutdown] unknown,
-	[__NR_bind] unknown,
-	[__NR_listen] unknown,
-	[__NR_getsockname] unknown,
-	[__NR_getpeername] unknown,
+	[__NR_bind] syscall_linux_bind,
+	[__NR_listen] syscall_linux_listen,
+	[__NR_getsockname] syscall_linux_getsockname,
+	[__NR_getpeername] syscall_linux_getpeername,
 	[__NR_socketpair] unknown,
 	[__NR_setsockopt] syscall_linux_setsockopt,
 	[__NR_getsockopt] syscall_linux_getsockopt,
@@ -815,7 +690,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_exit] sys_exit,
 	[__NR_wait4] sys_linux_waitpid,
 	[__NR_kill] sys_linux_kill,
-	[__NR_uname] unknown,
+	[__NR_uname] syscall_linux_uname,
 	[__NR_semget] unknown,
 	[__NR_semop] unknown,
 	[__NR_semctl] unknown,
@@ -824,14 +699,14 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_msgsnd] unknown,
 	[__NR_msgrcv] unknown,
 	[__NR_msgctl] unknown,
-	[__NR_fcntl] sys_linux_fcntl,
+	[__NR_fcntl] syscall_linux_fcntl,
 	[__NR_flock] unknown,
 	[__NR_fsync] unknown,
 	[__NR_fdatasync] unknown,
 	[__NR_truncate] unknown,
 	[__NR_ftruncate] unknown,
-	[__NR_getdents] sys_linux_getdents,
-	[__NR_getcwd] sys_linux_getcwd,
+	[__NR_getdents] syscall_linux_getdents,
+	[__NR_getcwd] syscall_linux_getcwd,
 	[__NR_chdir] sys_chdir,
 	[__NR_fchdir] unknown,
 	[__NR_rename] unknown,
@@ -849,26 +724,26 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_lchown] unknown,
 	[__NR_umask] unknown,
 	[__NR_gettimeofday] syscall_linux_gettimeofday,
-	[__NR_getrlimit] sys_getrlimit,
+	[__NR_getrlimit] syscall_linux_getrlimit,
 	[__NR_getrusage] unknown,
 	[__NR_sysinfo] unknown,
 	[__NR_times] syscall_linux_times,
-	[__NR_ptrace] unknown,
-	[__NR_getuid] sys_linux_getuid,
+	[__NR_ptrace] syscall_linux_ptrace,
+	[__NR_getuid] syscall_linux_getuid,
 	[__NR_syslog] unknown,
-	[__NR_getgid] unknown,
-	[__NR_setuid] unknown,
-	[__NR_setgid] unknown,
+	[__NR_getgid] syscall_linux_getgid,
+	[__NR_setuid] syscall_linux_setuid,
+	[__NR_setgid] syscall_linux_setgid,
 	[__NR_geteuid] sys_linux_geteuid,
-	[__NR_getegid] unknown,
+	[__NR_getegid] syscall_linux_getegid,
 	[__NR_setpgid] unknown,
 	[__NR_getppid] sys_linux_getppid,
 	[__NR_getpgrp] sys_linux_getpgrp,
-	[__NR_setsid] unknown,
+	[__NR_setsid] syscall_linux_setsid,
 	[__NR_setreuid] unknown,
 	[__NR_setregid] unknown,
 	[__NR_getgroups] unknown,
-	[__NR_setgroups] unknown,
+	[__NR_setgroups] syscall_linux_setgroups,
 	[__NR_setresuid] unknown,
 	[__NR_getresuid] unknown,
 	[__NR_setresgid] unknown,
@@ -912,7 +787,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_prctl] unknown,
 	[__NR_arch_prctl] sys_linux_arch_prctl,
 	[__NR_adjtimex] unknown,
-	[__NR_setrlimit] sys_setrlimit,
+	[__NR_setrlimit] syscall_linux_setrlimit,
 	[__NR_chroot] unknown,
 	[__NR_sync] unknown,
 	[__NR_acct] unknown,
@@ -969,7 +844,7 @@ static uint64_t(*syscalls_linux[305]) (uint64_t arg[]) = {
 	[__NR_epoll_ctl_old] unknown,
 	[__NR_epoll_wait_old] unknown,
 	[__NR_remap_file_pages] unknown,
-	[__NR_getdents64] sys_linux_getdents64,
+	[__NR_getdents64] syscall_linux_getdents64,
 	[__NR_set_tid_address] sys_linux_set_tid_address,
 	[__NR_restart_syscall] unknown,
 	[__NR_semtimedop] unknown,

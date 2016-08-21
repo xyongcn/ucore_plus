@@ -9,6 +9,7 @@
 #include "lwip/sockets.h"
 #include "socket_inode.h"
 #include "socket.h"
+#include <linux_misc_struct.h>
 
 //TODO : Check user mem!
 //TODO : Check addr length!
@@ -62,10 +63,12 @@ static int socket_ucore_fd_to_lwip_fd(int ucore_fd, int *lwip_fd)
   int ret;
   struct file *file;
   if ((ret = fd2file(ucore_fd, &file)) != 0) {
+    kprintf("BADF\n");
     return -E_BADF;
   }
   int fd_type;
   if(vop_gettype(file->node, &fd_type) != 0 || !S_ISSOCK(fd_type)) {
+    kprintf("NTSK %d\n", vop_gettype(file->node, &fd_type));
     return -E_NOTSOCK;
   }
   *lwip_fd = ((struct socket_inode_private_data *)(file->node->private_data))->lwip_socket;
@@ -129,14 +132,20 @@ int socket_listen(int fd, int backlog)
 
 int socket_accept(int fd, struct linux_sockaddr __user *upeer_sockaddr, int __user *upeer_addrlen)
 {
+  kprintf("Entering socket_accept %x %x\n", upeer_sockaddr, upeer_addrlen);
   int ret, lwip_fd;
   ret = socket_ucore_fd_to_lwip_fd(fd, &lwip_fd);
   if(ret != 0) return ret;
-  int kernel_addr_len = *upeer_addrlen;
+  int kernel_addr_len;
   struct sockaddr *lwip_sockaddr = kmalloc(sizeof(struct sockaddr));
+  if(upeer_sockaddr != NULL) {
+    kernel_addr_len = *upeer_addrlen;
+  }
   ret = lwip_accept(lwip_fd, lwip_sockaddr, &kernel_addr_len);
-  lwip_sockaddr_to_linux_sockaddr(lwip_sockaddr, upeer_sockaddr);
-  *upeer_addrlen = kernel_addr_len;
+  if(upeer_sockaddr != NULL) {
+    lwip_sockaddr_to_linux_sockaddr(lwip_sockaddr, upeer_sockaddr);
+    *upeer_addrlen = kernel_addr_len;
+  }
   kfree(lwip_sockaddr);
   if(ret < 0) return ret;
   return wrap_lwip_socket(ret);
@@ -172,6 +181,7 @@ int socket_getpeername(int fd, struct linux_sockaddr __user *usockaddr, int __us
 
 int socket_sendto(int fd, void __user *buff, size_t len, unsigned int flags, struct linux_sockaddr __user *addr, int addr_len)
 {
+  kprintf("Kernel Level socket_sendto\n");
   int ret, lwip_fd;
   ret = socket_ucore_fd_to_lwip_fd(fd, &lwip_fd);
   if(ret != 0) return ret;
@@ -179,15 +189,18 @@ int socket_sendto(int fd, void __user *buff, size_t len, unsigned int flags, str
   memcpy(kernel_buff, buff, len);
   if(addr == NULL) {
     ret = lwip_send(lwip_fd, kernel_buff, len, flags);
+    kprintf("**Kernel Level socket_sendto ret %d\n", ret);
   }
   else {
     struct sockaddr *lwip_sockaddr = kmalloc(sizeof(struct sockaddr));
     linux_sockaddr_to_lwip_sockaddr(addr, lwip_sockaddr);
     ret = lwip_sendto(lwip_fd, kernel_buff, len, flags, lwip_sockaddr, sizeof(struct sockaddr));
     kfree(lwip_sockaddr);
+    kprintf("##Kernel Level socket_sendto ret %d\n", ret);
   }
   //TODO: Not sure if lwip_sendto will free the buffer passed to it.
   kfree(kernel_buff);
+  kprintf("Kernel Level socket_sendto ret %d\n", ret);
   return ret;
 }
 
@@ -195,10 +208,13 @@ int socket_recvfrom(int fd, void __user *ubuf, size_t size, unsigned int flags, 
 {
   int ret, lwip_fd;
   ret = socket_ucore_fd_to_lwip_fd(fd, &lwip_fd);
+  if(ret != 0) assert(false);
   if(ret != 0) return ret;
   char* kernel_buff = kmalloc(size);
   if(addr == NULL) {
+    kprintf("Kernel Level socket_recvfrom\n");
     ret = lwip_recv(lwip_fd, kernel_buff, size, flags);
+    kprintf("Leaving Level socket_recvfrom\n");
   }
   else {
     //FIXME: Handle cases where linux_sockaddr is needed to copy to user!
@@ -235,6 +251,7 @@ int socket_get_option(int fd, int level, int optname, char __user *optval, int *
 int socket_lwip_select_wrapper(int nfds, linux_fd_set_t *readfds, linux_fd_set_t *writefds,
   linux_fd_set_t *exceptfds, struct linux_timeval *timeout)
 {
+  kprintf("Enetring socket_lwip_select_wrapper\n");
   fd_set *lwip_readfds = kmalloc(sizeof(fd_set));
   fd_set *lwip_writefds = kmalloc(sizeof(fd_set));
   fd_set *lwip_exceptfds = kmalloc(sizeof(fd_set));
@@ -256,6 +273,8 @@ int socket_lwip_select_wrapper(int nfds, linux_fd_set_t *readfds, linux_fd_set_t
       FD_SET(lwip_fd, lwip_exceptfds);
     }
   }
+  if(lwip_readfds) kprintf("readfds: %x\n", *(int*)lwip_readfds);
+  if(lwip_writefds) kprintf("readfds: %x\n", *(int*)lwip_writefds);
   int ret = lwip_select(
     nfds, lwip_readfds, lwip_writefds, lwip_exceptfds, (struct timeval*)timeout
   );
@@ -283,6 +302,7 @@ int socket_lwip_select_wrapper(int nfds, linux_fd_set_t *readfds, linux_fd_set_t
   kfree(lwip_readfds);
   kfree(lwip_writefds);
   kfree(lwip_exceptfds);
+  kprintf("Leaving socket_lwip_select_wrapper\n");
   return ret;
 }
 
@@ -299,7 +319,10 @@ static void socket_lwip_select_kernel_thread_entry(void* arg) {
   struct linux_timeval *timeout = (struct linux_timeval*)args[4];
   struct proc_struct **proc_to_wakeup = (struct proc_struct**)args[5];
   int *result_store = (int*)args[6];
-  int ret = socket_lwip_select_wrapper(nfds, &readfds, &writefds, &exceptfds, timeout);
+  int ret = 0;
+  if((*proc_to_wakeup) != NULL) {
+    ret = socket_lwip_select_wrapper(nfds, &readfds, &writefds, &exceptfds, timeout);
+  }
   if((*proc_to_wakeup) != NULL) {
     *result_store = ret;
     *_readfds = readfds;
@@ -315,6 +338,7 @@ int socket_lwip_select_wrapper_no_block(
   linux_fd_set_t *exceptfds, struct linux_timeval *timeout,
   struct proc_struct **proc_to_wakeup, int *result_store
 ) {
+  kprintf("### %x\n", *(int*)exceptfds);
   machine_word_t *thread_data = kmalloc(sizeof(machine_word_t) * 7);
   thread_data[0] = (machine_word_t)nfds;
   thread_data[1] = (machine_word_t)readfds;
@@ -376,6 +400,19 @@ int socket_lwip_select_wrapper_no_block(
     kfree(lwip_readfds);
     kfree(lwip_writefds);
     kfree(lwip_exceptfds);
+    /*kprintf("###2 %x\n", *(int*)exceptfds);
+    linux_fd_set_t *_readfds = kmalloc(sizeof(linux_fd_set_t));
+    linux_fd_set_t *_writefds = kmalloc(sizeof(linux_fd_set_t));
+    linux_fd_set_t *_exceptfds = kmalloc(sizeof(linux_fd_set_t));
+    struct linux_timeval *_timeout = kmalloc(sizeof(struct linux_timeval));
+    *_readfds = *readfds;
+    *_writefds = *writefds;
+    *_exceptfds = *exceptfds;
+    *_timeout = *timeout;
+    thread_data[1] = (machine_word_t)_readfds;
+    thread_data[2] = (machine_word_t)_writefds;
+    thread_data[3] = (machine_word_t)_exceptfds;
+    thread_data[4] = (machine_word_t)_timeout;*/
     return ucore_kernel_thread(
       socket_lwip_select_kernel_thread_entry, thread_data, CLONE_FS);
   }

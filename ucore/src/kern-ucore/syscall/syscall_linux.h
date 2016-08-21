@@ -5,6 +5,7 @@ machine_word_t syscall_linux_wait4(machine_word_t args[]);
 machine_word_t syscall_linux_getpid(machine_word_t args[]);
 machine_word_t syscall_linux_getppid(machine_word_t args[]);
 machine_word_t syscall_linux_getpgrp(machine_word_t args[]);
+machine_word_t syscall_linux_ptrace(machine_word_t args[]);
 
 machine_word_t syscall_linux_sigaction(machine_word_t args[]);
 machine_word_t syscall_linux_sigreturn(machine_word_t args[]);
@@ -61,6 +62,7 @@ machine_word_t syscall_linux_getsockopt(machine_word_t args[]);
 machine_word_t syscall_linux_time(machine_word_t args[]);
 machine_word_t syscall_linux_gettimeofday(machine_word_t args[]);
 machine_word_t syscall_linux_times(machine_word_t args[]);
+machine_word_t syscall_linux_nanosleep(machine_word_t args[]);
 
 machine_word_t syscall_linux_setsid(machine_word_t args[]);
 

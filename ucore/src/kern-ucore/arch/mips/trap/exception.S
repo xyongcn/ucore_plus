@@ -176,7 +176,15 @@ common_exception:
   # support nested interrupt
   li   t0, ~(ST0_KSU|ST0_EXL|ST0_IE)
   and t1, t1, t0
+  #or t1, t1, ST0_IE
   mtc0 t1, CP0_STATUS /* Copr.0 reg 11 == status */
+  #ppp:
+  #j ppp
+  #nop
+  #mfc0 t1, CP0_CAUSE
+  #li t0, 0xFFFF00FF
+  #and t1, t1, t0
+  #mtc0 zero, CP0_CAUSE
 
    /*
     * Prepare to call mips_trap(struct trapframe *)

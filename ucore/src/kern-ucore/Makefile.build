@@ -6,7 +6,7 @@ PHONY+=all subdir clean
 
 #TARGET_CFLAGS := -g -ggdb
 TARGET_CFLAGS += -g
-TARGET_CFLAGS += -fno-builtin -nostdlib  -nostdinc --std=gnu99
+TARGET_CFLAGS += -fno-builtin -nostdlib -nostdinc --std=gnu99 -Wall
 TARGET_CFLAGS += -D__KERNEL__ -D__KERN__
 TARGET_CFLAGS += $(shell echo $(UCONFIG_ADDITIONAL_CFLAGS))
 ifdef UCONFIG_PROFILER_ON

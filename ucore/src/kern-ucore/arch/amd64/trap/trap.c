@@ -39,6 +39,8 @@ void idt_init(void)
 		SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
 	}
 	SETGATE(idt[T_SYSCALL], 0, GD_KTEXT, __vectors[T_SYSCALL], DPL_USER);
+  SETGATE(idt[T_BRKPT], 0, GD_KTEXT, __vectors[T_BRKPT], DPL_USER);
+  //SETGATE(idt[T_DEBUG], 0, GD_KTEXT, __vectors[T_DEBUG], DPL_USER);
 	SETGATE(idt[T_IPI], 0, GD_KTEXT, __vectors[T_IPI], DPL_USER);
 	SETGATE(idt[T_IPI_DOS], 0, GD_KTEXT, __vectors[T_IPI_DOS], DPL_USER);
 	lidt(&idt_pd);

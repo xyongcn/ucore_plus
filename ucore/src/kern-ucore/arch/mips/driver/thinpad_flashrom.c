@@ -36,6 +36,7 @@ int thinpad_flashrom_read(size_t secno, void *dst, size_t nsecs)
 
 int thinpad_flashrom_write(size_t secno, const void *src, size_t nsecs)
 {
+  panic("FlashROM write limited.\n");
   nsecs = MIN(nsecs, THINFLASH_NR_SECTOR - secno);
   if (nsecs < 0) {
       return -E_INVAL;
@@ -89,7 +90,7 @@ void thinpad_flashrom_check(){
         }
     }
     kprintf("OK\n");
-
+    return;
     // check wirte & read
     kprintf("check write and read\n");
     for (secno = 0; secno < THINFLASH_NR_SECTOR; ++secno) {

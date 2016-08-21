@@ -10,7 +10,7 @@
 #include <proc.h>
 #include <dwarf_line.h>
 
-#define STACKFRAME_DEPTH 20
+#define STACKFRAME_DEPTH 10
 
 /* *
  * print_kerninfo - print the information about kernel, including the location
@@ -70,7 +70,7 @@ void print_stackframe(void)
   void *eip = read_rip();
 
  	int i, j;
- 	for (i = 0; ebp != 0 && i < 10; i++) {
+ 	for (i = 0; ebp != 0 && i < STACKFRAME_DEPTH; i++) {
     struct dwarf_line_section_header *header = __DWARF_DEBUG_LINE_BEGIN__;
     struct dwarf_line_search_result search_result;
     dwarf_line_search_for_address(header, eip, &search_result);

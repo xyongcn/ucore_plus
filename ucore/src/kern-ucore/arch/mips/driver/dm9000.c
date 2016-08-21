@@ -52,7 +52,7 @@ TODO: external MII is not functional, only internal at the moment.
 
 #include <types.h>
 #include <mmio.h>
-#include <network/ethernet.h>
+#include <ethernet.h>
 #include <slab.h>
 #include <kio.h>
 #include <picirq.h>
@@ -68,10 +68,15 @@ TODO: external MII is not functional, only internal at the moment.
 #define DM9000_DATA ((volatile void*)(CONFIG_DM9000_BASE + 4))
 #define __le16_to_cpu(x) (x)
 //TODO: udelay... How to implement?
-#define udelay(x)
 //TODO: How to define "valid"?
 #define is_valid_ether_addr(x) 1
 /* #define CONFIG_DM9000_DEBUG */
+void udelay(uint32_t tusec){
+	/*uint32_t i;
+	for(i=0;i<tusec*12;++i) {
+		__asm__ volatile("nop");
+	}*/
+}
 
 typedef uint32_t u32;
 typedef uint16_t u16;
@@ -141,11 +146,11 @@ static void DM9000_iow(int reg, u8 value);
 #define DM9000_inl(r) __raw_readl(r)
 #endif*/
 
-#define DM9000_outb(d, r) mmio_write8(r, d)
-#define DM9000_outw(d, r) mmio_write16(r, d)
+#define DM9000_outb(d, r) mmio_write32(r, d)
+#define DM9000_outw(d, r) mmio_write32(r, d)
 #define DM9000_outl(d, r) mmio_write32(r, d)
-#define DM9000_inb(r) mmio_read8(r)
-#define DM9000_inw(r) mmio_read16(r)
+#define DM9000_inb(r) mmio_read32(r)
+#define DM9000_inw(r) mmio_read32(r)
 #define DM9000_inl(r) mmio_read32(r)
 
 #ifdef CONFIG_DM9000_DEBUG
@@ -376,11 +381,18 @@ static int dm9000_init(struct ethernet_driver *dev)
 #endif
 	}
 
+	enetaddr[0] = 0xF2;
+	enetaddr[1] = 0x00;
+	enetaddr[2] = 0x00;
+	enetaddr[3] = 0x11;
+	enetaddr[4] = 0x11;
+	enetaddr[5] = 0x11;
+
 	/* TODO： fill device MAC address registers */
-	/*for (i = 0, oft = DM9000_PAR; i < 6; i++, oft++)
-		DM9000_iow(oft, dev->enetaddr[i]);
+	for (i = 0, oft = DM9000_PAR; i < 6; i++, oft++)
+		DM9000_iow(oft, enetaddr[i]);
 	for (i = 0, oft = 0x16; i < 8; i++, oft++)
-		DM9000_iow(oft, 0xff);*/
+		DM9000_iow(oft, 0xff);
 
 	/* read back mac, just to be sure */
 	for (i = 0, oft = 0x10; i < 6; i++, oft++)
@@ -389,7 +401,7 @@ static int dm9000_init(struct ethernet_driver *dev)
 
 	/* Activate DM9000 */
 	/* RX enable */
-	DM9000_iow(DM9000_RCR, RCR_DIS_LONG | RCR_DIS_CRC | RCR_RXEN);
+	DM9000_iow(DM9000_RCR, RCR_DIS_LONG | RCR_DIS_CRC | RCR_RXEN | 0x2);
 	/* Enable TX/RX interrupt mask */
   //TODO: Seems IMR_PRM is what directly related to interrupt = =.
 	DM9000_iow(DM9000_IMR, IMR_PAR | IMR_PRM);
@@ -498,13 +510,17 @@ static void dm9000_rx(struct ethernet_driver *netdev, uint16_t *length, uint8_t 
 
 	/* Check packet ready or not, we must check
 	   the ISR status first for DM9000A */
-	if (!(DM9000_ior(DM9000_ISR) & 0x01)) {
+	/*if (!(DM9000_ior(DM9000_ISR) & 0x01)) {
     *length = 0;
     *data = NULL;
+    DM9000_iow(DM9000_IMR, DM9000_ior(DM9000_IMR) | IMR_PRM);
     return;
-  }/* Rx-ISR bit must be set. */
+  }*//* Rx-ISR bit must be set. */
 
-	DM9000_iow(DM9000_ISR, 0x01); /* clear PR status latched in bit 0 */
+  //kprintf("Entering dm9000_rx\n");
+
+	//DM9000_iow(DM9000_ISR, 0x01); /* clear PR status latched in bit 0 */
+  //DM9000_iow(DM9000_IMR, DM9000_ior(DM9000_IMR) | IMR_PRM);
 
 	/* There is _at least_ 1 package in the fifo, read them all */
 	//for (;;) {
@@ -525,12 +541,11 @@ static void dm9000_rx(struct ethernet_driver *netdev, uint16_t *length, uint8_t 
       return;
 		}
 
-		/*if (rxbyte != DM9000_PKT_RDY) {
-          kprintf("NODATA2\n");
+		if (rxbyte != DM9000_PKT_RDY) {
       *length = 0;
       *data = NULL;
       return;
-    }*/
+    }
 
 		DM9000_DBG("receiving packet\n");
 
@@ -568,7 +583,6 @@ static void dm9000_rx(struct ethernet_driver *netdev, uint16_t *length, uint8_t 
       return;
 		}
 	//}
-      kprintf("NODATA3\n");
   *length = 0;
   *data = NULL;
 }
@@ -600,11 +614,17 @@ void dm9000_write_srom_word(int offset, u16 val)
 
 static void dm9000_get_enetaddr(struct ethernet_driver* driver, uint8_t* address_store)
 {
-#if !defined(CONFIG_DM9000_NO_SROM)
+	address_store[0] = 0xF2;
+	address_store[1] = 0x00;
+	address_store[2] = 0x00;
+	address_store[3] = 0x11;
+	address_store[4] = 0x11;
+	address_store[5] = 0x11;
+/*#if !defined(CONFIG_DM9000_NO_SROM)
 	int i;
 	for (i = 0; i < 3; i++)
 		dm9000_read_srom_word(i, address_store + (2 * i));
-#endif
+#endif*/
 }
 
 /*
@@ -664,8 +684,14 @@ static void dm9000_phy_write(int reg, u16 value)
 
 void dm9000_interrupt_handler()
 {
+  //kprintf("Interrupt!!!\n");
+  uint8_t mask = DM9000_ior(DM9000_ISR);
   struct ethernet_driver *driver = &dm9000_info.netdev;
-  driver->receive_notifier(driver);
+  if(mask & 0x01) {
+    driver->receive_notifier(driver);
+  }
+  DM9000_iow(DM9000_ISR, 0x01);
+  //DM9000_iow(DM9000_IMR, DM9000_ior(DM9000_IMR) & ~IMR_PRM);
 }
 
 int dm9000_initialize()
@@ -675,14 +701,13 @@ int dm9000_initialize()
 	/* Load MAC address from EEPROM */
 	//dm9000_get_enetaddr(dev);
 
-  kprintf("DM9000 : Found device\n");
   if(dm9000_init(ethernet_driver) != 0) return;
   char mac[6];
   dm9000_get_enetaddr(NULL, mac);
   kprintf("    MAC Address is ");
   for(int i = 0; i < 6; i++) {
     if(i != 0) kprintf(":");
-    kprintf("%02x", mac[i]);
+    kprintf("%x", mac[i]);
   }
   kprintf("\n");
 	//dev->init = dm9000_init;

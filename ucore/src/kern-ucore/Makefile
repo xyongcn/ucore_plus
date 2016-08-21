@@ -1,4 +1,4 @@
-dirs-y := schedule syscall fs process mm libs sync kmodule sysconf numa time debug network trap
+dirs-y := schedule syscall fs process mm libs sync kmodule sysconf numa time debug network trap ptrace
 
 dirs-y += arch/$(ARCH)
 

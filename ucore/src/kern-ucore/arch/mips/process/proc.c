@@ -486,6 +486,9 @@ int init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int a
 			 uint32_t elf_have_interpreter, uint32_t interpreter_entry,
 			 uint32_t elf_entry, uint32_t linker_base, void* program_header_address)
 {
+  kprintf("init_new_context_dynamic\n");
+  kprintf("elf_entry = %x\n", elf_entry);
+  kprintf("interpreter_entry = %x\n", interpreter_entry);
   //Conclude this by using LD_SHOW_AUXV=1 on my laptop running Linux 4.5.4
   const int ELF_AUXILIARY_VECTOR_COUNT = 19;
   char* stack_top = USTACKTOP;

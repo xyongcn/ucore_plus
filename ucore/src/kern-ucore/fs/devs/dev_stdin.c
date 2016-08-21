@@ -64,7 +64,7 @@ void dev_stdin_write(char c)
  *		every read or write operation will increase them
  *		if p_rpos >= p_wpos, current process should be wait
  * */
-static int dev_stdin_read(char *buf, size_t len)
+static int dev_stdin_read(char *buf, size_t len, int io_flags)
 {
 	int ret = 0;
 	bool intr_flag;
@@ -84,6 +84,11 @@ try_again:
 				if (p_rpos >= p_wpos)
 					break;
 			} else {
+        if(/*len == 1 && */(io_flags & O_NONBLOCK)) {
+          ret = -E_AGAIN;
+          //panic("%x", io_flags);
+          break;
+        }
 				wait_t __wait, *wait = &__wait;
 				wait_current_set(wait_queue, wait, WT_KBD);
 				local_intr_restore(intr_flag);
@@ -139,11 +144,11 @@ static int stdin_close(struct device *dev)
 /* *
  * for stdin io, write is invalidate
  * */
-static int stdin_io(struct device *dev, struct iobuf *iob, bool write)
+static int stdin_io(struct device *dev, struct iobuf *iob, bool write, int io_flags)
 {
 	if (!write) {
 		int ret;
-		if ((ret = dev_stdin_read(iob->io_base, iob->io_resid)) > 0) {
+		if ((ret = dev_stdin_read(iob->io_base, iob->io_resid, io_flags)) > 0) {
 			iob->io_resid -= ret;
 		}
 		return ret;

@@ -307,6 +307,9 @@ static void trap_dispatch(struct trapframe *tf)
 		break;
 		/* alignment error or access kernel
 		 * address space in user mode */
+  case EX_BP:
+    ptrace_interrupt_hook(tf);
+    break;
 	case EX_ADEL: case EX_ADES: {
     const uint32_t LOAD_STORE_OPCODE_MASK = 0xFC000000;
     const uint32_t BRANCH_OPCODE_MASK = 0xFC000000;

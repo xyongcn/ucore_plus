@@ -318,15 +318,23 @@ int sysfile_linux_fcntl64(int fd, int cmd, int arg)
   }
   else if(cmd == F_SETFL) {
     struct file *file;
-    if (fd2file(fd, &file) != 0) {
-      return -E_INVAL;
+    int fd_type;
+    if (fd2file(fd, &file) != 0 || vop_gettype(file->node, &fd_type) != 0) {
+      panic("= = %d", fd);
+      return -E_BADF;
     }
     file->io_flags = arg;
+    if(S_ISSOCK(fd_type)/* && (arg & O_NONBLOCK)*/) {
+      panic("XX");
+      /*linux_fd_set_set(lwip_wrapper_readfds, i);
+      socket_fds++;*/
+    }
     return 0;
   }
   else if(cmd == F_GETFL) {
     struct file *file;
     if (fd2file(fd, &file) != 0) {
+      panic("= = %d", fd);
       return -E_INVAL;
     }
     return file->io_flags;
@@ -660,6 +668,7 @@ void *sysfile_linux_mmap2(void *addr, size_t len, int prot, int flags,
 int sysfile_linux_select(int nfds, linux_fd_set_t *readfds, linux_fd_set_t *writefds,
   linux_fd_set_t *exceptfds, struct linux_timeval *timeout)
 {
+  kprintf("Entering sysfile_linux_select\n");
   int ret;
   linux_fd_set_t *lwip_wrapper_readfds = kmalloc(sizeof(linux_fd_set_t));
   linux_fd_set_t *lwip_wrapper_writefds = kmalloc(sizeof(linux_fd_set_t));
@@ -721,6 +730,7 @@ int sysfile_linux_select(int nfds, linux_fd_set_t *readfds, linux_fd_set_t *writ
         goto out;
       }
       if(S_ISSOCK(fd_type)) {
+                kprintf("Adding excfd %d\n", i);
         linux_fd_set_set(lwip_wrapper_exceptfds, i);
         socket_fds++;
       }
@@ -736,6 +746,7 @@ int sysfile_linux_select(int nfds, linux_fd_set_t *readfds, linux_fd_set_t *writ
     goto out;
   }
   else if(socket_fds != 0 && other_fds == 0) {
+      kprintf("XXXX = %x\n", *(uint32_t*)lwip_wrapper_exceptfds);
     ret = socket_lwip_select_wrapper(
       nfds, lwip_wrapper_readfds, lwip_wrapper_writefds, lwip_wrapper_exceptfds,
       ktimeout
@@ -838,5 +849,11 @@ out:
   kfree(ucore_writefds);
   kfree(ucore_exceptfds);
   if(ktimeout != NULL) kfree(ktimeout);
+  if(writefds != NULL) {
+    kprintf("Leaving sysfile_linux_select %x %x\n", *(int*)readfds, *(int*)writefds);
+  }
+  else
+    kprintf("Leaving sysfile_linux_select %x\n", *(int*)readfds);
+
   return ret;
 }

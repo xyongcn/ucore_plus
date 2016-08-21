@@ -21,6 +21,7 @@
 #include <inode.h>
 #include <time/time.h>
 #include <network/socket.h>
+#include <ptrace/ptrace.h>
 #include <syscall_linux.h>
 
 struct iovec;
@@ -58,6 +59,15 @@ machine_word_t syscall_linux_getppid(machine_word_t args[])
 machine_word_t syscall_linux_getpgrp(machine_word_t args[])
 {
   return current->gid;
+}
+
+machine_word_t syscall_linux_ptrace(machine_word_t args[])
+{
+  long request = (long)args[0];
+  long pid = (long)args[1];
+  unsigned long addr = (unsigned long)args[2];
+  unsigned long data = (unsigned long)args[3];
+  return ptrace_syscall(request, pid, addr, data);
 }
 
 machine_word_t syscall_linux_sigaction(machine_word_t arg[])
@@ -348,6 +358,14 @@ machine_word_t syscall_linux_times(machine_word_t args[])
   buf->tms_cutime = ticks;
   buf->tms_cstime = ticks;
   return ticks;
+}
+
+machine_word_t syscall_linux_nanosleep(machine_word_t args[])
+{
+	//TODO: handle signal interrupt
+	struct linux_timespec *req = (struct linux_timespec *)args[0];
+	struct linux_timespec *rem = (struct linux_timespec *)args[1];
+	return do_linux_sleep(req, rem);
 }
 
 machine_word_t syscall_linux_mount(machine_word_t args[])
