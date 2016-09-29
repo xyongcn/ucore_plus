@@ -2,7 +2,7 @@
 
 -include $(KCONFIG_AUTOCONFIG)
 
-TARGET_CFLAGS:= 	-I../libs-user-ucore/ -I../libs-user-ucore/common -I../libs-user-ucore/arch/$(ARCH) -nostdinc -nostdlib -fno-builtin -gstabs -ggdb
+TARGET_CFLAGS:= 	-I../libs-user-ucore/ -I../libs-user-ucore/common -I../libs-user-ucore/arch/$(ARCH) -nostdinc -nostdlib -fno-builtin -gstabs -ggdb -std=gnu99
 
 #TARGET_CC_SYSTEM_LIB ?=  -L/opt/FriendlyARM/toolschain/4.4.3/lib/gcc/arm-none-linux-gnueabi/4.4.3/ 
 
