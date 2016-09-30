@@ -1980,7 +1980,14 @@ static int init_main(void *arg)
 	assert(nr_process == 1 + sysconf.lcpu_count);
 #endif
 	assert(nr_used_pages_store == nr_used_pages());
+
+	// TODO: The following assertion fails under arch i386.
+	// About 34 testcases fail because of it. These failures
+	// complain that "init check memory pass" are missing.
+	// It is possibly caused by memory leak in the kernel,
+	// i.e. many memory blocks kmalloc'ed are never free'ed.
 	assert(slab_allocated_store == slab_allocated());
+
 	kprintf("init check memory pass.\n");
 	return 0;
 }
