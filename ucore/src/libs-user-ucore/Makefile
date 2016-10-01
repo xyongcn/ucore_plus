@@ -3,7 +3,7 @@
 ULIB_OBJ_ROOT := $(OBJPATH_ROOT)/libs-user-ucore
 ULIB_A := $(ULIB_OBJ_ROOT)/ulib.a
 
-TARGET_CFLAGS := -I. -Icommon -Iarch/$(ARCH) -nostdinc -nostdlib -fno-builtin
+TARGET_CFLAGS := -I. -Icommon -Iarch/$(ARCH) -nostdinc -nostdlib -fno-builtin -std=gnu99
 obj-y := dir.o file.o malloc.o panic.o signal.o spipe.o \
 				stdio.o string.o syscall.o thread.o ulib.o umain.o mod.o \
 				mount.o stab.o
