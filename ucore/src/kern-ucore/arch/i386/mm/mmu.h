@@ -108,7 +108,7 @@ struct gatedesc {
         (gate).gd_off_31_16 = (uint32_t)(off) >> 16;        \
     }
 
-/* segment gescriptors */
+/* segment descriptors */
 struct segdesc {
 	unsigned sd_lim_15_0:16;	// low bits of segment limit
 	unsigned sd_base_15_0:16;	// low bits of segment base address
