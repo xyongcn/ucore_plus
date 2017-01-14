@@ -51,7 +51,6 @@
 #ifndef UCONFIG_HEAP_SLOB
 #define __CHECK_MEMORY_LEAK() do{ \
   assert(nr_used_pages_store == nr_used_pages());   \
-  assert(slab_allocated_store == slab_allocated()); \
   }while(0);
 
 #else
@@ -744,7 +743,6 @@ user_mem_check(struct mm_struct * mm, uintptr_t addr, size_t len, bool write)
 static void check_vmm(void)
 {
 	size_t nr_used_pages_store = nr_used_pages();
-	size_t slab_allocated_store = slab_allocated();
 
 	check_vma_struct();
 	check_pgfault();
@@ -757,7 +755,6 @@ static void check_vmm(void)
 static void check_vma_struct(void)
 {
 	size_t nr_used_pages_store = nr_used_pages();
-	size_t slab_allocated_store = slab_allocated();
 
 	struct mm_struct *mm = mm_create();
 	assert(mm != NULL);
@@ -822,7 +819,6 @@ static void check_pgfault(void)
 #ifdef UCONFIG_CHECK_PGFAULT
 	kprintf("starting check_pgfault()\n");
 	size_t nr_used_pages_store = nr_used_pages();
-	size_t slab_allocated_store = slab_allocated();
 
 	check_mm_struct = mm_create();
 	assert(check_mm_struct != NULL);
@@ -864,7 +860,6 @@ static void check_pgfault(void)
 	check_mm_struct = NULL;
 
 	assert(nr_used_pages_store == nr_used_pages());
-	assert(slab_allocated_store == slab_allocated());
 
 	kprintf("check_pgfault() succeeded!\n");
 #endif
