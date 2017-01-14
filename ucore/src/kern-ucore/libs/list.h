@@ -4,7 +4,7 @@
 #ifndef __ASSEMBLER__
 
 #include <types.h>
-
+#include <stddef.h>
 /* *
  * Simple doubly linked list implementation.
  *
@@ -169,6 +169,18 @@ static inline void __list_del(list_entry_t * prev, list_entry_t * next)
 	prev->next = next;
 	next->prev = prev;
 }
+
+/**
+ * list_str - get the struct for this entry
+ * alias of list_entry in linux
+ * @ptr: the &struct list_head pointer.
+ * @type: the type of the struct this is embedded in.
+ * @member:	the name of the list_head within the struct.
+ */
+#define list_str(ptr, type, member) \
+		container_of(ptr, type, member)
+
+
 
 #endif /* !__ASSEMBLER__ */
 

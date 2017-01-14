@@ -1940,7 +1940,6 @@ static int init_main(void *arg)
   vfs_path_init_cwd("/");
 
 	size_t nr_used_pages_store = nr_used_pages();
-	size_t slab_allocated_store = slab_allocated();
 
 	unsigned int nr_process_store = nr_process;
 
@@ -1980,7 +1979,6 @@ static int init_main(void *arg)
 	assert(nr_process == 1 + sysconf.lcpu_count);
 #endif
 	assert(nr_used_pages_store == nr_used_pages());
-	assert(slab_allocated_store == slab_allocated());
 	kprintf("init check memory pass.\n");
 	return 0;
 }
