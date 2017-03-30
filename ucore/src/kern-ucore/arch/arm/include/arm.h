@@ -1,5 +1,5 @@
-#ifndef __LIBS_ARM_H__
-#define __LIBS_ARM_H__
+#ifndef __KERN_ARM_H__
+#define __KERN_ARM_H__
 
 #include <types.h>
 #include <div64.h>
@@ -154,14 +154,62 @@ inline static void ttbSet(uint32_t ttb)
 #define ARM_SR_T          (1<<5)
 
 //in ./libs
-void *__memset(void *s, char c, size_t n) __attribute__ ((always_inline));
-void *__memmove(void *dst, const void *src, size_t n)
+static void *__memset(void *s, char c, size_t n) __attribute__ ((always_inline));
+static void *__memmove(void *dst, const void *src, size_t n)
     __attribute__ ((always_inline));
-void *__memcpy(void *dst, const void *src, size_t n)
+static void *__memcpy(void *dst, const void *src, size_t n)
     __attribute__ ((always_inline));
 
+#ifndef __HAVE_ARCH_MEMSET_TODELETE
+#define __HAVE_ARCH_MEMSET_TODELETE
+static inline void *__memset(void *s, char c, size_t n)
+{
+	char *p = s;
+	while (n-- > 0) {
+		*p++ = c;
+	}
+	return s;
+}
+#endif /* __HAVE_ARCH_MEMSET */
+
+#ifndef __HAVE_ARCH_MEMMOVE_TODELETE
+#define __HAVE_ARCH_MEMMOVE_TODELETE
+static inline void *__memmove(void *dst, const void *src, size_t n)
+{
+	if (dst < src) {
+		return __memcpy(dst, src, n);
+	}
+	const char *s = src;
+	char *d = dst;
+	if (s < d && s + n > d) {
+		s += n, d += n;
+		while (n-- > 0) {
+			*--d = *--s;
+		}
+	} else {
+		while (n-- > 0) {
+			*d++ = *s++;
+		}
+	}
+	return dst;
+}
+#endif /* __HAVE_ARCH_MEMMOVE */
+
+#ifndef __HAVE_ARCH_MEMCPY_TODELETE
+#define __HAVE_ARCH_MEMCPY_TODELETE
+static inline void *__memcpy(void *dst, const void *src, size_t n)
+{
+	const char *s = src;
+	char *d = dst;
+	while (n-- > 0) {
+		*d++ = *s++;
+	}
+	return dst;
+}
+#endif /* __HAVE_ARCH_MEMCPY */
+    
 #define __HAVE_ARCH_MEMSET
 #define __HAVE_ARCH_MEMMOVE
 #define __HAVE_ARCH_MEMCPY
 
-#endif /* !__LIBS_ARM_H__ */
+#endif /* !__KERN_ARM_H__ */

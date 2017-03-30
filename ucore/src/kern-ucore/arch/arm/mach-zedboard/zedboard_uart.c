@@ -36,6 +36,8 @@
 
 static bool serial_exists = 0;
 
+static uint32_t uart_base = ZEDBOARD_UART0;
+
 struct uart_zynq {
 	uint32_t control;			/* 0x00 - Control Register [8:0] */
 	uint32_t mode;				/* 0x04 - Mode Register [10:0] */

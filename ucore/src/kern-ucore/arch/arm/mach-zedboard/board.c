@@ -51,6 +51,8 @@ void board_init_early()
 
 void board_init()
 {
+    kprintf("zedboard init finished\n");
+    serial_init_mmu();
 	return;
 }
 

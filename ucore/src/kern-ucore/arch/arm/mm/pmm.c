@@ -368,6 +368,7 @@ void pmm_init(void)
 	// high kernel WIP
 	//boot_map_segment(boot_pgdir, 0xC0000000, KMEMSIZE, KERNBASE, PTE_W); // relocation address
 	print_pgdir(kprintf);
+    kprintf("after print pgdir\n");
 
 	/* Part 3 activating page tables */
 	ttbSet((uint32_t) PADDR(boot_pgdir));
