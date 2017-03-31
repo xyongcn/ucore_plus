@@ -241,7 +241,7 @@ boot_map_segment(pde_t * pgdir, uintptr_t la, size_t size, uintptr_t pa,
 
 void __boot_map_iomem(uintptr_t la, size_t size, uintptr_t pa)
 {
-	//kprintf("mapping iomem 0x%08x to 0x%08x, size 0x%08x\n", pa, la,size);
+	kprintf("mapping iomem 0x%08x to 0x%08x, size 0x%08x\n", pa, la,size);
 	boot_map_segment(boot_pgdir, la, size, pa, PTE_W | PTE_IOMEM);
 }
 
@@ -369,6 +369,8 @@ void pmm_init(void)
 	//boot_map_segment(boot_pgdir, 0xC0000000, KMEMSIZE, KERNBASE, PTE_W); // relocation address
 	print_pgdir(kprintf);
     kprintf("after print pgdir\n");
+	board_init();
+	print_pgdir(kprintf);
 
 	/* Part 3 activating page tables */
 	ttbSet((uint32_t) PADDR(boot_pgdir));
@@ -377,7 +379,7 @@ void pmm_init(void)
 	mmu_init();
 
 	/* ioremap */
-	board_init();
+	//board_init();
 
 	kprintf("mmu enabled.\n");
 	print_pgdir(kprintf);

@@ -51,8 +51,9 @@ void board_init_early()
 
 void board_init()
 {
+    // pic_initxxx(); //need to init interrupt here
+    serial_init_mmu_irq(PER_IRQ_BASE_NONE_SPI + ZEDBOARD_UART1_IRQ);
     kprintf("zedboard init finished\n");
-    serial_init_mmu();
 	return;
 }
 

@@ -36,7 +36,7 @@
 
 static bool serial_exists = 0;
 
-static uint32_t uart_base = ZEDBOARD_UART0;
+static uint32_t uart_base = ZEDBOARD_UART1;
 
 struct uart_zynq {
 	uint32_t control;			/* 0x00 - Control Register [8:0] */
@@ -58,10 +58,12 @@ static inline struct uart_zynq * uart_zynq_ports(int port)
 		case 0:
 			return (struct uart_zynq *) ZEDBOARD_UART0;
 		case 1:
-			return (struct uart_zynq *) ZEDBOARD_UART1;
+			//return (struct uart_zynq *) ZEDBOARD_UART1;
+			return (struct uart_zynq *) uart_base;
 		default:
 			// TODO a better default behavior
-			return (struct uart_zynq *) ZEDBOARD_UART1;
+			//return (struct uart_zynq *) ZEDBOARD_UART1;
+			return (struct uart_zynq *) uart_base;
 	}
 }
 
@@ -112,10 +114,20 @@ int serial_init(const int port, uint32_t irq) {
 
 	serial_setbrg(port);
 
-	// register_irq(irq, serial_int_handler, NULL);
-	// pic_enable(irq);
-
+ 	//register_irq(irq, serial_int_handler, NULL);
+	//pic_enable(irq);
 	return 0;
+}
+
+int serial_init_mmu_irq(uint32_t irq) {
+    
+	void *newbase = __ucore_ioremap(uart_base, PGSIZE, 0);
+	uart_base = (uint32_t) newbase;
+
+	//outw(uart_base + UART_IER, UART_IER_RHR_IT);
+	register_irq(irq, serial_int_handler, NULL);
+	pic_enable(irq);  // useless, this func is not implemented
+    kprintf("do ioremap on uart");
 }
 
 /* put char */
