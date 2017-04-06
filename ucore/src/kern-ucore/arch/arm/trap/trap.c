@@ -285,7 +285,6 @@ void trap(struct trapframe *tf)
 		if (!in_kernel) {
 			may_killed();
 			if (current->need_resched) {
-                kprintf("proc now schedule:%d\n", current->pid);
 				schedule();
 			}
 			do_signal(tf, NULL);

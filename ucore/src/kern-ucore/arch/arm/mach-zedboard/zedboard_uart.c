@@ -80,7 +80,7 @@ void serial_putc(int c);
 static int serial_int_handler(int irq, void * data) {
 	extern void dev_stdin_write(char c);
 	char c = cons_getc();
-	serial_putc(c);
+	//serial_putc(c);
 	dev_stdin_write(c);
     
     // clear interrupt status

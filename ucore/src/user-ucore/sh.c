@@ -114,7 +114,6 @@ int testfile(const char *name)
 
 int runcmd(char *cmd)
 {
-    printf("run cmd as: %s\n", cmd);
 	static char argv0[BUFSIZE];
 	const char *argv[EXEC_MAX_ARG_NUM + 1];
 	char *t;
@@ -233,7 +232,6 @@ int main(int argc, char **argv)
 
 	char *buffer;
 	while ((buffer = readline((interactive) ? "$ " : NULL)) != NULL) {
-        printf("run a cmd!");
 		printf("\n");
 		shcwd[0] = '\0';
 		int pid;

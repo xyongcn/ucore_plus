@@ -30,7 +30,7 @@
 #define ENABLEWB 		0x00000008 // deprecated in v7
 #define CHANGEWB 		0x00000008
 
-#define DOM3CLT 		0x00000003	// Critical value 
+#define DOM3CLT 		0x00000001	// Critical value 
 
 /* type */
 #define FAULT 	0
