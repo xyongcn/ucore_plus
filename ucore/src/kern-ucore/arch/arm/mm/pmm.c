@@ -241,7 +241,6 @@ boot_map_segment(pde_t * pgdir, uintptr_t la, size_t size, uintptr_t pa,
 
 void __boot_map_iomem(uintptr_t la, size_t size, uintptr_t pa)
 {
-	kprintf("mapping iomem 0x%08x to 0x%08x, size 0x%08x\n", pa, la,size);
 	boot_map_segment(boot_pgdir, la, size, pa, PTE_W | PTE_IOMEM);
 }
 
@@ -313,13 +312,17 @@ void pmm_init(void)
 	//boot_map_segment(boot_pgdir, virtual, PGSIZE, physical, PTEX_W); // base location of vector table
 	extern char __kernel_text_start[], __kernel_text_end[];
 	//kprintf("## %08x %08x\n", __kernel_text_start, __kernel_text_end);
-	boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, PADDR(KERNBASE), PTE_W);	// fixed address
+	
+    boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, PADDR(KERNBASE), PTE_W);	// fixed address
+
+
 	/* kernel code readonly protection */
 	boot_map_segment(boot_pgdir, (uintptr_t) __kernel_text_start,
 			 __kernel_text_end - __kernel_text_start,
 			 (uintptr_t) PADDR(__kernel_text_start), PTE_P);
 
-	boot_map_segment(boot_pgdir, KIOBASE, KIOSIZE, KIOBASE, PTE_W | PTE_IOMEM);	// fixed address
+	//boot_map_segment(boot_pgdir, KIOBASE, KIOSIZE, KIOBASE, PTE_W | PTE_IOMEM);	// fixed address
+	//boot_map_segment(boot_pgdir, KIOBASE, KIOSIZE, KIOBASE, PTE_W | PTE_IOMEM);	// fixed address
 
 	//Add PTE_W|PTE_U by whn09
 	//PTE_W should be aborted later
@@ -367,19 +370,19 @@ void pmm_init(void)
 	//boot_map_segment(boot_pgdir, RAMDISK_START, 0x10000000, 0x10000000, PTE_W); // fixed address
 	// high kernel WIP
 	//boot_map_segment(boot_pgdir, 0xC0000000, KMEMSIZE, KERNBASE, PTE_W); // relocation address
-	print_pgdir(kprintf);
-    kprintf("after print pgdir\n");
-	board_init();
+    
+
 	print_pgdir(kprintf);
 
 	/* Part 3 activating page tables */
 	ttbSet((uint32_t) PADDR(boot_pgdir));
+    //kprintf("after update pagetable!\n");
 
 	/* enable cache and MMU */
 	mmu_init();
 
 	/* ioremap */
-	//board_init();
+	board_init();
 
 	kprintf("mmu enabled.\n");
 	print_pgdir(kprintf);

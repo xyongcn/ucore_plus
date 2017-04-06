@@ -89,6 +89,7 @@ int vfs_lookup(char *path, struct inode **node_store)
 	if ((ret = get_device(path, &path, &node)) != 0) {
 		return ret;
 	}
+    assert(node != NULL);
 	if (*path != '\0') {
 		ret = vop_lookup(node, path, node_store);
 		vop_ref_dec(node);

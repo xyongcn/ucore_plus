@@ -3,7 +3,7 @@
 #
 # TODO determine a proper prefix
 CROSS_COMPILE="arm-none-eabi-"
-ADDITIONAL_CFLAGS="-g -ggdb"
+ADDITIONAL_CFLAGS="-g -ggdb -std=gnu99 -march=armv7-a"
 ADDITIONAL_LDFLAGS=""
 
 #

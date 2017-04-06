@@ -85,6 +85,7 @@ try_again:
 				wait_current_set(wait_queue, wait, WT_KBD);
 				local_intr_restore(intr_flag);
 
+                kprintf("proc now scheduel in stdin:%d\n", current->pid);
 				schedule();
 
 				local_intr_save(intr_flag);

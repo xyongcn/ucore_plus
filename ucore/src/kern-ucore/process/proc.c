@@ -184,7 +184,8 @@ void proc_run(struct proc_struct *proc)
 	if (proc != current) {
 		bool intr_flag;
 		struct proc_struct *prev = current, *next = proc;
-		// kprintf("(%d) => %d\n", lapic_id, next->pid);
+        kprintf("now run: %d", proc->pid);
+		//kprintf("(%d) => %d\n", lapic_id, next->pid);
 		local_intr_save(intr_flag);
 		{
 			current = proc;
@@ -565,6 +566,7 @@ void may_killed(void)
 //    4. call wakup_proc to make the new child process RUNNABLE 
 int do_fork(uint32_t clone_flags, uintptr_t stack, struct trapframe *tf)
 {
+    kprintf("call fork");
 	int ret = -E_NO_FREE_PROC;
 	struct proc_struct *proc;
 	if (nr_process >= MAX_PROCESS) {

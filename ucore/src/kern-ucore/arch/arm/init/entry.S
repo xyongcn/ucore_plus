@@ -169,11 +169,13 @@ __create_pgtbl:
 
 #	mov r7, #mm_mmuflag
 #	ldr r7, [r7, #0]
-	ldr r7, =mm_mmuflag
+    
+    #full access, see armv7-arm-B3-1358
+	ldr r7, =mm_mmuflag  
 	eor r7, r7, #0xc << 28
 	ldr r7, [r7]
 
-	# map 0x0 to 0x0
+	# map 0x0 to 0x0(map a section in 1st level pgtable)
 	ldr r6, =0
 	orr r6, r6, r7
 	str r6, [r4]

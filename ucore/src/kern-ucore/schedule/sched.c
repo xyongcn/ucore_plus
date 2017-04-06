@@ -112,6 +112,7 @@ void stop_proc(struct proc_struct *proc, uint32_t wait)
 
 void wakeup_proc(struct proc_struct *proc)
 {
+    kprintf("wake up proc: %d", proc->pid);
 	assert(proc->state != PROC_ZOMBIE);
 	bool intr_flag;
 	local_intr_save(intr_flag);
@@ -186,6 +187,7 @@ void schedule(void)
 			sched_class_dequeue(next);
 		else
 			next = idleproc;
+        kprintf("now pick up:%d\n", next->pid);
 		next->runs++;
 		if (next != current)
 			proc_run(next);

@@ -30,6 +30,9 @@
 #define ZYNQ_UART_CR_TXRST			0x00000002 /* TX logic reset */
 #define ZYNQ_UART_CR_RXRST			0x00000001 /* RX logic reset */
 
+#define ZYNQ_UART_TRIG_LEVEL_MASK   0x0000003F /* RxFIFO's' trigger level is 0-63 */
+#define ZYNQ_UART_RX_TRIG_INT       (1)        /* Rx trig interrupt*/
+
 #define ZYNQ_UART_MR_PARITY_NONE	0x00000020  /* No parity mode */
 
 #define BAUDRATE_CONFIG 115200
@@ -41,9 +44,14 @@ static uint32_t uart_base = ZEDBOARD_UART1;
 struct uart_zynq {
 	uint32_t control;			/* 0x00 - Control Register [8:0] */
 	uint32_t mode;				/* 0x04 - Mode Register [10:0] */
-	uint32_t reserved1[4];
+    uint32_t intr_enable;       /* 0x08 - Interrupt enable register [12:0] read_only */
+    uint32_t intr_disable;      /* 0x0C - Interrupt disable register [12:0] read_only */
+    uint32_t intr_mask;         /* 0x10 - Interrupt mask [12:0] */
+    uint32_t channel_intr_status;  /*0x14 - Interrupt status [12:0] */
 	uint32_t baud_rate_gen;		/* 0x18 - Baud Rate Generator [15:0] */
-	uint32_t reserved2[4];
+    uint32_t placeholders1;
+    uint32_t recv_fifo_trig_level; /* 0x20 - Receiver fifo trigger level [5:0] */
+	uint32_t placeholders2[2];
 	uint32_t channel_sts;		/* 0x2c - Channel Status [11:0] */
 	uint32_t tx_rx_fifo;			/* 0x30 - FIFO [15:0] or [7:0] */
 	uint32_t baud_rate_divider;	/* 0x34 - Baud Rate Divider [7:0] */
@@ -69,11 +77,15 @@ static inline struct uart_zynq * uart_zynq_ports(int port)
 
 void serial_putc(int c);
 
-static int serial_int_handler(int irq, void * data) {\
+static int serial_int_handler(int irq, void * data) {
 	extern void dev_stdin_write(char c);
 	char c = cons_getc();
 	serial_putc(c);
 	dev_stdin_write(c);
+    
+    // clear interrupt status
+    const int port = 1;
+    serial_clear(port);
 	return 0;
 }
 
@@ -95,7 +107,7 @@ static void serial_setbrg(const int port) {
 }
 
 /* init the serial port */
-int serial_init(const int port, uint32_t irq) {
+int serial_init(const int port) {
 	if(serial_exists) {
 		return -1;
 	}
@@ -114,17 +126,26 @@ int serial_init(const int port, uint32_t irq) {
 
 	serial_setbrg(port);
 
- 	//register_irq(irq, serial_int_handler, NULL);
-	//pic_enable(irq);
 	return 0;
 }
 
-int serial_init_mmu_irq(uint32_t irq) {
+int serial_init_remap_irq(uint32_t irq, int port) {
     
 	void *newbase = __ucore_ioremap(uart_base, PGSIZE, 0);
 	uart_base = (uint32_t) newbase;
 
-	//outw(uart_base + UART_IER, UART_IER_RHR_IT);
+    // enable rx interrupt and register it.
+	struct uart_zynq * regs = uart_zynq_ports(port);
+    while(serial_set_trigger_level(1, 1) != 1);  // set trigger level to 1
+    while((inw((uint32_t) & regs -> intr_mask) & ZYNQ_UART_RX_TRIG_INT) != 1) {
+        uint32_t en_reg = inw((uint32_t) & regs -> intr_enable);
+        uint32_t dis_reg = inw((uint32_t) & regs -> intr_disable);
+        en_reg |= (uint32_t)ZYNQ_UART_RX_TRIG_INT;
+        dis_reg &= (~(uint32_t)ZYNQ_UART_RX_TRIG_INT);
+        outw((uint32_t) & regs -> intr_enable, en_reg);
+        outw((uint32_t) & regs -> intr_disable, dis_reg);
+    }
+
 	register_irq(irq, serial_int_handler, NULL);
 	pic_enable(irq);  // useless, this func is not implemented
     kprintf("do ioremap on uart");
@@ -163,7 +184,7 @@ int serial_proc_data(void) {
 
 	struct uart_zynq * regs = uart_zynq_ports(port);
 
-	while(! serial_test(port)) {
+	if (! serial_test(port)) {
 		return -1;
 	}
 
@@ -171,10 +192,27 @@ int serial_proc_data(void) {
 	return ret;
 }
 
-void serial_clear() {
-	return;
+void serial_clear(int port) {
+	struct uart_zynq * regs = uart_zynq_ports(port);
+    uint32_t intr_sts = inw((uint32_t) & regs -> channel_intr_status);
+    intr_sts |= ZYNQ_UART_RX_TRIG_INT;
+    outw((uint32_t) & regs -> channel_intr_status, intr_sts);
 }
 
 int serial_check() {
 	return serial_exists;
 }
+
+/* 
+ * zynq-7000 uart use a fifo for recv data, it has a trigger level
+ * for more details, refer t ug585-zynq-7000-trm 19.3.5
+ * */
+int serial_set_trigger_level(int port, uint32_t level)
+{
+	struct uart_zynq * regs = uart_zynq_ports(port);
+    outw((uint32_t) & regs -> recv_fifo_trig_level, level);
+    return inw((uint32_t) & regs -> recv_fifo_trig_level) == (level & ZYNQ_UART_TRIG_LEVEL_MASK) ;
+}
+
+
+

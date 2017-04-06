@@ -99,7 +99,6 @@ static void controlSet(uint32_t value, uint32_t mask)
  * */
 void mmu_init(void)
 {
-    kprintf("start init mmu");
 	uint32_t enable, change;
 
 	/* Part 4 Set Domain Access */
@@ -114,7 +113,5 @@ void mmu_init(void)
 #endif
 
 	/* enable cache and MMU */
-    kprintf("before ctl set");
 	controlSet(enable, change);
-    kprintf("after ctl set");
 }
