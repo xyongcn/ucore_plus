@@ -12,6 +12,7 @@
 	aliases {
 		ethernet0 = "/amba/ethernet@e000b000";
 		serial0 = "/amba/serial@e0000000";
+		serial1 = "/amba/serial@e0001000";
 	};
 
 	memory {
@@ -184,7 +185,7 @@
 
 		uart1: serial@e0001000 {
 			compatible = "xlnx,xuartps", "cdns,uart-r1p8";
-			status = "disabled";
+			status = "okay";
 			clocks = <0x1 0x18 0x1 0x29>;
 			clock-names = "uart_clk", "pclk";
 			reg = <0xe0001000 0x1000>;

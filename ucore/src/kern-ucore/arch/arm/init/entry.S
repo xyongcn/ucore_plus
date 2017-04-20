@@ -104,7 +104,10 @@ relocated:
 
 /* enable swp,flow prediction */
 #ifdef __MACH_ARM_CORTEX_A9
-  ldr r1, =(1<<11)|(1<<10)
+  MRC p15, 0, r1, c1, c0, 0
+  # ldr r1, =(1<<11)|(1<<10)
+  orr r1, #(1<<11)
+  orr r1, #(1<<10)
   MCR p15, 0, r1, c1, c0, 0
 #endif
 
