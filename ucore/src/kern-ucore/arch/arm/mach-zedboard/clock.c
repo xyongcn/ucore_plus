@@ -40,9 +40,7 @@ static void timer_clear(void)
     // disable timer
     uint32_t reg_ctl = inw((uint32_t) (timer_base + GLOBAL_TIMER_CTL));
     reg_ctl &= GLOBAL_TIMER_DIS;
-    do {
-        outw((uint32_t) (timer_base + GLOBAL_TIMER_CTL), reg_ctl);
-    } while (inw((uint32_t) (timer_base + GLOBAL_TIMER_CTL)) != reg_ctl);
+    outw((uint32_t) (timer_base + GLOBAL_TIMER_CTL), reg_ctl);
 
     // reload count
     outw((uint32_t) (timer_base + GLOBAL_TIMER_COUNT0), 0);
@@ -52,9 +50,7 @@ static void timer_clear(void)
     reg_ctl = inw((uint32_t) (timer_base + GLOBAL_TIMER_CTL));
     reg_ctl &= GLOBAL_TIMER_CONFIG_MASK;
     reg_ctl |= GLOBAL_TIMER_CONFIG;
-    do {
-        outw((uint32_t) (timer_base + GLOBAL_TIMER_CTL), reg_ctl);
-    } while (inw((uint32_t) (timer_base + GLOBAL_TIMER_CTL)) != reg_ctl);
+    outw((uint32_t) (timer_base + GLOBAL_TIMER_CTL), reg_ctl);
 
     // clear interrupt bit
     outw((uint32_t) (timer_base + GLOBAL_TIMER_STS), 1);
@@ -77,9 +73,7 @@ static int timer_init(uint32_t base, int irq)
     reg_ctl |= GLOBAL_TIMER_DIV;
     reg_ctl &= GLOBAL_TIMER_CONFIG_MASK;
     reg_ctl |= GLOBAL_TIMER_CONFIG;
-    do {
-        outw((uint32_t) (timer_base + GLOBAL_TIMER_CTL), reg_ctl);
-    } while (inw((uint32_t) (timer_base + GLOBAL_TIMER_CTL)) != reg_ctl);
+    outw((uint32_t) (timer_base + GLOBAL_TIMER_CTL), reg_ctl);
     
     // set cmp regiser
     outw((uint32_t) (timer_base + GLOBAL_TIMER_CMP0), (uint32_t) GLOBAL_TIMER_COMP);
