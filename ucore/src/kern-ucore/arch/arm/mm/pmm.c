@@ -371,21 +371,7 @@ void pmm_init(void)
 	// high kernel WIP
 	//boot_map_segment(boot_pgdir, 0xC0000000, KMEMSIZE, KERNBASE, PTE_W); // relocation address
     
-    //uint32_t sctlr = 0;
-    //asm volatile ("MRC p15, 0, %0, c1, c0, 0"       /* read control register */
-    //                 :"=r" (sctlr)
-    //       );
-    //sctlr |= (1U << 23);  // for qemu
-    ////sctlr &= (0xF7FFFFFF); // for zynq
-    //kprintf("set sctlr: 0x%08x\n", sctlr);
-    //   asm volatile ("MCR p15, 0, %0, c1, c0, 0"       /* read control register */
-    //                 ::"r" (sctlr)
-    //       );
-    //   asm volatile ("MRC p15, 0, %0, c1, c0, 0"       /* read control register */
-    //                 :"=r" (sctlr)
-    //       );
-    //kprintf("sctlr: 0x%08x\n", sctlr);
-	//print_pgdir(kprintf);
+	print_pgdir(kprintf);
 
 	/* Part 3 activating page tables */
 	ttbSet((uint32_t) PADDR(boot_pgdir));
