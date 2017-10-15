@@ -3,6 +3,6 @@
 
 int main(void)
 {
-	asm volatile ("int $14");
+	__asm__ volatile ("int $14");
 	panic("FAIL: T.T\n");
 }

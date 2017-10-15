@@ -63,7 +63,7 @@ static inline void atomic_set(atomic_t * v, int i)
  * */
 static inline void atomic_add(atomic_t * v, int i)
 {
-	asm volatile ("l.add %0, %0, %1":"+m" (v->counter):"ir"(i));
+	__asm__ volatile ("l.add %0, %0, %1":"+m" (v->counter):"ir"(i));
 }
 
 /* *
@@ -75,7 +75,7 @@ static inline void atomic_add(atomic_t * v, int i)
  * */
 static inline void atomic_sub(atomic_t * v, int i)
 {
-	asm volatile ("l.sub %0, %0, %1":"+m" (v->counter):"ir"(i));
+	__asm__ volatile ("l.sub %0, %0, %1":"+m" (v->counter):"ir"(i));
 }
 
 /* *
@@ -106,7 +106,7 @@ static inline bool atomic_sub_test_zero(atomic_t * v, int i)
  * */
 static inline void atomic_inc(atomic_t * v)
 {
-	asm volatile ("l.addi %0, %0, 1":"+m" (v->counter));
+	__asm__ volatile ("l.addi %0, %0, 1":"+m" (v->counter));
 }
 
 /* *
@@ -117,7 +117,7 @@ static inline void atomic_inc(atomic_t * v)
  * */
 static inline void atomic_dec(atomic_t * v)
 {
-	asm volatile ("l.addi %0, %0, -1":"+m" (v->counter));
+	__asm__ volatile ("l.addi %0, %0, -1":"+m" (v->counter));
 }
 
 /* *
@@ -132,7 +132,7 @@ static inline bool atomic_inc_test_zero(atomic_t * v)
 	unsigned char c = 0;
 	bool intr_flag;
 	local_intr_save(intr_flag);
-	asm volatile ("l.addi %0, %0, 1":"+m" (v->counter));
+	__asm__ volatile ("l.addi %0, %0, 1":"+m" (v->counter));
 	if (v->counter == 0)
 		c = 1;
 	local_intr_restore(intr_flag);
@@ -151,7 +151,7 @@ static inline bool atomic_dec_test_zero(atomic_t * v)
 	unsigned char c = 0;
 	bool intr_flag;
 	local_intr_save(intr_flag);
-	asm volatile ("l.addi %0, %0, -1":"+m" (v->counter));
+	__asm__ volatile ("l.addi %0, %0, -1":"+m" (v->counter));
 	if (v->counter == 0)
 		c = 1;
 	local_intr_restore(intr_flag);
@@ -246,7 +246,7 @@ static inline void change_bit(int nr, volatile void *addr)
 {
 	bool intr_flag;
 	local_intr_save(intr_flag);
-	asm volatile ("l.xor %0, %0, %1":"=m" (*(volatile long *)addr):"Ir"
+	__asm__ volatile ("l.xor %0, %0, %1":"=m" (*(volatile long *)addr):"Ir"
 		      (1 << nr));
 	local_intr_restore(intr_flag);
 }
@@ -300,7 +300,7 @@ static inline bool test_and_change_bit(int nr, volatile void *addr)
 	local_intr_save(intr_flag);
 	if (*_addr & (1 << nr))
 		c = 1;
-	asm volatile ("l.xor %0, %0, %1":"=m" (*(volatile long *)addr):"Ir"
+	__asm__ volatile ("l.xor %0, %0, %1":"=m" (*(volatile long *)addr):"Ir"
 		      (1 << nr));
 	local_intr_restore(intr_flag);
 	return 0;

@@ -72,7 +72,7 @@ static inline void atomic_set(atomic_t *v, int i)
  */
 static inline void atomic_add(atomic_t *v, int i)
 {
-	asm volatile(LOCK_PREFIX "addl %1,%0"
+	__asm__ volatile(LOCK_PREFIX "addl %1,%0"
 		     : "+m" (v->counter)
 		     : "ir" (i));
 }
@@ -86,7 +86,7 @@ static inline void atomic_add(atomic_t *v, int i)
  */
 static inline void atomic_sub(atomic_t *v, int i)
 {
-	asm volatile(LOCK_PREFIX "subl %1,%0"
+	__asm__ volatile(LOCK_PREFIX "subl %1,%0"
 		     : "+m" (v->counter)
 		     : "ir" (i));
 }
@@ -105,7 +105,7 @@ static inline int atomic_sub_and_test(int i, atomic_t *v)
 {
 	unsigned char c;
 
-	asm volatile(LOCK_PREFIX "subl %2,%0; sete %1"
+	__asm__ volatile(LOCK_PREFIX "subl %2,%0; sete %1"
 		     : "+m" (v->counter), "=qm" (c)
 		     : "ir" (i) : "memory");
 	return c;
@@ -120,7 +120,7 @@ static inline int atomic_sub_and_test(int i, atomic_t *v)
  */
 static inline void atomic_inc(atomic_t *v)
 {
-	asm volatile(LOCK_PREFIX "incl %0"
+	__asm__ volatile(LOCK_PREFIX "incl %0"
 		     : "+m" (v->counter));
 }
 
@@ -133,7 +133,7 @@ static inline void atomic_inc(atomic_t *v)
  */
 static inline void atomic_dec(atomic_t *v)
 {
-	asm volatile(LOCK_PREFIX "decl %0"
+	__asm__ volatile(LOCK_PREFIX "decl %0"
 		     : "+m" (v->counter));
 }
 
@@ -150,7 +150,7 @@ static inline bool atomic_dec_test_zero(atomic_t * v)
 {
 	unsigned char c;
 
-	asm volatile(LOCK_PREFIX "decl %0; sete %1"
+	__asm__ volatile(LOCK_PREFIX "decl %0; sete %1"
 		     : "+m" (v->counter), "=qm" (c)
 		     : : "memory");
 	return c != 0;
@@ -168,7 +168,7 @@ static inline bool atomic_inc_test_zero(atomic_t * v)
 {
 	unsigned char c;
 
-	asm volatile(LOCK_PREFIX "incl %0; sete %1"
+	__asm__ volatile(LOCK_PREFIX "incl %0; sete %1"
 		     : "+m" (v->counter), "=qm" (c)
 		     : : "memory");
 	return c != 0;
@@ -185,7 +185,7 @@ static inline bool atomic_inc_test_zero(atomic_t * v)
 static inline int atomic_add_return(atomic_t * v, int i)
 {
 	int __i = i;
-	asm volatile ("xaddl %0, %1":"+r" (i), "+m"(v->counter)::"memory");
+	__asm__ volatile ("xaddl %0, %1":"+r" (i), "+m"(v->counter)::"memory");
 	return i + __i;
 }
 
@@ -199,7 +199,7 @@ static inline int atomic_add_return(atomic_t * v, int i)
  * */
 static inline int atomic_add_return_orig(atomic_t * v, int i)
 {
-	asm volatile ("xaddl %0, %1":"+r" (i), "+m"(v->counter)::"memory");
+	__asm__ volatile ("xaddl %0, %1":"+r" (i), "+m"(v->counter)::"memory");
 	return i;
 }
 
@@ -253,7 +253,7 @@ static inline bool test_bit(int nr, volatile void *addr)
  * */
 static inline void set_bit(int nr, volatile void *addr)
 {
-	asm volatile ("btsl %1, %0":"=m" (*(volatile long *)addr):"Ir"(nr));
+	__asm__ volatile ("btsl %1, %0":"=m" (*(volatile long *)addr):"Ir"(nr));
 }
 
 /* *
@@ -263,7 +263,7 @@ static inline void set_bit(int nr, volatile void *addr)
  * */
 static inline void clear_bit(int nr, volatile void *addr)
 {
-	asm volatile ("btrl %1, %0":"=m" (*(volatile long *)addr):"Ir"(nr));
+	__asm__ volatile ("btrl %1, %0":"=m" (*(volatile long *)addr):"Ir"(nr));
 }
 
 /* *
@@ -273,7 +273,7 @@ static inline void clear_bit(int nr, volatile void *addr)
  * */
 static inline void change_bit(int nr, volatile void *addr)
 {
-	asm volatile ("btcl %1, %0":"=m" (*(volatile long *)addr):"Ir"(nr));
+	__asm__ volatile ("btcl %1, %0":"=m" (*(volatile long *)addr):"Ir"(nr));
 }
 
 /* *
@@ -284,7 +284,7 @@ static inline void change_bit(int nr, volatile void *addr)
 static inline bool test_and_set_bit(int nr, volatile void *addr)
 {
 	int oldbit;
-	asm volatile ("btsl %2, %1; sbbl %0, %0":"=r" (oldbit),
+	__asm__ volatile ("btsl %2, %1; sbbl %0, %0":"=r" (oldbit),
 		      "=m"(*(volatile long *)addr):"Ir"(nr));
 	return oldbit != 0;
 }
@@ -297,7 +297,7 @@ static inline bool test_and_set_bit(int nr, volatile void *addr)
 static inline bool test_and_clear_bit(int nr, volatile void *addr)
 {
 	int oldbit;
-	asm volatile ("btrl %2, %1; sbbl %0, %0":"=r" (oldbit),
+	__asm__ volatile ("btrl %2, %1; sbbl %0, %0":"=r" (oldbit),
 		      "=m"(*(volatile long *)addr):"Ir"(nr));
 	return oldbit != 0;
 }
@@ -310,7 +310,7 @@ static inline bool test_and_clear_bit(int nr, volatile void *addr)
 static inline bool test_and_change_bit(int nr, volatile void *addr)
 {
 	int oldbit;
-	asm volatile ("btcl %2, %1; sbbl %0, %0":"=r" (oldbit),
+	__asm__ volatile ("btcl %2, %1; sbbl %0, %0":"=r" (oldbit),
 		      "=m"(*(volatile long *)addr):"Ir"(nr));
 	return oldbit != 0;
 }
@@ -323,7 +323,7 @@ static inline bool test_and_change_bit(int nr, volatile void *addr)
 static inline bool test_bit(int nr, volatile void *addr)
 {
 	int oldbit;
-	asm volatile ("btl %2, %1; sbbl %0,%0":"=r" (oldbit):"m"
+	__asm__ volatile ("btl %2, %1; sbbl %0,%0":"=r" (oldbit):"m"
 		      (*(volatile long *)addr), "Ir"(nr));
 	return oldbit != 0;
 }

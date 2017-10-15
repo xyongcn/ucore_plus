@@ -132,7 +132,7 @@ int do_execve_arch_hook(int argc, char **kargv)
 int kernel_execve(const char *name, const char **argv, const char **kenvp)
 {
 	int ret;
-	asm volatile ("int %1;":"=a" (ret)
+	__asm__ volatile ("int %1;":"=a" (ret)
 		      :"i"(T_SYSCALL), "0"(SYS_exec), "d"(name), "c"(argv),
 		      "b"(kenvp)
 		      :"memory");

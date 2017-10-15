@@ -28,19 +28,19 @@ uint32_t do_set_tls(struct user_tls_desc *tlsp)
 inline static void flushCache926(void)
 {
 	unsigned int c7format = 0;
-	asm volatile (" MCR p15,0,%0,c7,c7,0"::"r" (c7format):"memory");	/* flush I&D-cache */
+	__asm__ volatile (" MCR p15,0,%0,c7,c7,0"::"r" (c7format):"memory");	/* flush I&D-cache */
 }
 
 inline static flushDcache926(void)
 {
 	unsigned int c7format = 0;
-	asm volatile (" MCR p15,0,%0,c7,c6,0"::"r" (c7format):"memory");	/* flush D-cache */
+	__asm__ volatile (" MCR p15,0,%0,c7,c6,0"::"r" (c7format):"memory");	/* flush D-cache */
 }
 
 inline static void flushIcache926(void)
 {
 	unsigned int c7format = 0;
-	asm volatile (" MCR p15,0,%0,c7,c5,0"::"r" (c7format):"memory");	/* flush D-cache */
+	__asm__ volatile (" MCR p15,0,%0,c7,c5,0"::"r" (c7format):"memory");	/* flush D-cache */
 }
 
 static Pagetable masterPT = { 0, 0, 0, MASTER, 0 };
@@ -421,8 +421,8 @@ void pmm_init(void)
 // (clean and flush, meaning we write the data back)
 void tlb_invalidate(pde_t * pgdir, uintptr_t la)
 {
-	asm volatile ("mcr p15, 0, %0, c8, c5, 1"::"r" (la):"cc");
-	asm volatile ("mcr p15, 0, %0, c8, c6, 1"::"r" (la):"cc");
+	__asm__ volatile ("mcr p15, 0, %0, c8, c5, 1"::"r" (la):"cc");
+	__asm__ volatile ("mcr p15, 0, %0, c8, c6, 1"::"r" (la):"cc");
 }
 
 void tlb_update(pgd_t * pgdir, uintptr_t la)
@@ -434,7 +434,7 @@ void tlb_invalidate_all()
 {
 	// tlb_invalidate(0,0);
 	const int zero = 0;
-	asm volatile ("MCR p15, 0, %0, c8, c5, 0;"	/* invalidate TLB */
+	__asm__ volatile ("MCR p15, 0, %0, c8, c5, 0;"	/* invalidate TLB */
 		      "MCR p15, 0, %0, c8, c6, 0"	/* invalidate TLB */
 		      ::"r" (zero):"cc");
 }
@@ -443,7 +443,7 @@ void tlb_invalidate_all()
 void tlb_clean_flush(pde_t * pgdir, uintptr_t la)
 {
 	uint32_t c8format = la & ~0x1F;	// ARM 920T dependant
-	asm volatile ("MCR p15, 0, %0, c7, c14, 1"	/* clean/flush TLB */
+	__asm__ volatile ("MCR p15, 0, %0, c7, c14, 1"	/* clean/flush TLB */
 		      ::"r" (c8format)
 	    );
 }

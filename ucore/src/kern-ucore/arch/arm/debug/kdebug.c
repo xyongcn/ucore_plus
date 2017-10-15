@@ -254,7 +254,7 @@ void print_debuginfo(uintptr_t eip)
 static inline uint32_t read_ip(void)
 {
 	uint32_t ip;
-	asm volatile ("mov %0, ip":"=r" (ip));
+	__asm__ volatile ("mov %0, ip":"=r" (ip));
 	return ip;
 }
 
@@ -296,7 +296,7 @@ void print_stackframe(void)
 {
 	uint32_t efp = 0, limit;	// = read_fp(), esp;
 
-	asm volatile ("mov %0, fp":"=r" (efp));
+	__asm__ volatile ("mov %0, fp":"=r" (efp));
 	limit = efp;
 
 	int i, j, k = 0;
@@ -322,7 +322,7 @@ void print_cur_status(void)
 {
 	static int round = 0;
 	uint32_t reg1, reg2, reg3, reg4;
-	asm volatile ("mov %0, sp;"
+	__asm__ volatile ("mov %0, sp;"
 		      "mov %1, fp;"
 		      "mrs %2, spsr;"
 		      "mrs %3, cpsr;":"=r" (reg1), "=r"(reg2), "=r"(reg3),

@@ -265,9 +265,9 @@ static inline void change_bit(int nr, volatile uint32_t * addr)
 {
 	bool intr_flag;
 	local_intr_save(intr_flag);
-	//asm volatile ("l.xor %0, %0, %1" :"=m" (*(volatile long *)addr) : "Ir" (1 << nr));
+	//__asm__ volatile ("l.xor %0, %0, %1" :"=m" (*(volatile long *)addr) : "Ir" (1 << nr));
 //#error Fill HERE
-	//asm volatile ("ldr r0, [%0]");
+	//__asm__ volatile ("ldr r0, [%0]");
 	*(volatile long *)addr ^= (1 << nr);
 	local_intr_restore(intr_flag);
 }
@@ -318,7 +318,7 @@ static inline bool test_and_change_bit(int nr, volatile uint32_t * addr)
 	local_intr_save(intr_flag);
 	if (*addr & (1 << nr))
 		c = 1;
-//      asm volatile ("l.xor %0, %0, %1" :"=m" (*(volatile long *)addr) : "Ir" (1 << nr));
+//      __asm__ volatile ("l.xor %0, %0, %1" :"=m" (*(volatile long *)addr) : "Ir" (1 << nr));
 //#error Fill HERE
 	*(volatile long *)addr ^= (1 << nr);
 	local_intr_restore(intr_flag);

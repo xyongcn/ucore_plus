@@ -88,7 +88,7 @@ void forkret(void)
 int kernel_execve(const char *name, const char **argv, const char **kenvp)
 {
 	int ret;
-	asm volatile ("int %1;":"=a" (ret)
+	__asm__ volatile ("int %1;":"=a" (ret)
 		      :"i"(T_SYSCALL), "0"(SYS_exec), "D"(name), "S"(argv),
 		      "d"(kenvp)
 		      :"memory");
@@ -219,7 +219,7 @@ void cpu_idle(void)
 {
 	while (1) {
 		assert((read_rflags() & FL_IF) != 0);
-		asm volatile ("hlt");
+		__asm__ volatile ("hlt");
 	}
 }
 

@@ -35,14 +35,14 @@ int mmu_init_pdt(Pagetable * pt)
 		return -1;
 	}
 /*  	
-	asm volatile (
+	__asm__ volatile (
 		"mov r0, %0;"
 		"mov r1, %0;"
 		::"r" (PTE):"r0","r1");
 	
 	for (; index > 0; index--)
 	{
-		asm volatile (
+		__asm__ volatile (
 			"STMIA %0!, {r0-r1};" 
 			"STMIA %0!, {r0-r1};"
 			"STMIA %0!, {r0-r1};"
@@ -64,12 +64,12 @@ int mmu_init_pdt(Pagetable * pt)
 static void domainAccessSet(uint32_t value, uint32_t mask)
 {
 	uint32_t c3format;
-	asm volatile ("MRC p15, 0, %0, c3, c0, 0"	/* read domain register */
+	__asm__ volatile ("MRC p15, 0, %0, c3, c0, 0"	/* read domain register */
 		      :"=r" (c3format)
 	    );
 	c3format &= ~mask;	/* clear bits that change */
 	c3format |= value;	/* set bits that change */
-	asm volatile ("MCR p15, 0, %0, c3, c0, 0"	/* write domain register */
+	__asm__ volatile ("MCR p15, 0, %0, c3, c0, 0"	/* write domain register */
 		      ::"r" (c3format)
 	    );
 }
@@ -79,12 +79,12 @@ static void domainAccessSet(uint32_t value, uint32_t mask)
 static void controlSet(uint32_t value, uint32_t mask)
 {
 	uint32_t c1format;
-	asm volatile ("MRC p15, 0, %0, c1, c0, 0"	/* read control register */
+	__asm__ volatile ("MRC p15, 0, %0, c1, c0, 0"	/* read control register */
 		      :"=r" (c1format)
 	    );
 	c1format &= ~mask;	/* clear bits that change */
 	c1format |= value;	/* set bits that change */
-	asm volatile ("MCR p15, 0, %0, c1, c0, 0"	/* write control register */
+	__asm__ volatile ("MCR p15, 0, %0, c1, c0, 0"	/* write control register */
 		      ::"r" (c1format)
 	    );
 }
