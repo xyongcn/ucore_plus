@@ -19,6 +19,7 @@ ARCHITECTURE_MAP = {
     'arm': 'arm-none-eabi',
 }
 
+
 def download_file_if_not_exist(local_path, remote_url):
     if os.path.isfile(local_path):
         print(local_path + ' exists')
@@ -30,18 +31,22 @@ def download_toolchain_src():
     print('Downloading binutils source code...')
     binutil_src_name = BINUTIL_SRC_NAME.format(BINUTIL_VERSION)
     binutil_src_url = BINUTIL_SRC_URL.format(binutil_src_name)
-    download_file_if_not_exist(BUILD_ENV_ROOT + '/' + binutil_src_name, binutil_src_url)
+    download_file_if_not_exist(
+        BUILD_ENV_ROOT + '/' + binutil_src_name, binutil_src_url)
     print('Downloading gcc source code...')
     for gcc_verion in GCC_VERSIONS:
         gcc_src_name = GCC_SRC_NAME.format(gcc_verion)
         gcc_src_url = GCC_SRC_URL.format(gcc_verion, gcc_src_name)
-        download_file_if_not_exist(BUILD_ENV_ROOT + '/' + gcc_src_name, gcc_src_url)
+        download_file_if_not_exist(
+            BUILD_ENV_ROOT + '/' + gcc_src_name, gcc_src_url)
 
 
 def extract_toolchain_src():
     print('Extracting binutils source code...')
-    binutil_src_name = BUILD_ENV_ROOT + '/' + BINUTIL_SRC_NAME.format(BINUTIL_VERSION)
-    binutil_src_dir = BUILD_ENV_ROOT + '/' + BINUTIL_SRC_DIR.format(BINUTIL_VERSION)
+    binutil_src_name = BUILD_ENV_ROOT + '/' + \
+        BINUTIL_SRC_NAME.format(BINUTIL_VERSION)
+    binutil_src_dir = BUILD_ENV_ROOT + '/' + \
+        BINUTIL_SRC_DIR.format(BINUTIL_VERSION)
     if os.path.isdir(binutil_src_dir):
         print(binutil_src_dir + ' exists')
     else:
@@ -76,31 +81,38 @@ initial_working_dir = os.getcwd()
 download_toolchain_src()
 extract_toolchain_src()
 
-for gcc_version in GCC_VERSIONS:
-    swicth_to_toolchain_build_dir(initial_working_dir)
-    binutil_build_configure = BUILD_ENV_ROOT + '/' + BINUTIL_SRC_DIR.format(BINUTIL_VERSION) +'/' + 'configure'
-    gcc_build_configure = BUILD_ENV_ROOT + '/' + GCC_SRC_DIR.format(gcc_version) +'/' + 'configure'
-    build_env_path = BUILD_ENV_ROOT + '/' + 'env-i386-gcc-' + gcc_version
-    if os.path.isdir(build_env_path):
-        print(build_env_path + ' exists.')
-        continue
-    call([binutil_build_configure,
-        '--prefix=' + build_env_path,
-        '--target=' + 'i386-linux-gnu',
-        '--disable-multilib',
-    ])
-    call(['make', '-j16'])
-    call(['make', 'install'])
-    swicth_to_toolchain_build_dir(initial_working_dir)
-    call([gcc_build_configure,
-        '--prefix=' + build_env_path,
-        '--target=' + 'i386-linux-gnu',
-        '--disable-multilib',
-        '--enable-languages=c',
-        '--without-headers',
-    ])
-    call(['make', '-j16', 'all-gcc'])
-    call(['make', 'install-gcc'])
+for ucore_arch in ARCHITECTURE_MAP:
+    gcc_arch = ARCHITECTURE_MAP[ucore_arch]
+    for gcc_version in GCC_VERSIONS:
+        swicth_to_toolchain_build_dir(initial_working_dir)
+        binutil_build_configure = BUILD_ENV_ROOT + \
+            '/' + BINUTIL_SRC_DIR.format(BINUTIL_VERSION) + '/' + 'configure'
+        gcc_build_configure = BUILD_ENV_ROOT + \
+            '/' + GCC_SRC_DIR.format(gcc_version) + '/' + 'configure'
+        build_env_path = BUILD_ENV_ROOT + \
+            '/' + 'env-' + ucore_arch + '-gcc-' + gcc_version
+        if os.path.isdir(build_env_path):
+            print(build_env_path + ' exists.')
+            continue
+        call([
+            binutil_build_configure,
+            '--prefix=' + build_env_path,
+            '--target=' + gcc_arch,
+            '--disable-multilib',
+        ])
+        call(['make', '-j16'])
+        call(['make', 'install'])
+        swicth_to_toolchain_build_dir(initial_working_dir)
+        call([
+            gcc_build_configure,
+            '--prefix=' + build_env_path,
+            '--target=' + gcc_arch,
+            '--disable-multilib',
+            '--enable-languages=c',
+            '--without-headers',
+        ])
+        call(['make', '-j16', 'all-gcc'])
+        call(['make', 'install-gcc'])
 
 os.chdir(initial_working_dir)
 call(['rm', '-rf', TOOLCHAIN_BUILD_DIR])
