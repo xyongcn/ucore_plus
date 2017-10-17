@@ -3,7 +3,7 @@
  *
  *       Filename:  kmalloc_glue.c
  *
- *    Description:  
+ *    Description:
  *
  *        Version:  1.0
  *        Created:  07/22/2012 04:02:49 PM
@@ -24,7 +24,7 @@
 #define __NO_UCORE_TYPE__
 #include <module.h>
 #include <kio.h>
-#include <slab.h>
+//#include <slab.h>
 
 void *__kmalloc(size_t size, gfp_t flags)
 {
