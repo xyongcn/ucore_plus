@@ -9,7 +9,7 @@
 static inline struct cpu* mycpu(void)
 {
 	uint64_t val;
-	__asm__ volatile("movq %%gs:0, %0" : "=r" (val));
+	__asm volatile("movq %%gs:0, %0" : "=r" (val));
 	return (struct cpu *)val;
 
 }

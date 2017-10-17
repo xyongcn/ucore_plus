@@ -53,14 +53,14 @@ static inline void outw(uint32_t port, uint32_t data)
 static inline uint32_t read_fp(void)
 {
 	uint32_t fp;
-	__asm__ volatile ("mov %0, fp":"=r" (fp));
+	asm volatile ("mov %0, fp":"=r" (fp));
 	return fp;
 }
 
 /* equivalent of sti assembly instruction */
 static inline void irq_flag_enable(void)
 {
-	__asm__ volatile ("mrs r0, cpsr;"
+	asm volatile ("mrs r0, cpsr;"
 		      "bic r0, r0, #0x80;"
 		      "msr cpsr, r0;":::"r0", "memory", "cc");
 }
@@ -68,7 +68,7 @@ static inline void irq_flag_enable(void)
 /* equivalent of cti assembly instruction */
 static inline void irq_flag_disable(void)
 {
-	__asm__ volatile ("mrs r0, cpsr;"
+	asm volatile ("mrs r0, cpsr;"
 		      "orr r0, r0, #0x80;"
 		      "msr cpsr, r0;":::"r0", "memory", "cc");
 }
@@ -76,20 +76,20 @@ static inline void irq_flag_disable(void)
 static inline uint32_t read_psrflags(void)
 {
 	uint32_t psrflags;
-	__asm__ volatile ("mrs %0, cpsr":"=r" (psrflags));
+	asm volatile ("mrs %0, cpsr":"=r" (psrflags));
 	return psrflags;
 }
 
 static inline void write_psrflags(uint32_t psrflags)
 {
-	__asm__ volatile ("msr cpsr, %0"::"r" (psrflags));
+	asm volatile ("msr cpsr, %0"::"r" (psrflags));
 }
 
 /* eauivalent of invlpg, hozever there is D TLB and I TLB */
 static inline void invalidate_itlb_line(void *addr)
 {
 	uint32_t c8format = (uint32_t) addr;	/* set bits that change */
-	__asm__ volatile ("MCR p15, 0, %0, c8, c5, 1"	/* write tlb flush command */
+	asm volatile ("MCR p15, 0, %0, c8, c5, 1"	/* write tlb flush command */
 		      ::"r" (c8format)
 	    );
 }
@@ -97,7 +97,7 @@ static inline void invalidate_itlb_line(void *addr)
 static inline void invalidate_dtlb_line(void *addr)
 {
 	uint32_t c8format = (uint32_t) addr;	/* set bits that change */
-	__asm__ volatile ("MCR p15, 0, %0, c8, c6, 1"	/* write tlb flush command */
+	asm volatile ("MCR p15, 0, %0, c8, c6, 1"	/* write tlb flush command */
 		      ::"r" (c8format)
 	    );
 }
@@ -105,7 +105,7 @@ static inline void invalidate_dtlb_line(void *addr)
 static inline uint32_t far(void)
 {
 	uint32_t c6format;
-	__asm__ volatile ("MRC p15, 0, %0, c6, c0, 0;"	//read data in fault address register
+	asm volatile ("MRC p15, 0, %0, c6, c0, 0;"	//read data in fault address register
 		      :"=r" (c6format));
 	return c6format;
 }
@@ -113,7 +113,7 @@ static inline uint32_t far(void)
 static inline uint32_t fsr(void)
 {
 	uint32_t c5format;
-	__asm__ volatile ("MRC p15, 0, %0, c5, c0, 0;"	//read data in fault status register
+	asm volatile ("MRC p15, 0, %0, c5, c0, 0;"	//read data in fault status register
 		      :"=r" (c5format));
 	return c5format;
 }
@@ -123,7 +123,7 @@ static inline uint32_t fsr(void)
 inline static void ttbSet(uint32_t ttb)
 {
 	ttb &= 0xffffc000;
-	__asm__ volatile ("MCR p15, 0, %0, c2, c0, 0"	/* set translation table base */
+	asm volatile ("MCR p15, 0, %0, c2, c0, 0"	/* set translation table base */
 		      ::"r" (ttb)
 	    );
 }

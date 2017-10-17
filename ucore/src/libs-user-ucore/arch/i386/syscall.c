@@ -20,7 +20,7 @@ uint32_t syscall(int num, ...)
 	va_end(ap);
 
 	uint32_t ret;
-	__asm__ volatile ("int %1;":"=a" (ret)
+	asm volatile ("int %1;":"=a" (ret)
 		      :"i"(T_SYSCALL),
 		      "a"(num),
 		      "d"(a[0]), "c"(a[1]), "b"(a[2]), "D"(a[3]), "S"(a[4])

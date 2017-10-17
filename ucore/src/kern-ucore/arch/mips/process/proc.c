@@ -405,7 +405,7 @@ int kernel_execve(const char *name, const char **argv, const char **kenvp)
 		argc++;
 	}
 	//panic("unimpl");
-	__asm__ volatile ("la $v0, %1;\n"	/* syscall no. */
+	asm volatile ("la $v0, %1;\n"	/* syscall no. */
 		      "move $a0, %2;\n"
 		      "move $a1, %3;\n"
 		      "move $a2, %4;\n"

@@ -2,8 +2,8 @@
 #include <intr.h>
 #include <asm/mipsregs.h>
 
-#define get_status(x) __asm__ volatile("mfc0 %0,$12" : "=r" (x))
-#define set_status(x) __asm__ volatile("mtc0 %0,$12" :: "r" (x))
+#define get_status(x) __asm volatile("mfc0 %0,$12" : "=r" (x))
+#define set_status(x) __asm volatile("mtc0 %0,$12" :: "r" (x))
 
 /* intr_enable - enable irq interrupt */
 void intr_enable(void)

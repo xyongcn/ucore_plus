@@ -55,7 +55,7 @@ static char vendor_[13];
 static inline  struct leaf read_one(uint32_t eax, uint32_t ecx)
 {
 	uint32_t ebx, edx;
-	__asm__ volatile("cpuid"
+	__asm volatile("cpuid"
 			: "=a" (eax), "=b" (ebx), "=c" (ecx), "=d" (edx)
 			: "a" (eax), "c" (ecx));
 	struct leaf l = {1, eax, ebx, ecx, edx};

@@ -135,7 +135,7 @@ int kernel_execve(const char *name, const char **argv)
 	register uint32_t _r4 asm("r4") = (uint32_t) name;
 	register uint32_t _r5 asm("r5") = argc;
 	register uint32_t _r6 asm("r6") = (uint32_t) argv;
-	__asm__ volatile ("l.sys 1; l.nop; l.nop;":"=r" (ret)
+	asm volatile ("l.sys 1; l.nop; l.nop;":"=r" (ret)
 		      :"r"(_r3), "r"(_r4), "r"(_r5), "r"(_r6));
 
 	return 0;

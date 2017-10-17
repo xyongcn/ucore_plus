@@ -94,7 +94,7 @@ static inline void print_pgfault(struct trapframe *tf)
 {
 	//print_trapframe(tf);
 	uint32_t ttb = 0;
-	__asm__ volatile ("MRC p15, 0, %0, c2, c0, 0":"=r" (ttb));
+	asm volatile ("MRC p15, 0, %0, c2, c0, 0":"=r" (ttb));
 	kprintf("%s page fault at (0x%08x) 0x%08x 0x%03x: %s-%s %s PID=%d\n",
 		tf->tf_trapno == T_PABT ? "instruction" : tf->tf_trapno ==
 		T_DABT ? "data" : "unknown", ttb, far(), tf->tf_err & 0xFFF,
@@ -230,7 +230,7 @@ static void trap_dispatch(struct trapframe *tf)
 #if 0
 		if (!trap_in_kernel(tf)) {
 			uint32_t sp;
-			__asm__ volatile ("mov %0, sp":"=r" (sp));
+			asm volatile ("mov %0, sp":"=r" (sp));
 			kprintf("### iRQnotK %08x\n", sp);
 		}
 #endif

@@ -100,14 +100,14 @@ const struct pmm_manager *pmm_manager;
  * */
 static inline void lgdt(struct pseudodesc *pd)
 {
-	__asm__ volatile ("lgdt (%0)"::"r" (pd));
-	__asm__ volatile ("movw %%ax, %%gs"::"a" (USER_DS));
-	__asm__ volatile ("movw %%ax, %%fs"::"a" (USER_DS));
-	__asm__ volatile ("movw %%ax, %%es"::"a" (KERNEL_DS));
-	__asm__ volatile ("movw %%ax, %%ds"::"a" (KERNEL_DS));
-	__asm__ volatile ("movw %%ax, %%ss"::"a" (KERNEL_DS));
+	asm volatile ("lgdt (%0)"::"r" (pd));
+	asm volatile ("movw %%ax, %%gs"::"a" (USER_DS));
+	asm volatile ("movw %%ax, %%fs"::"a" (USER_DS));
+	asm volatile ("movw %%ax, %%es"::"a" (KERNEL_DS));
+	asm volatile ("movw %%ax, %%ds"::"a" (KERNEL_DS));
+	asm volatile ("movw %%ax, %%ss"::"a" (KERNEL_DS));
 	// reload cs
-	__asm__ volatile ("ljmp %0, $1f\n 1:\n"::"i" (KERNEL_CS));
+	asm volatile ("ljmp %0, $1f\n 1:\n"::"i" (KERNEL_CS));
 }
 
 /**************************************************

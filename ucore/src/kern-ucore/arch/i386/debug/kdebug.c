@@ -299,7 +299,7 @@ static uint32_t read_eip(void) __attribute__ ((noinline));
 static uint32_t read_eip(void)
 {
 	uint32_t eip;
-	__asm__ volatile ("movl 4(%%ebp), %0":"=r" (eip));
+	asm volatile ("movl 4(%%ebp), %0":"=r" (eip));
 	return eip;
 }
 

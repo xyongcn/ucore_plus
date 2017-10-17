@@ -16,7 +16,7 @@ uint64_t syscall(int num, ...)
 	va_end(ap);
 
 	uint64_t ret;
-	__asm__ volatile ("movq 0x00(%%rbx), %%rdi;"
+	asm volatile ("movq 0x00(%%rbx), %%rdi;"
 		      "movq 0x08(%%rbx), %%rsi;"
 		      "movq 0x10(%%rbx), %%rdx;"
 		      "movq 0x18(%%rbx), %%rcx;"

@@ -126,10 +126,10 @@ struct segdesc {
 };
 
 #define SEG_NULL                                            \
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
+    (struct segdesc) {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 #define SEG(type, base, lim, dpl)                           \
-    {                                      \
+    (struct segdesc) {                                      \
         ((lim) >> 12) & 0xffff, (base) & 0xffff,            \
         ((base) >> 16) & 0xff, type, 1, dpl, 1,             \
         (unsigned)(lim) >> 28, 0, 0, 1, 1,                  \

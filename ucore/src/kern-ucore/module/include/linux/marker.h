@@ -72,7 +72,7 @@ struct marker {
 		_DEFINE_MARKER(name, #tp_name, tp_cb, format)
 
 /*
- * Note : the empty __asm__ volatile with read constraint is used here instead of a
+ * Note : the empty asm volatile with read constraint is used here instead of a
  * "used" attribute to fix a gcc 4.1.x bug.
  * Make sure the alignment of the structure in the __markers section will
  * not add unwanted padding between the beginning of the section and the

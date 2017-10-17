@@ -382,7 +382,7 @@ __kuser_helper_start:
  * This could be used as follows:
  *
  * #define __kernel_dmb() \
- *         __asm__ volatile ( "mov r0, #0xffff0fff; mov lr, pc; sub pc, r0, #95" \
+ *         asm volatile ( "mov r0, #0xffff0fff; mov lr, pc; sub pc, r0, #95" \
  *	        : : : "r0", "lr","cc" )
  */
 
@@ -432,7 +432,7 @@ __kuser_memory_barrier:				@ 0xffff0fa0
  * #define atomic_add(ptr, val) \
  *	({ register unsigned int *__ptr asm("r2") = (ptr); \
  *	   register unsigned int __result asm("r1"); \
- *	   __asm__ volatile ( \
+ *	   asm volatile ( \
  *	       "1: @ atomic_add\n\t" \
  *	       "ldr	r0, [r2]\n\t" \
  *	       "mov	r3, #0xffff0fff\n\t" \

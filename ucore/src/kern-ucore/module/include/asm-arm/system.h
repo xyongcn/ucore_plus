@@ -165,7 +165,7 @@ asm("mrc p15, 0, %0, c1, c0, 0	@ get CR": "=r"(val): :"cc");
 
 static inline void set_cr(unsigned int val)
 {
-	__asm__ volatile ("mcr p15, 0, %0, c1, c0, 0	@ set CR"::"r"
+	asm volatile ("mcr p15, 0, %0, c1, c0, 0	@ set CR"::"r"
 		      (val):"cc");
 	isb();
 }
@@ -187,7 +187,7 @@ asm("mrc p15, 0, %0, c1, c0, 2 @ get copro access": "=r"(val): :"cc");
 
 static inline void set_copro_access(unsigned int val)
 {
-	__asm__ volatile ("mcr p15, 0, %0, c1, c0, 2 @ set copro access"::"r"
+	asm volatile ("mcr p15, 0, %0, c1, c0, 2 @ set copro access"::"r"
 		      (val):"cc");
 	isb();
 }
@@ -247,7 +247,7 @@ static inline unsigned long __xchg(unsigned long x, volatile void *ptr,
 	switch (size) {
 #if __LINUX_ARM_ARCH__ >= 6
 	case 1:
-		__asm__ volatile ("@	__xchg1\n"
+		asm volatile ("@	__xchg1\n"
 			      "1:	ldrexb	%0, [%3]\n"
 			      "	strexb	%1, %2, [%3]\n"
 			      "	teq	%1, #0\n"
@@ -256,7 +256,7 @@ static inline unsigned long __xchg(unsigned long x, volatile void *ptr,
 			      :"memory", "cc");
 		break;
 	case 4:
-		__asm__ volatile ("@	__xchg4\n"
+		asm volatile ("@	__xchg4\n"
 			      "1:	ldrex	%0, [%3]\n"
 			      "	strex	%1, %2, [%3]\n"
 			      "	teq	%1, #0\n"
@@ -283,13 +283,13 @@ static inline unsigned long __xchg(unsigned long x, volatile void *ptr,
 		break;
 #else
 	case 1:
-		__asm__ volatile ("@	__xchg1\n"
+		asm volatile ("@	__xchg1\n"
 			      "	swpb	%0, %1, [%2]":"=&r" (ret)
 			      :"r"(x), "r"(ptr)
 			      :"memory", "cc");
 		break;
 	case 4:
-		__asm__ volatile ("@	__xchg4\n"
+		asm volatile ("@	__xchg4\n"
 			      "	swp	%0, %1, [%2]":"=&r" (ret)
 			      :"r"(x), "r"(ptr)
 			      :"memory", "cc");

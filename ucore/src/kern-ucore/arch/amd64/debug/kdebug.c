@@ -62,7 +62,7 @@ static uint64_t read_rip(void) __attribute__ ((noinline));
 static uint64_t read_rip(void)
 {
 	uint64_t rip;
-	__asm__ volatile ("movq 8(%%rbp), %0":"=r" (rip));
+	asm volatile ("movq 8(%%rbp), %0":"=r" (rip));
 	return rip;
 }
 

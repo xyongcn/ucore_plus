@@ -56,7 +56,7 @@ static inline void platform_1u_delay()
 {
 	int i;
 	for (i = 0; i < 100; i++)
-		__asm__ volatile ("nop");
+		asm volatile ("nop");
 }
 
 static inline void platform_udelay(int delay)
@@ -303,7 +303,7 @@ static uint32_t kgdb_get_lr(struct trapframe *tf)
 	case ARM_SR_MODE_UND:
 		nc |= mode;
 		write_psrflags(nc);
-		__asm__ volatile ("mov %0, lr":"=r" (lr));
+		asm volatile ("mov %0, lr":"=r" (lr));
 		write_psrflags(cpsr);
 		return lr;
 	case ARM_SR_MODE_USR:
@@ -328,7 +328,7 @@ static void kgdb_set_lr(struct trapframe *tf, uint32_t lr)
 	case ARM_SR_MODE_UND:
 		nc |= mode;
 		write_psrflags(nc);
-		__asm__ volatile ("mov lr, %0"::"r" (lr));
+		asm volatile ("mov lr, %0"::"r" (lr));
 		write_psrflags(cpsr);
 		break;
 	case ARM_SR_MODE_USR:

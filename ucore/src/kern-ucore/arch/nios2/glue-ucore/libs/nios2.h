@@ -48,7 +48,7 @@ extern "C" {
     do { __asm ("mov %0, et" : "=r" (et) ); } while (0)
 
 #define NIOS2_WRITE_ET(et) \
-    do { __asm__ volatile ("mov et, %z0" : : "rM" (et)); } while (0)
+    do { __asm volatile ("mov et, %z0" : : "rM" (et)); } while (0)
 
 #define NIOS2_READ_SP(sp) \
     do { __asm ("mov %0, sp" : "=r" (sp) ); } while (0)
@@ -62,33 +62,33 @@ extern "C" {
 #define NIOS2_READ_GP(gp) \
     do { __asm ("mov %0, gp" : "=r" (gp) ); } while (0)
 #define NIOS2_WRITE_GP(value) \
-    do { __asm__ volatile ("mov gp, %z0" : : "rM" (value)); } while (0)
+    do { __asm volatile ("mov gp, %z0" : : "rM" (value)); } while (0)
 
 #define NIOS2_READ_R2(r2) \
     do { __asm ("mov %0, r2" : "=r" (r2) ); } while (0)
 
 #define NIOS2_WRITE_R4(value) \
-    do { __asm__ volatile ("mov r4, %z0" : : "rM" (value)); } while (0)
+    do { __asm volatile ("mov r4, %z0" : : "rM" (value)); } while (0)
 #define NIOS2_WRITE_R5(value) \
-    do { __asm__ volatile ("mov r5, %z0" : : "rM" (value)); } while (0)
+    do { __asm volatile ("mov r5, %z0" : : "rM" (value)); } while (0)
 #define NIOS2_WRITE_R6(value) \
-    do { __asm__ volatile ("mov r6, %z0" : : "rM" (value)); } while (0)
+    do { __asm volatile ("mov r6, %z0" : : "rM" (value)); } while (0)
 #define NIOS2_WRITE_R7(value) \
-    do { __asm__ volatile ("mov r7, %z0" : : "rM" (value)); } while (0)
+    do { __asm volatile ("mov r7, %z0" : : "rM" (value)); } while (0)
 #define NIOS2_WRITE_R8(value) \
-    do { __asm__ volatile ("mov r8, %z0" : : "rM" (value)); } while (0)
+    do { __asm volatile ("mov r8, %z0" : : "rM" (value)); } while (0)
 #define NIOS2_WRITE_R9(value) \
-    do { __asm__ volatile ("mov r9, %z0" : : "rM" (value)); } while (0)
+    do { __asm volatile ("mov r9, %z0" : : "rM" (value)); } while (0)
 
 /*
  * Macros for useful processor instructions
  */
 
 #define NIOS2_BREAK() \
-    do { __asm__ volatile ("break"); } while (0)
+    do { __asm volatile ("break"); } while (0)
 
 #define NIOS2_REPORT_STACK_OVERFLOW() \
-    do { __asm__ volatile("break 3"); } while (0)
+    do { __asm volatile("break 3"); } while (0)
 
 /*
  * Macros for accessing the control registers.

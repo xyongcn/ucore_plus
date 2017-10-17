@@ -42,13 +42,13 @@ static inline void mtspr(uint16_t addr, uint32_t data)
 static inline uint32_t mfspr(uint16_t addr)
 {
 	uint32_t ret;
-	__asm__ volatile ("l.mfspr %0, %1, 0":"=r" (ret):"r"(addr));
+	asm volatile ("l.mfspr %0, %1, 0":"=r" (ret):"r"(addr));
 	return ret;
 }
 
 static inline void mtspr(uint16_t addr, uint32_t data)
 {
-	__asm__ volatile ("l.mtspr %0, %1, 0"::"r" (addr), "r"(data));
+	asm volatile ("l.mtspr %0, %1, 0"::"r" (addr), "r"(data));
 }
 
 static inline void enable_interrupt(void) __attribute__ ((always_inline));

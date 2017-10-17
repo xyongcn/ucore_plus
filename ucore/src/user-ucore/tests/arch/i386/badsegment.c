@@ -5,6 +5,6 @@
 
 int main(void)
 {
-	__asm__ volatile ("movw $0x28,%ax; movw %ax,%ds");
+	asm volatile ("movw $0x28,%ax; movw %ax,%ds");
 	panic("FAIL: T.T\n");
 }

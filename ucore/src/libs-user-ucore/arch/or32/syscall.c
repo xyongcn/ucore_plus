@@ -23,7 +23,7 @@ uint32_t syscall(int num, ...)
 	register uint32_t _r6 asm("r6") = a[2];
 	register uint32_t _r7 asm("r7") = a[3];
 	register uint32_t _r8 asm("r8") = a[4];
-	__asm__ volatile ("l.sys 1; l.nop;":"=r" (ret)
+	asm volatile ("l.sys 1; l.nop;":"=r" (ret)
 		      :"r"(_r3),
 		      "r"(_r4), "r"(_r5), "r"(_r6), "r"(_r7), "r"(_r8));
 	return ret;

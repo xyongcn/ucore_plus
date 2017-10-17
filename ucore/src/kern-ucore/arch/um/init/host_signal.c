@@ -216,7 +216,7 @@ int segv_handler(int sig, struct um_pt_regs *regs)
 		int ret = do_pgmark(mm, regs->faultinfo.error_code,
 				    regs->faultinfo.cr2);
 		/* uint32_t* ebp; */
-		/* __asm__ volatile ("movl %%ebp, %0" : "=r" (ebp)); */
+		/* asm volatile ("movl %%ebp, %0" : "=r" (ebp)); */
 		/* int i; */
 		/* for (i = 0; i < 5; i++) */
 		/*      kprintf ("[%d] 0x%x\n", i*4, ebp[i]); */

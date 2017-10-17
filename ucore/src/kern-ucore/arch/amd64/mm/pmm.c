@@ -102,15 +102,15 @@ static void check_alloc_page(void);
  * */
 static inline void lgdt(struct pseudodesc *pd)
 {
-	__asm__ volatile ("lgdt (%0)"::"r" (pd));
+	asm volatile ("lgdt (%0)"::"r" (pd));
 	//XXX needed? may confuse the compiler
 #if 0
-	__asm__ volatile ("movw %%ax, %%es"::"a" (KERNEL_DS));
-	__asm__ volatile ("movw %%ax, %%ds"::"a" (KERNEL_DS));
-	__asm__ volatile ("movw %%ax, %%gs"::"a" (KERNEL_DS));
+	asm volatile ("movw %%ax, %%es"::"a" (KERNEL_DS));
+	asm volatile ("movw %%ax, %%ds"::"a" (KERNEL_DS));
+	asm volatile ("movw %%ax, %%gs"::"a" (KERNEL_DS));
 
 	// reload cs & ss
-	__asm__ volatile ("movq %%rsp, %%rax;"	// move %rsp to %rax
+	asm volatile ("movq %%rsp, %%rax;"	// move %rsp to %rax
 		      "pushq %1;"	// push %ss
 		      "pushq %%rax;"	// push %rsp
 		      "pushfq;"	// push %rflags

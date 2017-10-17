@@ -5,15 +5,15 @@
 #define do_div(n, base) ({										\
 	unsigned long __upper, __low, __high, __mod, __base;		\
 	__base = (base);											\
-	__asm__("" : "=a" (__low), "=d" (__high) : "A" (n));			\
+	asm("" : "=a" (__low), "=d" (__high) : "A" (n));			\
 	__upper = __high;											\
 	if (__high != 0) {											\
 		__upper = __high % __base;								\
 		__high = __high / __base;								\
 	}															\
-	__asm__("divl %2" : "=a" (__low), "=d" (__mod)					\
+	asm("divl %2" : "=a" (__low), "=d" (__mod)					\
 	    : "rm" (__base), "0" (__low), "1" (__upper));			\
-	__asm__("" : "=A" (n) : "a" (__low), "d" (__high));				\
+	asm("" : "=A" (n) : "a" (__low), "d" (__high));				\
 	__mod;														\
  })
 

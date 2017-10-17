@@ -234,53 +234,53 @@ unsigned long iop_gettimeoffset(void);
 
 static inline void write_tmr0(u32 val)
 {
-	__asm__ volatile ("mcr p6, 0, %0, c0, c1, 0"::"r" (val));
+	asm volatile ("mcr p6, 0, %0, c0, c1, 0"::"r" (val));
 }
 
 static inline void write_tmr1(u32 val)
 {
-	__asm__ volatile ("mcr p6, 0, %0, c1, c1, 0"::"r" (val));
+	asm volatile ("mcr p6, 0, %0, c1, c1, 0"::"r" (val));
 }
 
 static inline u32 read_tcr0(void)
 {
 	u32 val;
-	__asm__ volatile ("mrc p6, 0, %0, c2, c1, 0":"=r" (val));
+	asm volatile ("mrc p6, 0, %0, c2, c1, 0":"=r" (val));
 	return val;
 }
 
 static inline u32 read_tcr1(void)
 {
 	u32 val;
-	__asm__ volatile ("mrc p6, 0, %0, c3, c1, 0":"=r" (val));
+	asm volatile ("mrc p6, 0, %0, c3, c1, 0":"=r" (val));
 	return val;
 }
 
 static inline void write_trr0(u32 val)
 {
-	__asm__ volatile ("mcr p6, 0, %0, c4, c1, 0"::"r" (val));
+	asm volatile ("mcr p6, 0, %0, c4, c1, 0"::"r" (val));
 }
 
 static inline void write_trr1(u32 val)
 {
-	__asm__ volatile ("mcr p6, 0, %0, c5, c1, 0"::"r" (val));
+	asm volatile ("mcr p6, 0, %0, c5, c1, 0"::"r" (val));
 }
 
 static inline void write_tisr(u32 val)
 {
-	__asm__ volatile ("mcr p6, 0, %0, c6, c1, 0"::"r" (val));
+	asm volatile ("mcr p6, 0, %0, c6, c1, 0"::"r" (val));
 }
 
 static inline u32 read_wdtcr(void)
 {
 	u32 val;
-	__asm__ volatile ("mrc p6, 0, %0, c7, c1, 0":"=r" (val));
+	asm volatile ("mrc p6, 0, %0, c7, c1, 0":"=r" (val));
 	return val;
 }
 
 static inline void write_wdtcr(u32 val)
 {
-	__asm__ volatile ("mcr p6, 0, %0, c7, c1, 0"::"r" (val));
+	asm volatile ("mcr p6, 0, %0, c7, c1, 0"::"r" (val));
 }
 
 extern unsigned long get_iop_tick_rate(void);

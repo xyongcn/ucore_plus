@@ -10,7 +10,7 @@
 int __fork()
 {
 	int res = -1;
-	__asm__ volatile ("mov r7, #2;"
+	asm volatile ("mov r7, #2;"
 		      "swi #0;" "mov %0,r0;":"=r" (res)::"r0", "r7");
 	return res;
 }
