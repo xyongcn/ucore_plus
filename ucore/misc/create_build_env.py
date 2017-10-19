@@ -1,5 +1,6 @@
 import os
-from subprocess import call
+import subprocess
+import argparse
 
 
 BINUTIL_VERSION = '2.29.1'
@@ -10,14 +11,18 @@ BINUTIL_SRC_URL = 'https://ftp.gnu.org/gnu/binutils/{}'
 GCC_SRC_NAME = 'gcc-{}.tar.gz'
 GCC_SRC_DIR = 'gcc-{}'
 GCC_SRC_URL = 'https://ftp.gnu.org/gnu/gcc/gcc-{}/{}'
-BUILD_ENV_ROOT = '/home/tinytangent/ucore_build_environment'
-TOOLCHAIN_BUILD_DIR = BUILD_ENV_ROOT + '/' + 'build'
+BUILD_ENV_ROOT = ''
+TOOLCHAIN_BUILD_DIR = ''
 ARCHITECTURE_MAP = {
     'i386': 'i386-linux-gnu',
     'amd64': 'x86_64-linux-gnu',
     'mips': 'mips-sde-elf',
     'arm': 'arm-none-eabi',
 }
+
+
+def call(args):
+    assert subprocess.call(args) == 0
 
 
 def download_file_if_not_exist(local_path, remote_url):
@@ -77,44 +82,55 @@ def swicth_to_toolchain_build_dir(initial_working_dir):
     os.chdir(TOOLCHAIN_BUILD_DIR)
 
 
-initial_working_dir = os.getcwd()
-download_toolchain_src()
-extract_toolchain_src()
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description='uCore build environment setup script.'
+    )
+    parser.add_argument('build_dir', metavar='build_dir',
+                        help='The location to setup ucore build environment.')
+    args = parser.parse_args()
+    print(args.build_dir)
+    BUILD_ENV_ROOT = args.build_dir
+    TOOLCHAIN_BUILD_DIR = args.build_dir + '/' + 'build'
+    print('Setting up uCore build environment on ' + BUILD_ENV_ROOT)
+    initial_working_dir = os.getcwd()
+    download_toolchain_src()
+    extract_toolchain_src()
 
-for ucore_arch in ARCHITECTURE_MAP:
-    gcc_arch = ARCHITECTURE_MAP[ucore_arch]
-    for gcc_version in GCC_VERSIONS:
-        swicth_to_toolchain_build_dir(initial_working_dir)
-        binutil_build_configure = BUILD_ENV_ROOT + \
-            '/' + BINUTIL_SRC_DIR.format(BINUTIL_VERSION) + '/' + 'configure'
-        gcc_build_configure = BUILD_ENV_ROOT + \
-            '/' + GCC_SRC_DIR.format(gcc_version) + '/' + 'configure'
-        build_env_path = BUILD_ENV_ROOT + \
-            '/' + 'env-' + ucore_arch + '-gcc-' + gcc_version
-        if os.path.isdir(build_env_path):
-            print(build_env_path + ' exists.')
-            continue
-        call([
-            binutil_build_configure,
-            '--prefix=' + build_env_path,
-            '--target=' + gcc_arch,
-            '--disable-multilib',
-        ])
-        call(['make', '-j16'])
-        call(['make', 'install'])
-        swicth_to_toolchain_build_dir(initial_working_dir)
-        call([
-            gcc_build_configure,
-            '--prefix=' + build_env_path,
-            '--target=' + gcc_arch,
-            '--disable-multilib',
-            '--enable-languages=c',
-            '--without-headers',
-        ])
-        call(['make', '-j16', 'all-gcc'])
-        call(['make', 'install-gcc'])
-        call(['make', '-j16', 'all-target-libgcc'])
-        call(['make', 'install-target-libgcc'])
+    for ucore_arch in ARCHITECTURE_MAP:
+        gcc_arch = ARCHITECTURE_MAP[ucore_arch]
+        for gcc_version in GCC_VERSIONS:
+            swicth_to_toolchain_build_dir(initial_working_dir)
+            binutil_build_configure = BUILD_ENV_ROOT + '/' \
+                + BINUTIL_SRC_DIR.format(BINUTIL_VERSION) + '/' + 'configure'
+            gcc_build_configure = BUILD_ENV_ROOT + '/' + \
+                GCC_SRC_DIR.format(gcc_version) + '/' + 'configure'
+            build_env_path = BUILD_ENV_ROOT + '/' + \
+                'env-' + ucore_arch + '-gcc-' + gcc_version
+            if os.path.isdir(build_env_path):
+                print(build_env_path + ' exists.')
+                continue
+            call([
+                binutil_build_configure,
+                '--prefix=' + build_env_path,
+                '--target=' + gcc_arch,
+                '--disable-multilib',
+            ])
+            call(['make', '-j16'])
+            call(['make', 'install'])
+            swicth_to_toolchain_build_dir(initial_working_dir)
+            call([
+                gcc_build_configure,
+                '--prefix=' + build_env_path,
+                '--target=' + gcc_arch,
+                '--disable-multilib',
+                '--enable-languages=c',
+                '--without-headers',
+            ])
+            call(['make', '-j16', 'all-gcc'])
+            call(['make', 'install-gcc'])
+            call(['make', '-j16', 'all-target-libgcc'])
+            call(['make', 'install-target-libgcc'])
 
-os.chdir(initial_working_dir)
-call(['rm', '-rf', TOOLCHAIN_BUILD_DIR])
+    os.chdir(initial_working_dir)
+    call(['rm', '-rf', TOOLCHAIN_BUILD_DIR])
