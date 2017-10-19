@@ -13,7 +13,9 @@ install:
     - ls
 
 script:
-    - make
+    - cd ucore
+    - pwd
+    - python misc/evaluate_build.py /tmp/ucore_build_env
 
 compiler:
     - gcc

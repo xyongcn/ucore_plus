@@ -129,8 +129,9 @@ if __name__ == "__main__":
             ])
             call(['make', '-j16', 'all-gcc'])
             call(['make', 'install-gcc'])
-            call(['make', '-j16', 'all-target-libgcc'])
-            call(['make', 'install-target-libgcc'])
+            if ucore_arch == 'arm':
+                call(['make', '-j16', 'all-target-libgcc'])
+                call(['make', 'install-target-libgcc'])
 
     os.chdir(initial_working_dir)
     call(['rm', '-rf', TOOLCHAIN_BUILD_DIR])
