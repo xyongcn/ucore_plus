@@ -1,4 +1,4 @@
-uCore_plus
+uCore_plus ![Travis CI status](https://travis-ci.org/tansinan/ucore_plus.svg?branch=master)
 ==========
 
 ##Current Progress

@@ -1,3 +1,4 @@
+import sys
 import os
 import subprocess
 
@@ -50,6 +51,7 @@ def evaluate_build(ucore_arch, board, compiler_version):
 if __name__ == '__main__':
     ALL_ARCH = ['i386', 'amd64', 'arm']
     test_result = []
+    all_test_passed = True
     for ucore_arch in ALL_ARCH:
         for board in EXISTING_BOARDS[ucore_arch]:
             for compiler_version in GCC_VERSIONS:
@@ -61,6 +63,11 @@ if __name__ == '__main__':
                     evaluate_build(ucore_arch, board, compiler_version)
                 except AssertionError:
                     compile_result = 'FAIL'
+                    all_test_passed = False
                 test_result.append([test_name, compile_result])
     for entry in test_result:
         print(entry[0] + ':' + ' ' + 'compile->' + entry[1])
+    if all_test_passed:
+        sys.exit(0)
+    else:
+        sys.exit(1)
