@@ -1,0 +1,19 @@
+sudo: required
+dist: trusty
+language: cpp
+
+env:
+    - BUILDTYPE=Release
+    - BUILDTYPE=Debug
+
+before_install:
+    - sudo apt-get update -qq
+
+install:
+    - ls
+
+script:
+    - make
+
+compiler:
+    - gcc
