@@ -344,9 +344,9 @@ void cpu_idle(void)
 	kprintf("cpu_idle: starting\n");
 	while (1) {
 		if (current->need_resched) {
-			kprintf("*");
+			//kprintf("*");
 			schedule();
-			kprintf("!%d",current->pid);
+			//kprintf("!%d",current->pid);
 		}
 	}
 }

@@ -426,98 +426,98 @@ static inline int check_compare2(rb_node * node, void *key)
 
 void check_rb_tree(void)
 {
-	rb_tree *tree = rb_tree_create(check_compare1);
-	assert(tree != NULL);
+	//rb_tree *tree = rb_tree_create(check_compare1);
+	//assert(tree != NULL);
 
-	rb_node *nil = tree->nil, *root = tree->root;
-	assert(!nil->red && root->left == nil);
+	//rb_node *nil = tree->nil, *root = tree->root;
+	//assert(!nil->red && root->left == nil);
 
-	int total = 100;
-	struct check_data **all =
-	    check_safe_kmalloc(sizeof(struct check_data *) * total);
+	//int total = 100;
+	//struct check_data **all =
+	//    check_safe_kmalloc(sizeof(struct check_data *) * total);
 
-	long i;
-	for (i = 0; i < total; i++) {
-		all[i] = check_safe_kmalloc(sizeof(struct check_data));
-		all[i]->data = i;
-	}
+	//long i;
+	//for (i = 0; i < total; i++) {
+	//	all[i] = check_safe_kmalloc(sizeof(struct check_data));
+	//	all[i]->data = i;
+	//}
 
-	int *mark = check_safe_kmalloc(sizeof(int) * total);
-	memset(mark, 0, sizeof(int) * total);
+	//int *mark = check_safe_kmalloc(sizeof(int) * total);
+	//memset(mark, 0, sizeof(int) * total);
 
-	for (i = 0; i < total; i++) {
-		mark[all[i]->data] = 1;
-	}
-	for (i = 0; i < total; i++) {
-		assert(mark[i] == 1);
-	}
+	//for (i = 0; i < total; i++) {
+	//	mark[all[i]->data] = 1;
+	//}
+	//for (i = 0; i < total; i++) {
+	//	assert(mark[i] == 1);
+	//}
 
-	for (i = 0; i < total; i++) {
-		int j = (rand() % (total - i)) + i;
-		struct check_data *z = all[i];
-		all[i] = all[j];
-		all[j] = z;
-	}
+	//for (i = 0; i < total; i++) {
+	//	int j = (rand() % (total - i)) + i;
+	//	struct check_data *z = all[i];
+	//	all[i] = all[j];
+	//	all[j] = z;
+	//}
 
-	memset(mark, 0, sizeof(int) * total);
-	for (i = 0; i < total; i++) {
-		mark[all[i]->data] = 1;
-	}
-	for (i = 0; i < total; i++) {
-		assert(mark[i] == 1);
-	}
+	//memset(mark, 0, sizeof(int) * total);
+	//for (i = 0; i < total; i++) {
+	//	mark[all[i]->data] = 1;
+	//}
+	//for (i = 0; i < total; i++) {
+	//	assert(mark[i] == 1);
+	//}
 
-	for (i = 0; i < total; i++) {
-		rb_insert(tree, &(all[i]->rb_link));
-		check_tree(tree, root->left);
-	}
+	//for (i = 0; i < total; i++) {
+	//	rb_insert(tree, &(all[i]->rb_link));
+	//	check_tree(tree, root->left);
+	//}
 
-	rb_node *node;
-	for (i = 0; i < total; i++) {
-		node = rb_search(tree, check_compare2, (void *)(all[i]->data));
-		assert(node != NULL && node == &(all[i]->rb_link));
-	}
+	//rb_node *node;
+	//for (i = 0; i < total; i++) {
+	//	node = rb_search(tree, check_compare2, (void *)(all[i]->data));
+	//	assert(node != NULL && node == &(all[i]->rb_link));
+	//}
 
-	for (i = 0; i < total; i++) {
-		node = rb_search(tree, check_compare2, (void *)i);
-		assert(node != NULL && rbn2data(node)->data == i);
-		rb_delete(tree, node);
-		check_tree(tree, root->left);
-	}
+	//for (i = 0; i < total; i++) {
+	//	node = rb_search(tree, check_compare2, (void *)i);
+	//	assert(node != NULL && rbn2data(node)->data == i);
+	//	rb_delete(tree, node);
+	//	check_tree(tree, root->left);
+	//}
 
-	assert(!nil->red && root->left == nil);
+	//assert(!nil->red && root->left == nil);
 
-	long max = 32;
-	if (max > total) {
-		max = total;
-	}
+	//long max = 32;
+	//if (max > total) {
+	//	max = total;
+	//}
 
-	for (i = 0; i < max; i++) {
-		all[i]->data = max;
-		rb_insert(tree, &(all[i]->rb_link));
-		check_tree(tree, root->left);
-	}
+	//for (i = 0; i < max; i++) {
+	//	all[i]->data = max;
+	//	rb_insert(tree, &(all[i]->rb_link));
+	//	check_tree(tree, root->left);
+	//}
 
-	for (i = 0; i < max; i++) {
-		node = rb_search(tree, check_compare2, (void *)max);
-		assert(node != NULL && rbn2data(node)->data == max);
-		rb_delete(tree, node);
-		check_tree(tree, root->left);
-	}
+	//for (i = 0; i < max; i++) {
+	//	node = rb_search(tree, check_compare2, (void *)max);
+	//	assert(node != NULL && rbn2data(node)->data == max);
+	//	rb_delete(tree, node);
+	//	check_tree(tree, root->left);
+	//}
 
-	assert(rb_tree_empty(tree));
+	//assert(rb_tree_empty(tree));
 
-	for (i = 0; i < total; i++) {
-		rb_insert(tree, &(all[i]->rb_link));
-		check_tree(tree, root->left);
-	}
+	//for (i = 0; i < total; i++) {
+	//	rb_insert(tree, &(all[i]->rb_link));
+	//	check_tree(tree, root->left);
+	//}
 
-	rb_tree_destroy(tree);
+	//rb_tree_destroy(tree);
 
-	for (i = 0; i < total; i++) {
-		kfree(all[i]);
-	}
+	//for (i = 0; i < total; i++) {
+	//	kfree(all[i]);
+	//}
 
-	kfree(mark);
-	kfree(all);
+	//kfree(mark);
+	//kfree(all);
 }

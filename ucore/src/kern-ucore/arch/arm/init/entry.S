@@ -104,7 +104,10 @@ relocated:
 
 /* enable swp,flow prediction */
 #ifdef __MACH_ARM_CORTEX_A9
-  ldr r1, =(1<<11)|(1<<10)
+  MRC p15, 0, r1, c1, c0, 0
+  # ldr r1, =(1<<11)|(1<<10)
+  orr r1, #(1<<11)
+  orr r1, #(1<<10)
   MCR p15, 0, r1, c1, c0, 0
 #endif
 
@@ -142,14 +145,18 @@ control_access_mask:
 
 #ifdef __MACH_ARM_ARMV6
 mmu_value:
-.long  ENABLEMMU | ENABLEICACHE | ENABLEDCACHE | ENABLEHIGHEVT | ENABLENEWPT
+#.long  ENABLEMMU | ENABLEICACHE | ENABLEDCACHE | ENABLEHIGHEVT | ENABLENEWPT
+.long  ENABLEMMU | ENABLEHIGHEVT | ENABLEICACHE | ENABLENEWPT
 mmu_mask:
-.long  CHANGEMMU | CHANGEICACHE | CHANGEDCACHE | CHANGEHIGHEVT | CHANGENEWPT
+#.long  CHANGEMMU | CHANGEICACHE | CHANGEDCACHE | CHANGEHIGHEVT | CHANGENEWPT
+.long  CHANGEMMU | CHANGEICACHE | CHANGEHIGHEVT | CHANGENEWPT
 #elif defined __MACH_ARM_ARMV7
 mmu_value:
-.long	ENABLEMMU | ENABLEICACHE | ENABLEDCACHE | ENABLEHIGHEVT
+#.long	ENABLEMMU | ENABLEICACHE | ENABLEDCACHE | ENABLEHIGHEVT
+.long	ENABLEMMU | ENABLEICACHE | ENABLEHIGHEVT
 mmu_mask:
-.long	CHANGEMMU | CHANGEICACHE | CHANGEDCACHE | CHANGEHIGHEVT
+#.long	CHANGEMMU | CHANGEICACHE | CHANGEDCACHE | CHANGEHIGHEVT
+.long	CHANGEMMU | CHANGEICACHE | CHANGEHIGHEVT
 #else
 #error Unsupported arch
 #endif
@@ -169,11 +176,13 @@ __create_pgtbl:
 
 #	mov r7, #mm_mmuflag
 #	ldr r7, [r7, #0]
-	ldr r7, =mm_mmuflag
+    
+    #full access, see armv7-arm-B3-1358
+	ldr r7, =mm_mmuflag  
 	eor r7, r7, #0xc << 28
 	ldr r7, [r7]
 
-	# map 0x0 to 0x0
+	# map 0x0 to 0x0(map a section in 1st level pgtable)
 	ldr r6, =0
 	orr r6, r6, r7
 	str r6, [r4]

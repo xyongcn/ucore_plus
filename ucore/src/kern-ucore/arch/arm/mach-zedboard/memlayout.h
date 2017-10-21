@@ -70,6 +70,7 @@
 
 /* All physical memory mapped at this address */
 #define KERNBASE            0xc0000000 //SDRAM0_START
+//#define KERNBASE            SDRAM0_START
 #define KMEMSIZE            SDRAM0_SIZE	// the maximum amount of physical memory
 #define KERNTOP             (KERNBASE + KMEMSIZE)
 
@@ -77,6 +78,7 @@
 #define KIOBASE IO_SPACE_START
 /* We dont automap it*/
 #define KIOSIZE (0)
+//#define KIOSIZE IO_SPACE_SIZE
 
 /* end IO */
 

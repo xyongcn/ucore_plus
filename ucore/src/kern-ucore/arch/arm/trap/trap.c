@@ -94,6 +94,7 @@ static inline void print_pgfault(struct trapframe *tf)
 {
 	//print_trapframe(tf);
 	uint32_t ttb = 0;
+    print_pgdir(kprintf);
 	asm volatile ("MRC p15, 0, %0, c2, c0, 0":"=r" (ttb));
 	kprintf("%s page fault at (0x%08x) 0x%08x 0x%03x: %s-%s %s PID=%d\n",
 		tf->tf_trapno == T_PABT ? "instruction" : tf->tf_trapno ==

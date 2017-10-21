@@ -20,7 +20,7 @@
 #define PMD_TYPE_FAULT		(0 << 0)
 #define PMD_TYPE_TABLE		(1 << 0)
 #define PMD_TYPE_SECT		(2 << 0)
-#define PMD_BIT4		(1 << 4)
+#define PMD_BIT4		(1 << 4)    /* SBZ in v7 for page table, XN for others*/
 #define PMD_DOMAIN(x)		((x) << 5)
 #define PMD_PROTECTION		(1 << 9)	/* v5 */
 /*
@@ -35,7 +35,7 @@
 #define PMD_SECT_APX		(1 << 15)	/* v6 */
 #define PMD_SECT_S		(1 << 16)	/* v6 */
 #define PMD_SECT_nG		(1 << 17)	/* v6 */
-#define PMD_SECT_SUPER		(1 << 18)	/* v6 */
+#define PMD_SECT_SUPER		(1 << 18)	/* v6, but should be 0 in v7 */
 
 #define PMD_SECT_UNCACHED	(0)
 #define PMD_SECT_BUFFERED	(PMD_SECT_BUFFERABLE)

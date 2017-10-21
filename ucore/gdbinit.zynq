@@ -1,0 +1,8 @@
+file obj/kernel/kernel-arm.elf
+define hook-stop
+x/2i $pc
+i r
+end
+
+target remote 127.0.0.1:1234
+

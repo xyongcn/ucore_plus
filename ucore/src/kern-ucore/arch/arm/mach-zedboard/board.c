@@ -36,22 +36,35 @@ static void put_string(const char *str)
 
 void board_init_early()
 {
+    const int port = 1;
 	// put_string(message);
 	gpio_init();
 	gpio_test();
 
-	serial_init(1, PER_IRQ_BASE_NONE_SPI + ZEDBOARD_UART1_IRQ);
-	// Tianyu: we place pic init here
-	pic_init2(ZEDBOARD_APU_BASE);
-	kprintf("Tianyu: picirq inited! \n");
-	// Tianyu: we place clock init here
-	clock_init_arm(ZEDBOARD_TIMER0_BASE, GLOBAL_TIMER0_IRQ + PER_IRQ_BASE_SPI);
-	kprintf("Tianyu: clock inited! \n");
+	serial_init(port);  // for the sake of debug, init serial in advance
 }
+
 
 void board_init()
 {
-	return;
+    const int port = 1;
+    // ioremap apu
+    uint32_t apu_base = 
+        (uint32_t) __ucore_ioremap(ZEDBOARD_APU_BASE, 3 * PGSIZE, 0);
+    
+    // enable interrupts(GIC)
+	pic_init2(apu_base);
+
+    // init timer and its interrupt
+	clock_init_arm(apu_base, GLOBAL_TIMER0_IRQ + PER_IRQ_BASE_SPI);
+
+    // do ioremap on uart and init its interrupt
+    if (port == 1) 
+        serial_init_remap_irq(PER_IRQ_BASE_NONE_SPI + ZEDBOARD_UART1_IRQ, port);
+    else
+        serial_init_remap_irq(PER_IRQ_BASE_NONE_SPI + ZEDBOARD_UART0_IRQ, port);
+
+    kprintf("zedboard init finished\n");
 }
 
 /* no nand */
