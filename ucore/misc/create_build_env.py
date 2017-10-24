@@ -95,7 +95,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     print(args.build_dir)
     BUILD_ENV_ROOT = args.build_dir
-    os.makedirs(BUILD_ENV_ROOT)
+    if not os.path.isdir(BUILD_ENV_ROOT):
+        os.makedirs(BUILD_ENV_ROOT)
     build_thread_param = '-j' + args.build_threads
     TOOLCHAIN_BUILD_DIR = args.build_dir + '/' + 'build'
     print('Setting up uCore build environment on ' + BUILD_ENV_ROOT)
