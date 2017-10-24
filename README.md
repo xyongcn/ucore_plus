@@ -1,9 +1,14 @@
 uCore_plus
 ==========
 
+
+
 ##Current Progress
  We are working on ucore plus for amd64 smp porting. 
  You can chekout the "amd64-smp" branch to see the newest progress of ucore plus.
+
+##Compile & Run on ARM
+ Refer to `README_ZED.md`.
 
 ##Quick Try
  1. download or clone ucore plus source code
