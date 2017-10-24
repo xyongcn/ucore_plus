@@ -4,7 +4,8 @@ import argparse
 
 
 BINUTIL_VERSION = '2.29.1'
-GCC_VERSIONS = ['4.9.4', '5.5.0', '6.4.0', '7.2.0']
+# GCC_VERSIONS = ['4.9.4', '5.5.0', '6.4.0', '7.2.0']
+GCC_VERSIONS = ['6.4.0', '7.2.0']
 BINUTIL_SRC_NAME = 'binutils-{}.tar.gz'
 BINUTIL_SRC_DIR = 'binutils-{}'
 BINUTIL_SRC_URL = 'https://ftp.gnu.org/gnu/binutils/{}'
@@ -88,10 +89,14 @@ if __name__ == "__main__":
     )
     parser.add_argument('build_dir', metavar='build_dir',
                         help='The location to setup ucore build environment.')
+    parser.add_argument('--build_threads', metavar='build_threads',
+                        default='4',
+                        help='Number of threads used for this build.')
     args = parser.parse_args()
     print(args.build_dir)
     BUILD_ENV_ROOT = args.build_dir
     os.makedirs(BUILD_ENV_ROOT)
+    build_thread_param = '-j' + args.build_threads
     TOOLCHAIN_BUILD_DIR = args.build_dir + '/' + 'build'
     print('Setting up uCore build environment on ' + BUILD_ENV_ROOT)
     initial_working_dir = os.getcwd()
@@ -117,7 +122,7 @@ if __name__ == "__main__":
                 '--target=' + gcc_arch,
                 '--disable-multilib',
             ])
-            call(['make', '-j16'])
+            call(['make', build_thread_param])
             call(['make', 'install'])
             swicth_to_toolchain_build_dir(initial_working_dir)
             call([
@@ -128,10 +133,10 @@ if __name__ == "__main__":
                 '--enable-languages=c',
                 '--without-headers',
             ])
-            call(['make', '-j16', 'all-gcc'])
+            call(['make', build_thread_param, 'all-gcc'])
             call(['make', 'install-gcc'])
             if ucore_arch == 'arm':
-                call(['make', '-j16', 'all-target-libgcc'])
+                call(['make', build_thread_param, 'all-target-libgcc'])
                 call(['make', 'install-target-libgcc'])
 
     os.chdir(initial_working_dir)
