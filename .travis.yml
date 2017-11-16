@@ -15,11 +15,11 @@ install:
     - ls
 
 script:
-    - docker cp -r ucore mycontainer:/
-    - docker run pwd
-    - docker run ls
-    - docker run ls /
-    - docker run ls /opt
+    - docker cp -r ucore tinytangent/ucore_build_environment:/
+    - docker run tinytangent/ucore_build_environment pwd
+    - docker run tinytangent/ucore_build_environment ls
+    - docker run tinytangent/ucore_build_environment ls /
+    - docker run tinytangent/ucore_build_environment ls /opt
     - pwd
     - python misc/evaluate_build.py /tmp/ucore_build_env
 
