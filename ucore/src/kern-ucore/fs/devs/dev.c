@@ -166,6 +166,7 @@ static const struct inode_ops dev_node_ops = {
 void dev_init(void)
 {
 	init_device(null);
+	init_device(uio);
 	init_device(stdin);
 	init_device(stdout);
   init_device(fuse);
