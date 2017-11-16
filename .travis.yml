@@ -1,19 +1,25 @@
 sudo: required
 dist: trusty
 language: cpp
+services: docker
 
 env:
     - BUILDTYPE=Release
     - BUILDTYPE=Debug
 
 before_install:
+    - sudo docker pull tinytangent/ucore_build_environment
     - sudo apt-get update -qq
 
 install:
     - ls
 
 script:
-    - cd ucore
+    - docker cp -r ucore mycontainer:/
+    - docker run pwd
+    - docker run ls
+    - docker run ls /
+    - docker run ls /opt
     - pwd
     - python misc/evaluate_build.py /tmp/ucore_build_env
 
