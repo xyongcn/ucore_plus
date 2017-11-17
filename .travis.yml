@@ -4,22 +4,23 @@ language: cpp
 services: docker
 
 env:
-    - BUILDTYPE=Release
-    - BUILDTYPE=Debug
+    - BUILDTYPE=Default
 
 before_install:
     - sudo docker pull tinytangent/ucore_build_environment
+    - sudo docker create --name=ucore_build_environment -it tinytangent/ucore_build_environment
     - sudo apt-get update -qq
 
 install:
     - ls
 
 script:
-    - docker cp -r ucore tinytangent/ucore_build_environment:/
-    - docker run tinytangent/ucore_build_environment pwd
-    - docker run tinytangent/ucore_build_environment ls
-    - docker run tinytangent/ucore_build_environment ls /
-    - docker run tinytangent/ucore_build_environment ls /opt
+    - docker cp ucore ucore_build_environment:/
+    - docker start ucore_build_environment
+    - docker exec ucore_build_environment pwd
+    - docker exec ucore_build_environment ls
+    - docker exec ucore_build_environment ls /
+    - docker exec ucore_build_environment ls /opt
     - pwd
     - python misc/evaluate_build.py /tmp/ucore_build_env
 
