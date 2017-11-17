@@ -17,12 +17,7 @@ install:
 script:
     - docker cp ucore ucore_build_environment:/
     - docker start ucore_build_environment
-    - docker exec ucore_build_environment pwd
-    - docker exec ucore_build_environment ls
-    - docker exec ucore_build_environment ls /
-    - docker exec ucore_build_environment ls /opt
-    - pwd
-    - python misc/evaluate_build.py /tmp/ucore_build_env
+    - docker exec ucore_build_environment bash -c "cd /ucore && python misc/evaluate_build.py /opt/ucore_build_environment"
 
 compiler:
     - gcc
