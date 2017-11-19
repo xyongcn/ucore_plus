@@ -79,7 +79,7 @@ HOSTCXX:=$(shell $(CONFIG_SHELL) -c "which $(HOSTCXX)" || type -p $(HOSTCXX) || 
 HOSTLD:=$(shell $(CONFIG_SHELL) -c "which $(HOSTLD)" || type -p $(HOSTLD) || echo ld)
 HOSTLN:=$(shell $(CONFIG_SHELL) -c "which $(HOSTLN)" || type -p $(HOSTLN) || echo ln)
 ifndef CFLAGS_FOR_BUILD
-CFLAGS_FOR_BUILD:=-g -O0
+CFLAGS_FOR_BUILD:=-g -O2
 endif
 export HOSTAR HOSTAS HOSTCC HOSTCXX HOSTLD
 
