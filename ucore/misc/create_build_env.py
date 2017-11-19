@@ -4,8 +4,7 @@ import argparse
 
 
 BINUTIL_VERSION = '2.29.1'
-# GCC_VERSIONS = ['4.9.4', '5.5.0', '6.4.0', '7.2.0']
-GCC_VERSIONS = ['6.4.0', '7.2.0']
+GCC_VERSIONS = ['4.9.4', '5.5.0', '6.4.0', '7.2.0']
 BINUTIL_SRC_NAME = 'binutils-{}.tar.gz'
 BINUTIL_SRC_DIR = 'binutils-{}'
 BINUTIL_SRC_URL = 'https://ftp.gnu.org/gnu/binutils/{}'
@@ -92,8 +91,17 @@ if __name__ == "__main__":
     parser.add_argument('--build_threads', metavar='build_threads',
                         default='4',
                         help='Number of threads used for this build.')
+    parser.add_argument('--gcc_major_versions', metavar='gcc_major_versions',
+                        default='7',
+                        help='Number of threads used for this build.')
     args = parser.parse_args()
-    print(args.build_dir)
+    gcc_major_versions = args.gcc_major_versions
+    gcc_major_versions = gcc_major_versions.split(',')
+    for v in gcc_major_versions:
+        if v not in ['4', '5', '6', '7']:
+            print("Unknown GCC major version: " + v)
+            exit(1)
+    GCC_VERSIONS = [v for v in GCC_VERSIONS if v[0] in gcc_major_versions]
     BUILD_ENV_ROOT = args.build_dir
     if not os.path.isdir(BUILD_ENV_ROOT):
         os.makedirs(BUILD_ENV_ROOT)
