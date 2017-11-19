@@ -5,6 +5,8 @@
 
 //TODO: Follow the implementation of linux kernel.
 
+#if defined(ARCH_ARM) || defined(ARCH_MIPS)
+
 #include <types.h>
 #include <dev.h>
 #include <vfs.h>
@@ -95,3 +97,5 @@ void dev_init_uio(void)
 		panic("UIO: vfs_add_dev: %e.\n", ret);
 	}
 }
+
+#endif

@@ -166,7 +166,9 @@ static const struct inode_ops dev_node_ops = {
 void dev_init(void)
 {
 	init_device(null);
+	#if defined(ARCH_ARM) || defined(ARCH_MIPS)
 	init_device(uio);
+	#endif
 	init_device(stdin);
 	init_device(stdout);
   init_device(fuse);
