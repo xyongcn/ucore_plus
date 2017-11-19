@@ -1,6 +1,7 @@
 import sys
 import os
 import subprocess
+import argparse
 
 
 BINUTIL_VERSION = '2.29.1'
@@ -31,8 +32,8 @@ def call(args):
     assert subprocess.call(args) == 0
 
 
-def evaluate_build(ucore_arch, board, compiler_version):
-    os.environ['CROSS_COMPILE'] = '/home/tinytangent/ucore_build_environment/' + \
+def evaluate_build(build_env_dir, ucore_arch, board, compiler_version):
+    os.environ['CROSS_COMPILE'] = build_env_dir + '/' + \
         'env-' + ucore_arch + '-gcc-' + compiler_version + '/bin/' + ARCHITECTURE_MAP[ucore_arch] + '-'
     subprocess.call(['make', 'clean'])
     call(['make', 'ARCH=' + ucore_arch, 'BOARD=' + board, 'defconfig'])
@@ -49,6 +50,13 @@ def evaluate_build(ucore_arch, board, compiler_version):
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='uCore build environment setup script.'
+    )
+    parser.add_argument('build_env_dir', metavar='build_env_dir',
+                        help='The location of ucore build environment.')
+    args = parser.parse_args()
+    build_env_dir = args.build_env_dir
     ALL_ARCH = ['i386', 'amd64', 'arm']
     test_result = []
     all_test_passed = True
@@ -60,7 +68,7 @@ if __name__ == '__main__':
                 test_name = ucore_arch + '_' + board + '_' + compiler_version
                 compile_result = 'pass'
                 try:
-                    evaluate_build(ucore_arch, board, compiler_version)
+                    evaluate_build(build_env_dir, ucore_arch, board, compiler_version)
                 except AssertionError:
                     compile_result = 'FAIL'
                     all_test_passed = False
