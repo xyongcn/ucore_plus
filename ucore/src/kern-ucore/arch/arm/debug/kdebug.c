@@ -219,6 +219,8 @@ int debuginfo_eip(uintptr_t addr, struct eipdebuginfo *info)
 void print_kerninfo(void)
 {
 	extern char etext[], edata[], end[], kern_init[];
+	// TODO
+	// currently only with delays do these messages show up normally
 	kprintf("Special kernel symbols:\n");
 	kprintf("  entry  0x%08x (phys)\n", kern_init);
 	kprintf("  etext  0x%08x (phys)\n", etext);

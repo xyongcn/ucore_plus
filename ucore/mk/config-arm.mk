@@ -28,7 +28,7 @@ MACH_MACRO += -DDEBUG -D__ARM_EABI__
 export TARGET_CC_SYSTEM_LIB ?=  -L/opt/FriendlyARM/toolschain/4.4.3/lib/gcc/arm-none-linux-gnueabi/4.4.3/ 
 
 export HOST_CC_PREFIX	?=
-export TARGET_CC_PREFIX	?= arm-linux-
+export TARGET_CC_PREFIX	?= arm-linux-gnueabihf
 export TARGET_CC_FLAGS_COMMON	?= -fno-builtin -nostdinc -fno-stack-protector -nostartfiles -march=$(ARCH_ARM_MACH) $(PLATFORM_DEF) -DARCH_ARM $(MACH_MACRO)  -ggdb
 export TARGET_CC_FLAGS_BL		?=
 export TARGET_CC_FLAGS_KERNEL	?=

@@ -178,7 +178,7 @@ static void page_init(void)
 
 	// put page structure table at the end of kernel
 	pages = (struct Page *)ROUNDUP((void *)end, PGSIZE);
-	//kprintf("maxpa: 0x%08x  npage: 0x%08x  pages: 0x%08x  end: 0x%08x\n", maxpa, npage, pages, end);
+	kprintf("maxpa: 0x%08x  npage: 0x%08x  pages: 0x%08x  end: 0x%08x sizeof(struct Page): 0x%08x\n", maxpa, npage, pages, end, sizeof(struct Page));
 
 	for (i = 0; i < npage; i++) {	// trick to not consider non existing pages
 		SetPageReserved(pages + i);
@@ -241,7 +241,6 @@ boot_map_segment(pde_t * pgdir, uintptr_t la, size_t size, uintptr_t pa,
 
 void __boot_map_iomem(uintptr_t la, size_t size, uintptr_t pa)
 {
-	//kprintf("mapping iomem 0x%08x to 0x%08x, size 0x%08x\n", pa, la,size);
 	boot_map_segment(boot_pgdir, la, size, pa, PTE_W | PTE_IOMEM);
 }
 
@@ -313,13 +312,17 @@ void pmm_init(void)
 	//boot_map_segment(boot_pgdir, virtual, PGSIZE, physical, PTEX_W); // base location of vector table
 	extern char __kernel_text_start[], __kernel_text_end[];
 	//kprintf("## %08x %08x\n", __kernel_text_start, __kernel_text_end);
-	boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, PADDR(KERNBASE), PTE_W);	// fixed address
+	
+    boot_map_segment(boot_pgdir, KERNBASE, KMEMSIZE, PADDR(KERNBASE), PTE_W);	// fixed address
+
+
 	/* kernel code readonly protection */
 	boot_map_segment(boot_pgdir, (uintptr_t) __kernel_text_start,
 			 __kernel_text_end - __kernel_text_start,
 			 (uintptr_t) PADDR(__kernel_text_start), PTE_P);
 
-	boot_map_segment(boot_pgdir, KIOBASE, KIOSIZE, KIOBASE, PTE_W | PTE_IOMEM);	// fixed address
+	//boot_map_segment(boot_pgdir, KIOBASE, KIOSIZE, KIOBASE, PTE_W | PTE_IOMEM);	// fixed address
+	//boot_map_segment(boot_pgdir, KIOBASE, KIOSIZE, KIOBASE, PTE_W | PTE_IOMEM);	// fixed address
 
 	//Add PTE_W|PTE_U by whn09
 	//PTE_W should be aborted later
@@ -367,10 +370,12 @@ void pmm_init(void)
 	//boot_map_segment(boot_pgdir, RAMDISK_START, 0x10000000, 0x10000000, PTE_W); // fixed address
 	// high kernel WIP
 	//boot_map_segment(boot_pgdir, 0xC0000000, KMEMSIZE, KERNBASE, PTE_W); // relocation address
+    
 	print_pgdir(kprintf);
 
 	/* Part 3 activating page tables */
 	ttbSet((uint32_t) PADDR(boot_pgdir));
+    //kprintf("after update pagetable!\n");
 
 	/* enable cache and MMU */
 	mmu_init();
@@ -391,30 +396,11 @@ void pmm_init(void)
 	/* boot_pgdir now should be VDT */
 	boot_pgdir = (pde_t *) VPT_BASE;
 
+	print_pgdir(kprintf);
+
 	slab_init();
 
 	kprintf("slab_init() done\n");
-
-	/*
-	 * Add by whn09, map 0xffff0fa0!
-	 */
-	unsigned long vectors = 0xffff0000;	//CONFIG_VECTORS_BASE = 0xffff0000
-	extern char __kuser_helper_start[], __kuser_helper_end[];
-	//kprintf("## whn09 start %08x %08x\n", __kuser_helper_start, __kuser_helper_end);
-	int kuser_sz = __kuser_helper_end - __kuser_helper_start;
-	memcpy((void *)vectors + 0x1000 - kuser_sz, __kuser_helper_start,
-	       kuser_sz);
-	//kprintf("## whn09 end %08x %08x\n", __kuser_helper_start, __kuser_helper_end);
-	pte_t *ptep = get_pte(boot_pgdir, 0XFFFF0000, 1);
-	assert(ptep != NULL);
-	//Fix me
-	//the page 0xffff0000's permission should be 'PTE_P | ~PTE_W | PTE_PWT | PTE_U',
-	//but the code didn't work even though the permission of that page is set as mentioned above.
-	ptep_set_perm(ptep, PTE_P | ~PTE_W | PTE_PWT | PTE_U);
-	//memcpy((void*)vectors + 0x1000 - kuser_sz, __kuser_helper_start, kuser_sz);
-	/*
-	 * Add end
-	 */
 }
 
 // invalidate both TLB 

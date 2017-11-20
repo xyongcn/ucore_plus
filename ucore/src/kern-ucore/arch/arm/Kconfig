@@ -38,6 +38,9 @@ config ARM_BOARD_PANDABOARD
 config ARM_BOARD_RASPBERRYPI
   bool "Raspberry Pi"
 
+config ARM_BOARD_ZEDBOARD
+  bool "ZedBoard"
+
 endchoice
 
 config HAVE_RAMDISK

@@ -184,7 +184,7 @@ void proc_run(struct proc_struct *proc)
 	if (proc != current) {
 		bool intr_flag;
 		struct proc_struct *prev = current, *next = proc;
-		// kprintf("(%d) => %d\n", lapic_id, next->pid);
+		//kprintf("(%d) => %d\n", lapic_id, next->pid);
 		local_intr_save(intr_flag);
 		{
 			current = proc;

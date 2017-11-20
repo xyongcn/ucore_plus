@@ -30,6 +30,19 @@ endif
 
 endif
 
+ifdef UCONFIG_ARM_BOARD_ZEDBOARD
+ARCH_INLUCDES += mach-zedboard
+# TODO currently borrowed from pandaboard
+PLATFORM_DEF := -DPLATFORM_ZEDBOARD -D__MACH_ARM_CORTEX_A9
+PLATFORM_DEF += -DCONFIG_ARCH_OMAP4 -DCONFIG_OMAP_MUX -DCONFIG_GENERIC_GPIO
+PLATFORM_DEF += -DCONFIG_GPIOLIB -DCONFIG_ARCH_NR_GPIO=512
+
+# use goldfish linux header
+ifdef UCONFIG_HAVE_LINUX_DDE_BASE
+PLATFORM_DEF += -include $(KTREE)/module/include/mach-goldfish/autoconf.h
+endif
+
+endif
 
 ifdef UCONFIG_ARM_CPU_V7
 MACH_MACRO := -D__MACH_ARM_ARMV7 	-D__LINUX_ARM_ARCH__=7

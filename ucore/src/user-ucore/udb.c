@@ -14,9 +14,9 @@ enum DebugSignal {
     DEBUG_CONTINUE = 2,
     DEBUG_STEPINTO = 3,
     DEBUG_STEPOVER = 4,
-    DEBUG_SETBREAKPOINT = 5, 
-    DEBUG_DELBREAKPOINT = 6, 
-    DEBUG_PRINT = 7, 
+    DEBUG_SETBREAKPOINT = 5,
+    DEBUG_DELBREAKPOINT = 6,
+    DEBUG_PRINT = 7,
     DEBUG_PRINT_REG = 8,
     DEBUG_BACKTRACE = 9,
 };
@@ -65,7 +65,7 @@ int hex_to_int(const char c) {
 }
 
 /* *
- * asmparse - parse a line in a asm file. 
+ * asmparse - parse a line in a asm file.
 */
 void
 asmparse(const char *line, struct asminfo *info) {
@@ -74,8 +74,8 @@ asmparse(const char *line, struct asminfo *info) {
     info->type = 0;
     info->buf[0] = '\0';
     info->pos = 0;
-/*    if (strlen(line) > 10 
-            && is_hex(line[0]) 
+/*    if (strlen(line) > 10
+            && is_hex(line[0])
             && is_hex(line[1])
             && line[9] == '<') {
         info->type = FUNC_DEF;
@@ -88,11 +88,11 @@ asmparse(const char *line, struct asminfo *info) {
         }
         info->buf[i-10] = '\0';
         return;
-    } else */if (strlen(line) > 10 
+    } else */if (strlen(line) > 10
             && line[0] == ' '
             && line[1] == ' '
             && is_hex(line[2])
-            && line[8] == ':') { 
+            && line[8] == ':') {
         info->type = ASM_CODE;
         for (i = 2; i < 8; i++) {
             info->pos *= 16;
@@ -294,7 +294,7 @@ void load_asm() {
             assym[as_n].val = bf + bf_n + 1;
             strcpy(assym[as_n].val, info.buf);
             bf_n = bf_n + strlen(info.buf) + 1;
-            // modify pos for c code, so that we know where 
+            // modify pos for c code, so that we know where
             // in the memory does the c code points to
    //         for (i = gc_n - 1; i >= 0; i--) {
    //             if (gcsym[i].pos == 0) {
@@ -328,8 +328,10 @@ char *find_asm_by_pos(uint32_t pos) {
 uint32_t doSysDebug(int sig, int arg) {
     // printf("[debug]%d\n", sig);
     uint32_t ret;
+    #ifndef ARCH_ARM
     if((ret = sys_debug(pid, sig, arg)) == -1)
         uninit();
+    #endif
     return ret;
 }
 
@@ -349,7 +351,7 @@ int udbContinue(int argc, char* argv[]) {
 
 int udbStepInto(int argc, char* argv[]) {
     struct DebugInfo* p = 0;
-    while(!(p && 
+    while(!(p &&
             p->vaddr == pinfo.pc)) {
         doSysDebug(DEBUG_STEPINTO, 0);
         udbWait();
@@ -379,8 +381,8 @@ int udbStepOver(int argc, char* argv[]) {
         return 0;
     }
     struct DebugInfo* p = 0;
-    while(!(p && 
-            p->vaddr == pinfo.pc && 
+    while(!(p &&
+            p->vaddr == pinfo.pc &&
             p->func == last->func)) {
         doSysDebug(DEBUG_STEPINTO, 0);
         udbWait();
@@ -501,7 +503,7 @@ int findOpt(char* s) {
 }
 
 void printCalcStack() {
-    cprintf("--------\n"); 
+    cprintf("--------\n");
     for(int i = 1; i <= stackn; ++i) {
         cprintf("%d ", calcStack[i].type);
     }
@@ -526,7 +528,7 @@ void doCalc() {
 uint32_t calc(int argc, char* argv[]) {
     calcErrFlag = 0;
     int now = 0;
-    for(int i = 1; i < argc; ++i) 
+    for(int i = 1; i < argc; ++i)
         for(int j = 0; argv[i][j]; ++j)
             buf[now++] = argv[i][j];
     buf[now] = 0;
@@ -548,8 +550,8 @@ uint32_t calc(int argc, char* argv[]) {
             continue;
         if('0' <= buf[i] && buf[i] <= '9') {
             while(  buf[i] == 'x' ||
-                    '0' <= buf[i] && buf[i] <= '9' || 
-                    'a' <= buf[i] && buf[i] <= 'f' || 
+                    '0' <= buf[i] && buf[i] <= '9' ||
+                    'a' <= buf[i] && buf[i] <= 'f' ||
                     'A' <= buf[i] && buf[i] <= 'F' ) {
                 calcBuf[now++] = buf[i++];
             }
@@ -585,8 +587,8 @@ uint32_t calc(int argc, char* argv[]) {
         if((j = findOpt(calcComp[i])) != -1) {
             if(operator[j].type == OPT_LBRACE || operator[j].type == OPT_RBRACE)
                 calcMark[i] = operator[j].type;
-            else if(i == 0 || 
-                    calcMark[i-1] == OPT_UNO || 
+            else if(i == 0 ||
+                    calcMark[i-1] == OPT_UNO ||
                     calcMark[i-1] == OPT_BINARY ||
                     calcMark[i-1] == OPT_LBRACE)
                 calcMark[i] = OPT_UNO;
@@ -601,14 +603,14 @@ uint32_t calc(int argc, char* argv[]) {
         calcMark[i] = OPT_SYMBOL;
     }
     /*
-    for(int i = 0; i <= m; ++i) 
+    for(int i = 0; i <= m; ++i)
         cprintf("%d ", calcMark[i]);
     cprintf("\n");
     */
     for(int i = m; i >= 0; --i) {
         //printCalcStack();
         int j;
-        struct DebugInfo* p;    
+        struct DebugInfo* p;
         switch(calcMark[i]) {
             case OPT_UNO:
                 j = findSpecOpt(calcComp[i], OPT_UNO);
@@ -628,7 +630,7 @@ uint32_t calc(int argc, char* argv[]) {
                     return -1;
                 }
                 while(  stackn > 0 &&
-                        calcStack[stackn].type == OPT_BINARY && 
+                        calcStack[stackn].type == OPT_BINARY &&
                         calcStack[stackn].priority > operator[j].priority)
                     doCalc();
                 calcStack[++stackn] = operator[j];
@@ -741,8 +743,8 @@ int udbList(int argc, char* argv[]) {
     int linen = 10;
     if(argc > 1)
         linen = strToInt(argv[1]);
-    for(int i = p->sourceLine; 
-        i < p->sourceLine + linen && printCodeLine(p->soStr, i) == 0; 
+    for(int i = p->sourceLine;
+        i < p->sourceLine + linen && printCodeLine(p->soStr, i) == 0;
         ++i);
 }
 
@@ -763,7 +765,7 @@ int udbBacktrace(int argc, char* argv[]) {
         uint32_t eip = strToInt(res[i + 1]);
         struct DebugInfo* deb = findSline(eip);
         cprintf(
-            "0x%08x in %s (ebp=%08x, eip=%08x) at %s:%d\n", 
+            "0x%08x in %s (ebp=%08x, eip=%08x) at %s:%d\n",
             eip, deb->func->symStr, ebp, eip, deb->soStr, deb->sourceLine);
     }
 }
@@ -801,6 +803,7 @@ int doHelp(int argc, char* argv[]) {
 //char test[50] = "p +-1+(-testValue<<1*3+4)-5 | 0x001000";
 
 int main(int argc, char* argv[]) {
+    #ifndef ARCH_ARM
     if(argc == 1)
     {
         strcpy(target, "testudb");
@@ -820,7 +823,7 @@ int main(int argc, char* argv[]) {
     // load_asm();
     cprintf("Attached.\n");
     udbWait();
-    
+
     // test begins
     /*
     int con = 0;
@@ -831,7 +834,7 @@ int main(int argc, char* argv[]) {
     return 0;
     */
     // test ends
-    
+
     char* inp_raw;
     while(1) {
         inp_raw = readl_raw("udb>");
@@ -852,5 +855,8 @@ int main(int argc, char* argv[]) {
             }
         }
     }
+    #else
+    cprintf("ARM has no support for debug syscall.\n");
+    #endif
     return 0;
 }

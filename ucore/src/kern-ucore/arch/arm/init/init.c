@@ -107,6 +107,10 @@ static void check_bp()
 
 int kern_init(void)
 {
+    uint32_t sctlr;
+	asm volatile ("MRC p15, 0, %0, c1, c0, 0"	/* set translation table base */
+		      :"=r" (sctlr)
+	    );
 	extern char edata[], end[];
 	memset(edata, 0, end - edata);
 
@@ -117,6 +121,7 @@ int kern_init(void)
 //	pmm_init();		// init physical memory management
 //	pmm_init_ap();
 	board_init_early();
+    kprintf("sctlr: 0x%08x\n", sctlr);
 
 #ifdef UCONFIG_HAVE_RAMDISK
 	check_initrd();
@@ -160,6 +165,7 @@ int kern_init(void)
 	_PROBE_();
 
 	intr_enable();		// enable irq interrupt
+    _PROBE_();
 
 #ifdef UCONFIG_HAVE_LINUX_DDE_BASE
 	calibrate_delay();
