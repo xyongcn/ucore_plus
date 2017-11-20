@@ -18,18 +18,19 @@
 #define ENABLEMMU 		0x00000001
 #define ENABLEDCACHE 	0x00000004
 #define ENABLEICACHE 	0x00001000
-#define ENABLEHIGHEVT	0x00002000
+#define ENABLEHIGHEVT	0x00002000  // use excpt vector art 0xFFFF0000, see B4.1.130, armv7-r/a-arm.pdf 
+//#define ENABLEHIGHEVT	0x00000000  // use excpt vector art 0xFFFF0000, see B4.1.130, armv7-r/a-arm.pdf 
 // In ARMv6, this enables new page table format
-#define ENABLENEWPT   0x00800000
+#define ENABLENEWPT   0x00800000  // this XP bit in SCTLR is reserved to be 1 in v7
 #define CHANGEMMU 		0x00000001
 #define CHANGEDCACHE 	0x00000004
 #define CHANGEICACHE 	0x00001000
 #define CHANGEHIGHEVT	0x00002000
 #define CHANGENEWPT   0x00800000
-#define ENABLEWB 		0x00000008
+#define ENABLEWB 		0x00000008 // deprecated in v7
 #define CHANGEWB 		0x00000008
 
-#define DOM3CLT 		0x00000001	// Critical value
+#define DOM3CLT 		0x00000001	// Critical value 
 
 /* type */
 #define FAULT 	0
@@ -147,11 +148,11 @@
 #define PTEX_W   0x010		// supervisor rw, user no_access
 #define PTEX_U   0x020		// supervisor rw, user ro
 #define PTEX_UW  0x030		// supervisor rw, user rw
-#elif defined __MACH_ARM_ARMV7
+#elif defined __MACH_ARM_ARMV7  // only works on SCTLR(CP15-c1-0-c0-0).AFE=0, see section B3.7 in ARMv7_R/A_ARM.pdf
 #define PTEX_R   0x210		// Supervisor/Readonly
-#define PTEX_W   0x010		// Supervisor/Write
-#define PTEX_U   0x020		// Supervisor/Write _ User/Read Only
-#define PTEX_UW  0x030		// Supervisor/Write _ User/Write
+#define PTEX_W   0x010		// Supervisor/rw
+#define PTEX_U   0x020		// Supervisor/rw _ User/Read Only
+#define PTEX_UW  0x030		// Supervisor/rw _ User/rw
 #else
 #error Unknown ARM CPU type
 #endif

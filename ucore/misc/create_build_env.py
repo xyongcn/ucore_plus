@@ -88,9 +88,24 @@ if __name__ == "__main__":
     )
     parser.add_argument('build_dir', metavar='build_dir',
                         help='The location to setup ucore build environment.')
+    parser.add_argument('--build_threads', metavar='build_threads',
+                        default='4',
+                        help='Number of threads used for this build.')
+    parser.add_argument('--gcc_major_versions', metavar='gcc_major_versions',
+                        default='7',
+                        help='Number of threads used for this build.')
     args = parser.parse_args()
-    print(args.build_dir)
+    gcc_major_versions = args.gcc_major_versions
+    gcc_major_versions = gcc_major_versions.split(',')
+    for v in gcc_major_versions:
+        if v not in ['4', '5', '6', '7']:
+            print("Unknown GCC major version: " + v)
+            exit(1)
+    GCC_VERSIONS = [v for v in GCC_VERSIONS if v[0] in gcc_major_versions]
     BUILD_ENV_ROOT = args.build_dir
+    if not os.path.isdir(BUILD_ENV_ROOT):
+        os.makedirs(BUILD_ENV_ROOT)
+    build_thread_param = '-j' + args.build_threads
     TOOLCHAIN_BUILD_DIR = args.build_dir + '/' + 'build'
     print('Setting up uCore build environment on ' + BUILD_ENV_ROOT)
     initial_working_dir = os.getcwd()
@@ -116,7 +131,7 @@ if __name__ == "__main__":
                 '--target=' + gcc_arch,
                 '--disable-multilib',
             ])
-            call(['make', '-j16'])
+            call(['make', build_thread_param])
             call(['make', 'install'])
             swicth_to_toolchain_build_dir(initial_working_dir)
             call([
@@ -127,10 +142,11 @@ if __name__ == "__main__":
                 '--enable-languages=c',
                 '--without-headers',
             ])
-            call(['make', '-j16', 'all-gcc'])
+            call(['make', build_thread_param, 'all-gcc'])
             call(['make', 'install-gcc'])
-            call(['make', '-j16', 'all-target-libgcc'])
-            call(['make', 'install-target-libgcc'])
+            if ucore_arch == 'arm':
+                call(['make', build_thread_param, 'all-target-libgcc'])
+                call(['make', 'install-target-libgcc'])
 
     os.chdir(initial_working_dir)
     call(['rm', '-rf', TOOLCHAIN_BUILD_DIR])

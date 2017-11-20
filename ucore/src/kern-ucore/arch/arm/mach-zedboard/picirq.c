@@ -120,5 +120,5 @@ void irq_handler() {
  * 	Clear a pending interrupt request
  *  necessary when handling an irq */
 void irq_clear(unsigned int source) {
-	// not implemented
+	// should be done in irq handler for specific device
 }

@@ -1,4 +1,4 @@
-OUTPUT_FORMAT(elf32-littlemips)
+OUTPUT_FORMAT(elf32-tradlittlemips)
 OUTPUT_ARCH(mips:isa32)
 ENTRY(_start)
 
