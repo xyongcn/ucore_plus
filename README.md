@@ -1,7 +1,7 @@
-uCore_plus ![Travis CI status](https://travis-ci.org/tansinan/ucore_plus.svg?branch=master)
+uCore_plus
 ==========
 
-
+[![Travis CI status](https://travis-ci.org/oscourse-tsinghua/ucore_plus.svg?branch=master)](https://travis-ci.org/oscourse-tsinghua/ucore_plus?branch=master)
 
 ##Current Progress
  We are working on ucore plus for amd64 smp porting. 
