@@ -10,7 +10,15 @@
 #ifndef _ZYNQPL_H_
 #define _ZYNQPL_H_
 
-#include <xilinx.h>
+typedef enum {
+	BIT_FULL = 0,
+	BIT_PARTIAL,
+	BIT_NONE = 0xFF,
+} bitstream_type;
+
+typedef struct {} xilinx_desc;
+
+int zynq_load(xilinx_desc *desc, const void *buf, size_t bsize, bitstream_type bstype);
 
 #define XILINX_ZYNQ_7007S	0x3
 #define XILINX_ZYNQ_7010	0x2

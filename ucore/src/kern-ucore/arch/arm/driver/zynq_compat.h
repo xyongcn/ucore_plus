@@ -4,7 +4,8 @@
 #include <error.h>
 
 /* armv7m fixed base addresses */
-#define V7M_SCS_BASE		0xE000E000
+const static uint8_t *V7M_SCS_BASE = (uint8_t*)0xE000E000;
+//#define V7M_SCS_BASE		0xE000E000
 #define V7M_NVIC_BASE		(V7M_SCS_BASE + 0x0100)
 #define V7M_SCB_BASE		(V7M_SCS_BASE + 0x0D00)
 #define V7M_PROC_FTR_BASE	(V7M_SCS_BASE + 0x0D78)

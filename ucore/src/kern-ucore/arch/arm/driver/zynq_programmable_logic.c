@@ -16,22 +16,17 @@
 #include <asm/arch/hardware.h>
 #include <asm/arch/sys_proto.h>*/
 
+#include <pmm.h>
 #include <zynq_compat.h>
+#include <zynq_programmable_logic.h>
 
 #define SZ_1M 0
-
-typedef enum {
-	BIT_FULL = 0,
-	BIT_PARTIAL,
-	BIT_NONE = 0xFF,
-} bitstream_type;
 
 #define ALIGN(x,a)		__ALIGN_MASK((x),(typeof(x))(a)-1)
 #define __ALIGN_MASK(x,mask)	(((x)+(mask))&~(mask))
 //#include <zynq_programmable_logic.h>
 
 #define get_timer(x) 0
-typedef struct {} xilinx_desc;
 
 struct devcfg_regs {
 	u32 ctrl; /* 0x0 */
@@ -54,7 +49,7 @@ struct devcfg_regs {
 	u32 read_count; /* 0x8c */
 };
 
-#define devcfg_base ((struct devcfg_regs *)ZYNQ_DEV_CFG_APB_BASEADDR)
+static struct devcfg_regs *devcfg_base = ((struct devcfg_regs *)ZYNQ_DEV_CFG_APB_BASEADDR);
 
 #define CONFIG_SYS_HZ 100000000
 
@@ -167,19 +162,21 @@ static u32 check_header(const void *buf)
 
 static void *check_data(u8 *buf, size_t bsize, u32 *swap)
 {
+	kprintf("Entering check_data.\n");
 	u32 word, p = 0; /* possition */
 
 	/* Because buf doesn't need to be aligned let's read it by chars */
 	for (p = 0; p < bsize; p++) {
 		word = load_word(&buf[p], SWAP_NO);
-		debug("%s: word %x %x/%x\n", __func__, word, p, (u32)&buf[p]);
+		//debug("%s: word %x %x/%x\n", __func__, word, p, (u32)&buf[p]);
 
 		/* Find the first bitstream dummy word */
 		if (word == DUMMY_WORD) {
-			debug("%s: Found dummy word at position %x/%x\n",
-			      __func__, p, (u32)&buf[p]);
+			//debug("%s: Found dummy word at position %x/%x\n",
+			//      __func__, p, (u32)&buf[p]);
 			*swap = check_header(&buf[p]);
 			if (*swap) {
+				kprintf("Leaving check_data %d.\n", __LINE__);
 				/* FIXME add full bitstream checking here */
 				return &buf[p];
 			}
@@ -188,6 +185,7 @@ static void *check_data(u8 *buf, size_t bsize, u32 *swap)
 		//if (ctrlc())
 		//	return NULL;
 	}
+	kprintf("Leaving check_data %d.\n", __LINE__);
 	return NULL;
 }
 
@@ -197,7 +195,7 @@ static int zynq_dma_transfer(u32 srcbuf, u32 srclen, u32 dstbuf, u32 dstlen)
 	u32 isr_status;
 
 	/* Set up the transfer */
-	writel((u32)srcbuf, &devcfg_base->dma_src_addr);
+	writel(PADDR((u32)srcbuf), &devcfg_base->dma_src_addr);
 	writel(dstbuf, &devcfg_base->dma_dst_addr);
 	writel(srclen, &devcfg_base->dma_src_len);
 	writel(dstlen, &devcfg_base->dma_dst_len);
@@ -239,6 +237,7 @@ static int zynq_dma_xfer_init(bitstream_type bstype)
 	unsigned long ts;
 
 	/* Clear loopback bit */
+	kprintf("DEBUG! %x %d", devcfg_base, __LINE__);
 	clrbits_le32(&devcfg_base->mctrl, DEVCFG_MCTRL_PCAP_LPBK);
 
 	if (bstype != BIT_PARTIAL) {
@@ -275,6 +274,7 @@ static int zynq_dma_xfer_init(bitstream_type bstype)
 		}
 	}
 
+	kprintf("DEBUG! %x %d", devcfg_base, __LINE__);
 	isr_status = readl(&devcfg_base->int_sts);
 
 	/* Clear it all, so if Boot ROM comes back, it can proceed */
@@ -323,6 +323,7 @@ static int zynq_dma_xfer_init(bitstream_type bstype)
 
 static u32 *zynq_align_dma_buffer(u32 *buf, u32 len, u32 swap)
 {
+	kprintf("Entering %s %d\n", __func__, __LINE__);
 	u32 *new_buf;
 	u32 i;
 
@@ -355,7 +356,7 @@ static u32 *zynq_align_dma_buffer(u32 *buf, u32 len, u32 swap)
 		for (i = 0; i < (len/4); i++)
 			new_buf[i] = load_word(&buf[i], swap);
 	}
-
+	kprintf("Leaving %s %d\n", __func__, __LINE__);
 	return buf;
 }
 
@@ -391,9 +392,18 @@ static int zynq_validate_bitstream(xilinx_desc *desc, const void *buf,
 	return 0;
 }
 
-static int zynq_load(xilinx_desc *desc, const void *buf, size_t bsize,
+int zynq_load(xilinx_desc *desc, const void *buf, size_t bsize,
 		     bitstream_type bstype)
 {
+	if(devcfg_base == (struct devcfg_regs *)ZYNQ_DEV_CFG_APB_BASEADDR) {
+		kprintf("Remapping devcfg_base\n");
+		devcfg_base = __ucore_ioremap(ZYNQ_DEV_CFG_APB_BASEADDR, 8 * PGSIZE, 0);
+	}
+	if(V7M_SCS_BASE == (uint8_t*)0xE000E000) {
+		kprintf("Remapping V7M_SCS_BASE\n");
+		V7M_SCS_BASE = __ucore_ioremap(V7M_SCS_BASE, 8 * PGSIZE, 0);
+	}
+	kprintf("Remapping devcfg_base %x\n", V7M_SCS_BASE);
 	unsigned long ts; /* Timestamp */
 	u32 isr_status, swap;
 
