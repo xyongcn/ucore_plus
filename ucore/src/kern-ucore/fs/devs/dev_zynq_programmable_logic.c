@@ -1,4 +1,4 @@
-#if defined(ARCH_ARM)
+#if defined(UCONFIG_ARM_BOARD_ZEDBOARD)
 
 #include <types.h>
 #include <stdio.h>
