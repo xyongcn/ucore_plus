@@ -38,7 +38,6 @@ static int zynq_programmable_logic_io(struct device *dev, struct iobuf *iob, boo
     memcpy(private_data->buffer_kernel_address + private_data->buffer_used, data, iob->io_resid);
     private_data->buffer_used += iob->io_resid;
     iob->io_resid = 0;
-    kprintf("zynqpl_buffer: %d\n", private_data->buffer_used);
 		return 0;
 	}
 	return -E_INVAL;
@@ -49,8 +48,12 @@ static int zynq_programmable_logic_ctrl_io(struct device *dev, struct iobuf *iob
   struct zynq_programmable_logic_private_data *private_data = dev_get_private_data(dev);
 	if (write) {
     iob->io_resid = 0;
-    kprintf("zynqpl write!\n");
-    zynq_load(NULL, private_data->buffer_kernel_address, private_data->buffer_used, BIT_PARTIAL);
+    if(((char*)iob->io_base)[0] == 0) {
+      zynq_load(NULL, private_data->buffer_kernel_address, private_data->buffer_used, BIT_FULL);
+    }
+    else if(((char*)iob->io_base)[0] == 1) {
+      zynq_load(NULL, private_data->buffer_kernel_address, private_data->buffer_used, BIT_PARTIAL);
+    }
     private_data->buffer_used = 0;
 		return 0;
 	}
