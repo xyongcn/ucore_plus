@@ -1,3 +1,3 @@
-obj-y := dev.o dev_disk.o dev_null.o dev_stdin.o dev_stdout.o dev_uio.o
+obj-y := dev.o dev_disk.o dev_null.o dev_stdin.o dev_stdout.o dev_uio.o dev_zynq_programmable_logic.o
 
 obj-$(UCONFIG_DDE_MMC_UCORE_BLOCK) += dev_mmc0.o

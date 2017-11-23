@@ -169,6 +169,9 @@ void dev_init(void)
 	#if defined(ARCH_ARM) || defined(ARCH_MIPS)
 	init_device(uio);
 	#endif
+	#if defined(UCONFIG_ARM_BOARD_ZEDBOARD)
+	init_device(zynq_programmable_logic);
+	#endif
 	init_device(stdin);
 	init_device(stdout);
   init_device(fuse);
