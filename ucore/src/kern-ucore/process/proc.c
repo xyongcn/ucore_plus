@@ -26,7 +26,7 @@
 #include <sysconf.h>
 #include <refcache.h>
 #include <spinlock.h>
-
+#include <network/input_thread.h>
 /* ------------- process/thread mechanism design&implementation -------------
 (an simplified Linux process/thread mechanism )
 introduction:
@@ -857,6 +857,15 @@ int program_count, struct mm_struct *mm, int fd, off_t bias)
     char *start = program_header->p_va + bias;
     char *end = program_header->p_va + bias + program_header->p_memsz;
 
+    if((uintptr_t)end % program_header->p_align != 0) {
+      end = ((uintptr_t)end / program_header->p_align + 1) * program_header->p_align;
+    }
+    if(bias == 0) {
+      if (mm->brk_start < end) {
+        mm->brk_start = end;
+      }
+    }
+
     //TODO: Not certain if this may introduce a bug if end % PGSIZE == 0.
     start = ROUNDDOWN(start, PGSIZE);
     end = ROUNDUP(end, PGSIZE);
@@ -1073,7 +1082,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 	set_pgdir(current, mm->pgdir);
 	mp_set_mm_pagetable(mm);
 
-#if defined(UCONFIG_BIONIC_LIBC) || defined(ARCH_AMD64)
+#if defined(ARCH_ARM) || defined(ARCH_AMD64) || defined(ARCH_MIPS)
 	if (init_new_context_dynamic(current, elf, argc, kargv, envc, kenvp,
 				     elf_have_interpreter, interpreter_entry + bias, elf_entry,
 				     bias, program_header_address) < 0)
@@ -1253,6 +1262,7 @@ int do_execve(const char *filename, const char **argv, const char **envp)
 
 	put_kargv(argc, kargv);
 	put_kargv(envc, kenvp);
+  ptrace_execve_hook();
 	return 0;
 
 execve_exit:
@@ -1371,7 +1381,7 @@ repeat:
 			do {
 				if (proc->parent == cproc) {
 					haskid = 1;
-					if (proc->state == PROC_ZOMBIE) {
+					if (proc->state == PROC_ZOMBIE || proc->state == PROC_STOPPED) {
 						goto found;
 					}
 					break;
@@ -1386,7 +1396,7 @@ repeat:
 			proc = cproc->cptr;
 			for (; proc != NULL; proc = proc->optr) {
 				haskid = 1;
-				if (proc->state == PROC_ZOMBIE) {
+				if (proc->state == PROC_ZOMBIE || proc->state == PROC_STOPPED) {
 					goto found;
 				}
 			}
@@ -1410,21 +1420,26 @@ found:
 		panic("wait idleproc or initproc.\n");
 	}
 	int exit_code = proc->exit_code;
-	int return_pid = proc->pid;
-	local_intr_save(intr_flag);
-	{
-		unhash_proc(proc);
-		remove_links(proc);
-	}
-	local_intr_restore(intr_flag);
-	put_kstack(proc);
-	kfree(proc);
+  int return_pid = proc->pid;
+  if(proc->state == PROC_ZOMBIE) {
+  	local_intr_save(intr_flag);
+  	{
+  		unhash_proc(proc);
+  		remove_links(proc);
+  	}
+  	local_intr_restore(intr_flag);
+  	put_kstack(proc);
+  	kfree(proc);
+  }
 
 	int ret = 0;
 	if (code_store != NULL) {
 		lock_mm(mm);
 		{
 			int status = exit_code << 8;
+      if(proc->state == PROC_STOPPED) {
+        status |= 0x7F;
+      }
 			if (!copy_to_user(mm, code_store, &status, sizeof(int))) {
 				ret = -E_INVAL;
 			}
@@ -1918,6 +1933,11 @@ static int user_main(void *arg)
 	kprintf("user_main execve failed, no /bin/sh?.\n");
 }
 
+
+static void foo(void* arg) {
+  struct netif *netif = (struct netif*)arg;
+  dhcp_start(netif);
+}
 // init_main - the second kernel thread used to create kswapd_main & user_main kernel threads
 static int init_main(void *arg)
 {
@@ -1942,6 +1962,12 @@ static int init_main(void *arg)
 	size_t nr_used_pages_store = nr_used_pages();
 
 	unsigned int nr_process_store = nr_process;
+
+  extern struct netif *__netif;
+  if(__netif != NULL) {
+    ucore_kernel_thread(network_input_thread_main, NULL, 0);
+    tcpip_init(foo, __netif);
+  }
 
 	pid = ucore_kernel_thread(user_main, NULL, 0);
 	if (pid <= 0) {
@@ -2118,7 +2144,8 @@ int do_linux_usetrlimit(int res, const struct linux_rlimit *__user __limit)
 		limit.rlim_max = USTACKSIZE;
 		break;
 	default:
-		return -E_INVAL;
+		ret = -E_INVAL;
+    goto out;
 	}
 	if (__limit->rlim_cur > limit.rlim_max)
 	{

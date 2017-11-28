@@ -132,6 +132,8 @@
 #define O_RDONLY             00
 #define O_WRONLY             01
 #define O_RDWR               02
+
+#ifndef ARCH_MIPS
 #define O_CREAT            0100	/* not fcntl */
 #define O_EXCL             0200	/* not fcntl */
 #define O_NOCTTY           0400	/* not fcntl */
@@ -142,6 +144,17 @@
 #define O_SYNC           010000
 #define O_FSYNC          O_SYNC
 #define O_ASYNC          020000
+#else
+#define O_APPEND        0x0008
+#define O_DSYNC         0x0010  /* used to be O_SYNC, see below */
+#define O_NONBLOCK      0x0080
+#define O_CREAT         0x0100  /* not fcntl */
+#define O_TRUNC         0x0200  /* not fcntl */
+#define O_EXCL          0x0400  /* not fcntl */
+#define O_NOCTTY        0x0800  /* not fcntl */
+#define FASYNC          0x1000  /* fcntl, for BSD compatibility */
+#define O_LARGEFILE     0x2000  /* allow large file opens */
+#endif
 
 /* access function */
 #define F_OK            0       /* test for existence of file */

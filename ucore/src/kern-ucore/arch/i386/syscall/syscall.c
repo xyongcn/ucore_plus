@@ -14,6 +14,7 @@
 #include <error.h>
 #include <kio.h>
 #include <udb.h>
+#include <syscall_linux.h>
 
 static uint32_t sys_exit(uint32_t arg[])
 {
@@ -212,41 +213,6 @@ static uint32_t sys_mbox_info(uint32_t arg[])
 	return ipc_mbox_info(id, info);
 }
 
-static uint32_t sys_open(uint32_t arg[])
-{
-	const char *path = (const char *)arg[0];
-	uint32_t open_flags = (uint32_t) arg[1];
-	return sysfile_open(path, open_flags);
-}
-
-static uint32_t sys_close(uint32_t arg[])
-{
-	int fd = (int)arg[0];
-	return sysfile_close(fd);
-}
-
-/* *
- * sys_read -  read file
- * @arg[0] file handle
- * @arg[1] buffer address
- * @arg[2] length to be read
- *  */
-static uint32_t sys_read(uint32_t arg[])
-{
-	int fd = (int)arg[0];
-	void *base = (void *)arg[1];
-	size_t len = (size_t) arg[2];
-	return sysfile_read(fd, base, len);
-}
-
-static uint32_t sys_write(uint32_t arg[])
-{
-	int fd = (int)arg[0];
-	void *base = (void *)arg[1];
-	size_t len = (size_t) arg[2];
-	return sysfile_write(fd, base, len);
-}
-
 static uint32_t sys_seek(uint32_t arg[])
 {
 	int fd = (int)arg[0];
@@ -354,22 +320,6 @@ static uint32_t sys_list_module(uint32_t arg[])
 	return 0;
 }
 
-static uint32_t sys_mount(uint32_t arg[])
-{
-	const char *source = (const char *)arg[0];
-	const char *target = (const char *)arg[1];
-	const char *filesystemtype = (const char *)arg[2];
-  uint32_t mountflags = arg[3];
-	const void *data = (const void *)arg[4];
-	return do_mount(source, target, filesystemtype, mountflags, data);
-}
-
-static uint32_t sys_umount(uint32_t arg[])
-{
-	const char *target = (const char *)arg[0];
-	return do_umount(target);
-}
-
 static int sys_debug(uint32_t arg[]) {
     return userDebug(arg[0], arg[1], arg[2]);
 }
@@ -404,10 +354,10 @@ static uint32_t(*syscalls[]) (uint32_t arg[]) = {
 	    [SYS_mbox_recv] sys_mbox_recv,
 	    [SYS_mbox_free] sys_mbox_free,
 	    [SYS_mbox_info] sys_mbox_info,
-	    [SYS_open] sys_open,
-	    [SYS_close] sys_close,
-	    [SYS_read] sys_read,
-	    [SYS_write] sys_write,
+	    [SYS_open] syscall_linux_open,
+	    [SYS_close] syscall_linux_close,
+	    [SYS_read] syscall_linux_read,
+	    [SYS_write] syscall_linux_write,
 	    [SYS_seek] sys_seek,
 	    [SYS_fstat] sys_fstat,
 	    [SYS_fsync] sys_fsync,
@@ -424,8 +374,8 @@ static uint32_t(*syscalls[]) (uint32_t arg[]) = {
 	    [SYS_init_module] sys_init_module,
 	    [SYS_cleanup_module] sys_cleanup_module,
 	    [SYS_list_module] sys_list_module,
-	    [SYS_mount] sys_mount,
-		[SYS_umount] sys_umount,
+	    [SYS_mount] syscall_linux_mount,
+		[SYS_umount] syscall_linux_umount,
 	    [SYS_debug] sys_debug
 };
 

@@ -7,9 +7,11 @@
 #include <pipe_state.h>
 #include <iobuf.h>
 #include <stat.h>
+#include <poll.h>
 #include <unistd.h>
 #include <error.h>
 #include <assert.h>
+#include <pipe_state.h>
 
 static int pipe_inode_open(struct inode *node, uint32_t open_flags)
 {
@@ -34,32 +36,81 @@ static int pipe_inode_close(struct inode *node)
 	return 0;
 }
 
-static int pipe_inode_read(struct inode *node, struct iobuf *iob)
+static int pipe_inode_read(struct inode *node, struct iobuf *iob, int io_flags)
 {
+  bool no_block = (io_flags & O_NONBLOCK) ? 1 : 0;
 	struct pipe_inode *pin = vop_info(node, pipe_inode);
 	if (pin->pin_type != PIN_RDONLY) {
 		return -E_INVAL;
 	}
 	size_t ret;
 	if ((ret =
-	     pipe_state_read(pin->state, iob->io_base, iob->io_resid)) != 0) {
+	     pipe_state_read(pin->state, iob->io_base, iob->io_resid, no_block)) != 0) {
 		iobuf_skip(iob, ret);
 	}
 	return 0;
 }
 
-static int pipe_inode_write(struct inode *node, struct iobuf *iob)
+static int pipe_inode_write(struct inode *node, struct iobuf *iob, int io_flags)
 {
+  bool no_block = (io_flags & O_NONBLOCK) ? 1 : 0;
 	struct pipe_inode *pin = vop_info(node, pipe_inode);
 	if (pin->pin_type != PIN_WRONLY) {
 		return -E_INVAL;
 	}
 	size_t ret;
 	if ((ret =
-	     pipe_state_write(pin->state, iob->io_base, iob->io_resid)) != 0) {
+	     pipe_state_write(pin->state, iob->io_base, iob->io_resid, no_block)) != 0) {
 		iobuf_skip(iob, ret);
 	}
 	return 0;
+}
+
+//TODO: Should be moved to a pipe_state function.
+static int pipe_inode_poll(struct inode *node, wait_t *wait, int io_requests)
+{
+  struct pipe_inode *pipe_inode = vop_info(node, pipe_inode);
+  struct pipe_state *state= pipe_inode->state;
+  if(pipe_inode->pin_type == PIN_WRONLY) {
+    if(io_requests | POLL_WRITE_AVAILABLE) {
+      //TODO: This is ugly, should be using pipe_state macros.
+      if (state->p_wpos - state->p_rpos >= PGSIZE - sizeof(struct pipe_state)) {
+    		if (state->isclosed) {
+    			return 0;
+    		} else {
+    			//unlock_state(state);
+          if(wait != NULL) wait_queue_add(&state->writer_queue, wait);
+          return 0;
+    		}
+    	}
+      else {
+        return POLL_WRITE_AVAILABLE;
+      }
+    }
+    else {
+      return 0;
+    }
+  }
+  else {
+    if(io_requests | POLL_READ_AVAILABLE) {
+      //lock_state(state);
+    	if (state->p_rpos == state->p_wpos) {
+    		if (state->isclosed) {
+    			return 0;
+    		} else {
+    			//unlock_state(state);
+          if(wait != NULL) wait_queue_add(&state->reader_queue, wait);
+          return 0;
+    		}
+    	}
+      else {
+        return POLL_READ_AVAILABLE;
+      }
+    }
+    else {
+      return 0;
+    }
+  }
 }
 
 static int pipe_inode_fstat(struct inode *node, struct stat *stat)
@@ -118,6 +169,14 @@ static int pipe_inode_gettype(struct inode *node, uint32_t * type_store)
 	return 0;
 }
 
+static int pipe_inode_ioctl(struct inode * node, int op, void *data)
+{
+  struct pipe_inode *pin = vop_info(node, pipe_inode);
+  if(op & 04000) pin->no_block = 1;
+  else pin->no_block = 0;
+  return 0;
+}
+
 static const struct inode_ops pipe_node_ops = {
 	.vop_magic = VOP_MAGIC,
 	.vop_open = pipe_inode_open,
@@ -134,7 +193,7 @@ static const struct inode_ops pipe_node_ops = {
 	.vop_namefile = pipe_inode_namefile,
 	.vop_getdirentry = NULL_VOP_INVAL,
 	.vop_reclaim = pipe_inode_reclaim,
-	.vop_ioctl = NULL_VOP_INVAL,
+	.vop_ioctl = pipe_inode_ioctl,
 	.vop_gettype = pipe_inode_gettype,
 	.vop_tryseek = NULL_VOP_INVAL,
 	.vop_truncate = NULL_VOP_INVAL,
@@ -142,6 +201,7 @@ static const struct inode_ops pipe_node_ops = {
 	.vop_unlink = NULL_VOP_NOTDIR,
 	.vop_lookup = NULL_VOP_NOTDIR,
 	.vop_lookup_parent = NULL_VOP_NOTDIR,
+  .vop_poll = pipe_inode_poll,
 };
 
 static void
@@ -151,6 +211,7 @@ pipe_inode_init(struct pipe_inode *pin, char *name, struct pipe_state *state,
 	assert(state != NULL);
 	pin->pin_type = readonly ? PIN_RDONLY : PIN_WRONLY;
 	pin->name = name, pin->state = state, pin->reclaim_count = 1;
+  pin->no_block = 0;
 	list_init(&(pin->pipe_link));
 }
 

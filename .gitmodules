@@ -1,0 +1,3 @@
+[submodule "ucore/src/kern-ucore/network/lwIP"]
+	path = ucore/src/kern-ucore/network/lwIP
+	url = git@github.com:tansinan/lwIP.git

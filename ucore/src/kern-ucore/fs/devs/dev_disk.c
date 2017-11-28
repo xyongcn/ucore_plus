@@ -1,4 +1,5 @@
 #include <types.h>
+#include <string.h>
 #include <mmu.h>
 #include <slab.h>
 #include <sem.h>

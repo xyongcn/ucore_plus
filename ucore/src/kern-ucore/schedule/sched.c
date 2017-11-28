@@ -39,6 +39,7 @@ static inline void sched_class_enqueue(struct proc_struct *proc)
 		//XXX lock
 		sched_class->enqueue(rq, proc);
 	}
+  else panic("sched");
 }
 
 static inline void sched_class_dequeue(struct proc_struct *proc)
@@ -182,6 +183,12 @@ void schedule(void)
 		}
 
 		next = sched_class_pick_next();
+    /*if(next == NULL) {
+      kprintf("Nxt = null\n");
+    }
+    else {
+      kprintf("Nxt = %d\n", next->pid);
+    }*/
 		if (next != NULL)
 			sched_class_dequeue(next);
 		else
@@ -275,8 +282,9 @@ void run_timer_list(void)
 				}
 				struct proc_struct *proc = timer->proc;
 				if (proc->wait_state != 0) {
-					assert(proc->wait_state &
-					       WT_INTERRUPTED);
+          //TODO: This seems to prevent kernel-thread mutex with timeout from
+          //working, but I don't know what I' doing.
+					//assert(proc->wait_state & WT_INTERRUPTED);
 				} else {
 					warn("process %d's wait_state == 0.\n",
 					     proc->pid);

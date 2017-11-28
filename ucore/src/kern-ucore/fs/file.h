@@ -16,27 +16,20 @@ struct ucore_file {
 #else
 struct file {
 #endif
-	enum {
-		FD_NONE, FD_INIT, FD_OPENED, FD_CLOSED,
-	} status;
 	bool readable;
 	bool writable;
-	int fd;
 	off_t pos;
+  int io_flags;
 	struct inode *node;
 	atomic_t open_count;
 };
-
-void filemap_init(struct file *filemap);
-void filemap_open(struct file *file);
-void filemap_close(struct file *file);
-void filemap_dup(struct file *to, struct file *from);
 
 void filemap_acquire(struct file *file);
 void filemap_release(struct file *file);
 
 bool file_testfd(int fd, bool readable, bool writable);
 
+int file_init(struct file *file);
 int file_open(char *path, uint32_t open_flags);
 int file_close(int fd);
 int file_read(int fd, void *base, size_t len, size_t * copied_store);
@@ -68,7 +61,12 @@ static inline int fopen_count_inc(struct file *file)
 
 static inline int fopen_count_dec(struct file *file)
 {
-	return atomic_sub_return(&(file->open_count), 1);
+	int ret = atomic_sub_return(&(file->open_count), 1);
+  if(ret == 0) {
+    vfs_close(file->node);
+    kernel_file_pool_free(file);
+  }
+  return ret;
 }
 
 #ifdef UCONFIG_BIONIC_LIBC

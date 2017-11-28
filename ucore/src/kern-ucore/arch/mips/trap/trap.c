@@ -21,8 +21,8 @@
 
 #define GET_CAUSE_EXCODE(x)   ( ((x) & CAUSEF_EXCCODE) >> CAUSEB_EXCCODE)
 
-#define current (pls_read(current))
-#define idleproc (pls_read(idleproc))
+//#define current (pls_read(current))
+//#define idleproc (pls_read(idleproc))
 
 static void print_ticks()
 {
@@ -95,6 +95,9 @@ static void interrupt_handler(struct trapframe *tf)
 	for (i = 0; i < 8; i++) {
 		if (tf->tf_cause & (1 << (CAUSEB_IP + i))) {
 			switch (i) {
+      case 2: //D9000_IRQ
+        dm9000_interrupt_handler();
+        break;
 			case TIMER0_IRQ:
 				clock_int_handler(NULL);
 				break;
@@ -170,8 +173,7 @@ static void handle_tlbmiss(struct trapframe *tf, int write, int perm)
 	uint32_t badaddr = tf->tf_vaddr;
 	int ret = 0;
 	pte_t *pte = get_pte(current_pgdir, tf->tf_vaddr, 0);
-	if (perm || pte == NULL || ptep_invalid(pte) || (write && !ptep_u_write(pte))) {	//PTE miss, pgfault
-		//panic("unimpl");
+	if (perm || pte == NULL || ptep_invalid(pte) || (write && !ptep_u_write(pte) && !in_kernel)) {	//PTE miss, pgfault
 		//TODO
 		//tlb will not be refill in do_pgfault,
 		//so a vmm pgfault will trigger 2 exception
@@ -211,6 +213,18 @@ exit:
 	return;
 }
 
+static void __no_optimize_copy_integer(void* dst, void* src)
+{
+  signed char* _dst = dst;
+  signed char* _src = src;
+  uint32_t value;
+  uint32_t dst_hi, dst_lo;
+  _dst[0] = _src[0];
+  _dst[1] = _src[1];
+  _dst[2] = _src[2];
+  _dst[3] = _src[3];
+}
+
 static void trap_dispatch(struct trapframe *tf)
 {
 	int i;
@@ -228,32 +242,153 @@ static void trap_dispatch(struct trapframe *tf)
 	case EX_TLBS:
 		handle_tlbmiss(tf, 1, 0);
 		break;
-	case EX_RI:
-		print_trapframe(tf);
-		uint32_t *addr = (uint32_t *) (tf->tf_epc);
-		for (i = 0; i < 10; ++i, addr++)
-			kprintf("[%x:%x]\n", addr, *addr);
-
-		panic("hey man! Do NOT use that insn! insn=%x",
-		      *(uint32_t *) (tf->tf_epc));
-		break;
+  case EX_RI: {
+    if(tf->tf_cause & (1 << 31)) {
+      print_trapframe(tf);
+      panic("Cannot fix unimplemented instruction in branch delay slot.");
+    }
+    const uint32_t DIV_OPCODE_MASK = 0xFC00FFFF;
+    const uint32_t DIV_OPCODE = 0x0000001A;
+    const uint32_t DIVU_OPCODE = 0x0000001B;
+    const uint32_t MULTU_OPCODE = 0x00000019;
+    uint32_t instruction = *(uint32_t*)tf->tf_epc;
+    if((instruction & DIV_OPCODE_MASK) == DIV_OPCODE) {
+      int rt = (instruction >> 16) & 0x1F;
+      int rs = (instruction >> 21) & 0x1F;
+      int dividend = rs == 0 ? 0 : tf->tf_regs.reg_r[rs - 1];
+      int division = rt == 0 ? 0 : tf->tf_regs.reg_r[rt - 1];
+      tf->tf_lo = __divsi3(dividend, division);
+      tf->tf_hi = __modsi3(dividend, division);
+      tf->tf_epc = (void*)((uint32_t)tf->tf_epc + 4);
+      break;
+    }
+    else if((instruction & DIV_OPCODE_MASK) == DIVU_OPCODE) {
+      int rt = (instruction >> 16) & 0x1F;
+      int rs = (instruction >> 21) & 0x1F;
+      int dividend = rs == 0 ? 0 : tf->tf_regs.reg_r[rs - 1];
+      int division = rt == 0 ? 0 : tf->tf_regs.reg_r[rt - 1];
+      tf->tf_lo = udivmodsi4(dividend, division, 0);
+      tf->tf_hi = udivmodsi4(dividend, division, 1);
+      tf->tf_epc = (void*)((uint32_t)tf->tf_epc + 4);
+      break;
+    }
+    else if((instruction & DIV_OPCODE_MASK) == MULTU_OPCODE) {
+      int rt = (instruction >> 16) & 0x1F;
+      int rs = (instruction >> 21) & 0x1F;
+      uint32_t num1 = rs == 0 ? 0 : tf->tf_regs.reg_r[rs - 1];
+      uint32_t num2 = rt == 0 ? 0 : tf->tf_regs.reg_r[rt - 1];
+      uint32_t num11, num12, num21, num22;
+      num11 = num1 / 2;
+      num12 = num1 - num11;
+      num21 = num2 / 2;
+      num22 = num2 - num21;
+      uint64_t result = 0;
+      //TODO: 0xFFFFFFFF = 0x80000000 + 0x7FFFFFFF
+      //TODO: hi will always be zero.
+      result += ((int32_t)num11) * ((int32_t)num21);
+      result += ((int32_t)num12) * ((int32_t)num21);
+      result += ((int32_t)num11) * ((int32_t)num22);
+      result += ((int32_t)num12) * ((int32_t)num22);
+      tf->tf_lo = (uint32_t)result;
+      tf->tf_hi = result >> 32;
+      tf->tf_epc = (void*)((uint32_t)tf->tf_epc + 4);
+      break;
+    }
+    print_trapframe(tf);
+    if(trap_in_kernel(tf)) {
+      panic("hey man! Do NOT use that insn!");
+    }
+    do_exit(-E_KILLED);
+    break;
+  }
 	case EX_SYS:
-		//print_trapframe(tf);
 		tf->tf_epc += 4;
 		syscall();
 		break;
 		/* alignment error or access kernel
 		 * address space in user mode */
-	case EX_ADEL:
-	case EX_ADES:
+  case EX_BP:
+    ptrace_interrupt_hook(tf);
+    break;
+	case EX_ADEL: case EX_ADES: {
+    const uint32_t LOAD_STORE_OPCODE_MASK = 0xFC000000;
+    const uint32_t BRANCH_OPCODE_MASK = 0xFC000000;
+    const uint32_t LW_OPCODE = 0x8C000000;
+    const uint32_t SW_OPCODE = 0xAC000000;
+    const uint32_t SH_OPCODE = 0xA4000000;
+    const uint32_t BNE_OPCODE = 0x14000000;
+    bool in_branch_delay_slot = 0;
+    if(tf->tf_cause & (1 << 31)) {
+      in_branch_delay_slot = 1;
+    }
+    if(in_branch_delay_slot) {
+      uint32_t branch_instruction = *(uint32_t*)tf->tf_epc;
+      if((branch_instruction & BRANCH_OPCODE_MASK) == BNE_OPCODE) {
+          int rs = (branch_instruction >> 16) & 0x1F;
+          int rt = (branch_instruction >> 16) & 0x1F;
+          uint32_t rs_value = rs == 0 ? 0 : tf->tf_regs.reg_r[rs - 1];
+          uint32_t rt_value = rt == 0 ? 0 : tf->tf_regs.reg_r[rt - 1];
+          int16_t offset = branch_instruction & 0xFFFF;
+          if(rs_value == rt_value) {
+            tf->tf_epc = (void*)((uint32_t)tf->tf_epc + 4);
+          }
+          else {
+            tf->tf_epc = (void*)((uint32_t)tf->tf_epc + offset * 4);
+          }
+      }
+      else {
+        panic("Unhandled branch instruction %x", branch_instruction);
+      }
+    }
+
+    uint32_t instruction;
+    if(in_branch_delay_slot) {
+      instruction = *(((uint32_t*)tf->tf_epc) + 1);
+    }
+    else {
+      instruction = *(uint32_t*)tf->tf_epc;
+    }
+    if((instruction & LOAD_STORE_OPCODE_MASK) == LW_OPCODE) {
+      int rt = (instruction >> 16) & 0x1F;
+      int base = (instruction >> 21) & 0x1F;
+      int offset = instruction & 0xFFFF;
+      int base_address = base == 0 ? 0 : tf->tf_regs.reg_r[base - 1];
+      uint32_t result;
+      __no_optimize_copy_integer(&result, (void*)(base_address + offset));
+      if(rt != 0) tf->tf_regs.reg_r[rt - 1] = result;
+      tf->tf_epc = (void*)((uint32_t)tf->tf_epc + 4);
+      break;
+    }
+    else if((instruction & LOAD_STORE_OPCODE_MASK) == SW_OPCODE) {
+      int rt = (instruction >> 16) & 0x1F;
+      int base = (instruction >> 21) & 0x1F;
+      int offset = instruction & 0xFFFF;
+      int base_address = base == 0 ? 0 : tf->tf_regs.reg_r[base - 1];
+      uint32_t value = rt == 0 ? 0 : tf->tf_regs.reg_r[rt - 1];
+      __no_optimize_copy_integer((void*)(base_address + offset), &value);
+      tf->tf_epc = (void*)((uint32_t)tf->tf_epc + 4);
+      break;
+    }
+    else if((instruction & LOAD_STORE_OPCODE_MASK) == SH_OPCODE) {
+      int rt = (instruction >> 16) & 0x1F;
+      int base = (instruction >> 21) & 0x1F;
+      int offset = instruction & 0xFFFF;
+      int base_address = base == 0 ? 0 : tf->tf_regs.reg_r[base - 1];
+      uint32_t value = rt == 0 ? 0 : tf->tf_regs.reg_r[rt - 1];
+      memcpy((void*)(base_address + offset), &value, 2);
+      tf->tf_epc = (void*)((uint32_t)tf->tf_epc + 4);
+      break;
+    }
 		if (trap_in_kernel(tf)) {
 			print_trapframe(tf);
-			panic("Alignment Error");
+			panic("Alignment Error on instruction %x", instruction);
 		} else {
+      kprintf("Alignment Error on instruction %x", instruction);
 			print_trapframe(tf);
 			do_exit(-E_KILLED);
 		}
 		break;
+  }
 	default:
 		print_trapframe(tf);
 		panic("Unhandled Exception");

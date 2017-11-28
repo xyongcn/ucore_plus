@@ -21,6 +21,7 @@
 #include <ioapic.h>
 #include <sysconf.h>
 #include <refcache.h>
+#include <interrupt_manager.h>
 
 #define TICK_NUM 30
 
@@ -38,6 +39,8 @@ void idt_init(void)
 		SETGATE(idt[i], 0, GD_KTEXT, __vectors[i], DPL_KERNEL);
 	}
 	SETGATE(idt[T_SYSCALL], 0, GD_KTEXT, __vectors[T_SYSCALL], DPL_USER);
+  SETGATE(idt[T_BRKPT], 0, GD_KTEXT, __vectors[T_BRKPT], DPL_USER);
+  //SETGATE(idt[T_DEBUG], 0, GD_KTEXT, __vectors[T_DEBUG], DPL_USER);
 	SETGATE(idt[T_IPI], 0, GD_KTEXT, __vectors[T_IPI], DPL_USER);
 	SETGATE(idt[T_IPI_DOS], 0, GD_KTEXT, __vectors[T_IPI_DOS], DPL_USER);
 	lidt(&idt_pd);
@@ -270,6 +273,7 @@ uintptr_t addr;
 		/* do nothing */
 		break;
 	default:
+    if(interrupt_manager_process(tf)) break;
 		print_trapframe(tf);
 		if (current != NULL) {
 			kprintf("unhandled trap.\n");
@@ -310,7 +314,7 @@ void trap(struct trapframe *tf)
 			if (current->need_resched) {
 				schedule();
 			}
-		} else if (current == idleproc) {
+		} /*else if (current == idleproc)*/ {
 			schedule();
 		}
 		// kprintf("%d %d }}}\n", lapic_id, current->pid);

@@ -12,13 +12,15 @@ typedef struct {
 
 struct proc_struct;
 
-typedef struct {
+typedef struct __wait_t {
 	struct proc_struct *proc;
 	uint32_t wakeup_flags;
 	wait_queue_t *wait_queue;
 	list_entry_t wait_link;
 	spinlock_s lock;
-} wait_t;
+};
+
+typedef struct __wait_t wait_t;
 
 #define le2wait(le, member)         \
     to_struct((le), wait_t, member)

@@ -57,6 +57,7 @@ pte_t *get_pte(pgd_t * pgdir, uintptr_t la, bool create);
 struct Page *get_page(pgd_t * pgdir, uintptr_t la, pte_t ** ptep_store);
 void page_remove(pgd_t * pgdir, uintptr_t la);
 int page_insert(pgd_t * pgdir, struct Page *page, uintptr_t la, pte_perm_t perm);
+int pmm_mmio_map_direct(pgd_t *pgdir, uintptr_t physics_address_start, uintptr_t logic_address_start, uint32_t size, pte_perm_t perm);
 
 void load_rsp0(uintptr_t rsp0);
 void set_pgdir(struct proc_struct *proc, pgd_t * pgdir);

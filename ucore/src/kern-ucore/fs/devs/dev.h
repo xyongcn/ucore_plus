@@ -2,6 +2,7 @@
 #define __KERN_FS_DEVS_DEV_H__
 
 #include <types.h>
+#include <wait.h>
 
 struct inode;
 struct iobuf;
@@ -51,15 +52,22 @@ void *linux_file;
 
 	int (*d_open) (struct device * dev, uint32_t open_flags);
 	int (*d_close) (struct device * dev);
-	int (*d_io) (struct device * dev, struct iobuf * iob, bool write);
+	int (*d_io) (struct device * dev, struct iobuf * iob, bool write, int io_flags);
 	int (*d_ioctl) (struct device * dev, int op, void *data);
+  int (*d_poll) (struct device *dev, wait_t *wait, int io_requests);
   void* private_data;
 };
 
+#define __dop_get_macro(_1,_2,_3,_4,name,...) name
+
 #define dop_open(dev, open_flags)           ((dev)->d_open(dev, open_flags))
 #define dop_close(dev)                      ((dev)->d_close(dev))
-#define dop_io(dev, iob, write)             ((dev)->d_io(dev, iob, write))
+#define dop_io3(dev, iob, write)  ((dev)->d_io(dev, iob, write, 0))
+#define dop_io4(dev, iob, write, io_flags)  ((dev)->d_io(dev, iob, write, io_flags))
+#define dop_io(...) __dop_get_macro(__VA_ARGS__, dop_io4, dop_io3)(__VA_ARGS__)
+
 #define dop_ioctl(dev, op, data)            ((dev)->d_ioctl(dev, op, data))
+#define dop_poll(dev, wait, io_requests)    ((dev)->d_poll(dev, wait, io_requests))
 
 #define dev_is_linux_dev(dev) ((dev)->linux_dentry != NULL)
 

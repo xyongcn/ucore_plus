@@ -3,6 +3,7 @@
 
 void pic_init(void);
 void pic_enable(unsigned int irq);
+void pic_send_end_of_interrupt(unsigned int irq);
 
 #define IRQ_OFFSET      32
 

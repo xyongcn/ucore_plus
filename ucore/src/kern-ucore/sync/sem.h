@@ -45,6 +45,8 @@ typedef struct sem_queue {
 void sem_init(semaphore_t * sem, int value);
 void up(semaphore_t * sem);
 void down(semaphore_t * sem);
+uint32_t __attribute__ ((noinline)) __down(semaphore_t * sem, uint32_t wait_state,
+				      timer_t * timer);
 bool try_down(semaphore_t * sem);
 
 sem_undo_t *semu_create(semaphore_t * sem, int value);

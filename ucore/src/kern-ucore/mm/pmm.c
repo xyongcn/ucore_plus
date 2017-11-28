@@ -124,7 +124,7 @@ struct Page *get_page(pgd_t * pgdir, uintptr_t la, pte_t ** ptep_store)
  * @param pgdir page directory (not used)
  * @param la logical address of the page to be removed
  * @param page table entry of the page to be removed
- * note: PT is changed, so the TLB need to be invalidate 
+ * note: PT is changed, so the TLB need to be invalidate
  */
 void page_remove_pte(pgd_t * pgdir, uintptr_t la, pte_t * ptep)
 {
@@ -182,6 +182,24 @@ out:
 	return 0;
 }
 
+int pmm_mmio_map_direct(pgd_t *pgdir, uintptr_t physics_address_start, uintptr_t logic_address_start, uint32_t size, pte_perm_t perm)
+{
+  assert(physics_address_start % PGSIZE == 0);
+  assert(logic_address_start % PGSIZE == 0);
+  assert(size % PGSIZE == 0);
+  uint32_t page_count = size / PGSIZE;
+  for(int i = 0; i < page_count; i++) {
+    uintptr_t logic_address = logic_address_start + i * PGSIZE;
+    uintptr_t physics_address = physics_address_start + i * PGSIZE;
+    pte_t *ptep = get_pte(pgdir, logic_address, 1);
+    if(ptep_present(ptep)) panic("Using pmm_mmio_map_direct on mapped area.");
+    ptep_map(ptep, physics_address);
+    ptep_set_perm(ptep, perm);
+    mp_tlb_update(pgdir, logic_address);
+  }
+  return 0;
+}
+
 #ifdef UCONFIG_BIONIC_LIBC
 void
 page_insert_pte(pgd_t * pgdir, struct Page *page, pte_t * ptep, uintptr_t la,
@@ -215,7 +233,7 @@ void page_remove(pgd_t * pgdir, uintptr_t la)
 }
 
 /**
- * pgdir_alloc_page - call alloc_page & page_insert functions to 
+ * pgdir_alloc_page - call alloc_page & page_insert functions to
  *                  - allocate a page size memory & setup an addr map
  *                  - pa<->la with linear address la and the PDT pgdir
  * @param pgdir    page directory
@@ -385,7 +403,7 @@ void exit_range(pgd_t * pgdir, uintptr_t start, uintptr_t end)
 }
 
 /* ucore use copy-on-write when forking a new process,
- * thus copy_range only copy pdt/pte and set their permission to 
+ * thus copy_range only copy pdt/pte and set their permission to
  * READONLY, a write will be handled in pgfault
  */
 int
@@ -414,7 +432,7 @@ copy_range(pgd_t * to, pgd_t * from, uintptr_t start, uintptr_t end, bool share)
 			//kprintf("%08x %08x %08x\n", nptep, *nptep, start);
 			assert(*ptep != 0 && *nptep == 0);
 #ifdef ARCH_ARM
-			//TODO  add code to handle swap 
+			//TODO  add code to handle swap
 			if (ptep_present(ptep)) {
 				//no body should be able to write this page
 				//before a W-pgfault

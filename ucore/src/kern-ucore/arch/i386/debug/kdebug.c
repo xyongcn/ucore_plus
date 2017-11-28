@@ -12,6 +12,7 @@
 #include <assert.h>
 #include <kio.h>
 #include <mp.h>
+#include <dwarf_line.h>
 
 #define STACKFRAME_DEPTH 20
 
@@ -273,27 +274,6 @@ void print_kerninfo(void)
 		(end - kern_init + 1023) / 1024);
 }
 
-/* *
- * print_debuginfo - read and print the stat information for the address @eip,
- * and info.eip_fn_addr should be the first address of the related function.
- * */
-void print_debuginfo(uintptr_t eip)
-{
-	struct eipdebuginfo info;
-	if (debuginfo_eip(eip, &info) != 0) {
-		kprintf("    <unknow>: -- 0x%08x --\n", eip);
-	} else {
-		char fnname[256];
-		int j;
-		for (j = 0; j < info.eip_fn_namelen; j++) {
-			fnname[j] = info.eip_fn_name[j];
-		}
-		fnname[j] = '\0';
-		kprintf("    %s:%d: %s+%d\n", info.eip_file, info.eip_line,
-			fnname, eip - info.eip_fn_addr);
-	}
-}
-
 static uint32_t read_eip(void) __attribute__ ((noinline));
 
 static uint32_t read_eip(void)
@@ -339,23 +319,29 @@ static uint32_t read_eip(void)
  * */
 void print_stackframe(void)
 {
-	uint32_t ebp = read_ebp(), eip = read_eip();
+ 	void *ebp = read_ebp();
+  void *eip = read_eip();
 
-	int i, j;
-	for (i = 0; ebp != 0 && i < 10; i++) {
-		kprintf("ebp:0x%08x eip:0x%08x args:", ebp, eip);
-		uint32_t *args = (uint32_t *) ebp + 2;
-		for (j = 0; j < 4; j++) {
-			kprintf("0x%08x ", args[j]);
-		}
-		kprintf("\n");
-		print_debuginfo(eip - 1);
-		eip = ((uint32_t *) ebp)[1];
-		ebp = ((uint32_t *) ebp)[0];
-	}
+ 	int i, j;
+ 	for (i = 0; ebp != 0 && i < 10; i++) {
+    struct dwarf_line_section_header *header = __DWARF_DEBUG_LINE_BEGIN__;
+    struct dwarf_line_search_result search_result;
+    dwarf_line_search_for_address(header, eip, &search_result);
+    if(search_result.address != NULL &&
+      (machine_word_t)eip - (machine_word_t)search_result.address < 0x100
+    ) {
+      kprintf("%p : %s Line %d\n", eip, search_result.file_name, search_result.line);
+    }
+    else {
+      kprintf("%p : Unknown\n", eip);
+    }
+    eip = ((void**)ebp)[1];
+    ebp = ((void**)ebp)[0];
+ 	}
 }
 
-// below codes are added for proj4.3+, 
+
+// below codes are added for proj4.3+,
 // and are used for ucore internal debugger support with hardware breakpoint&watchpoint functions
 
 // used to save debug registers
@@ -508,7 +494,7 @@ void debug_monitor(struct trapframe *tf)
 	{
 		debug_start(tf);
 		kprintf("debug_monitor at:\n");
-		print_debuginfo(tf->tf_eip);
+		//print_debuginfo(tf->tf_eip);
 		monitor(tf);
 		debug_end(tf);
 	}

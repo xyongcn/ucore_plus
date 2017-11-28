@@ -15,6 +15,7 @@
 
 static const struct inode_ops sfs_node_dirops;
 static const struct inode_ops sfs_node_fileops;
+static const struct inode_ops sfs_node_symlinkops;
 
 static inline int trylock_sin(struct sfs_inode *sin)
 {
@@ -40,6 +41,8 @@ static const struct inode_ops *sfs_get_ops(uint16_t type)
 		return &sfs_node_dirops;
 	case SFS_TYPE_FILE:
 		return &sfs_node_fileops;
+  case SFS_TYPE_LINK:
+    return &sfs_node_symlinkops; //TODO: Maybe we need some different fileops.
 	}
 	panic("invalid file type %d.\n", type);
 }
@@ -1365,6 +1368,17 @@ static int sfs_unlink(struct inode *node, const char *name)
 	return ret;
 }
 
+static int sfs_readlink(struct inode *node, char *buffer)
+{
+  struct iobuf iobuf;
+  iobuf_init(&iobuf, buffer, 1024, 0);
+  vop_read(node, &iobuf);
+  int link_to_path_length = iobuf_used(&iobuf);
+  buffer[link_to_path_length] = '\0';
+  return 0;
+}
+
+
 static char *sfs_lookup_subpath(char *path)
 {
 	if ((path = strchr(path, '/')) != NULL) {
@@ -1505,6 +1519,32 @@ static const struct inode_ops sfs_node_fileops = {
 	.vop_link = NULL_VOP_NOTDIR,
 	.vop_rename = NULL_VOP_NOTDIR,
 	.vop_readlink = NULL_VOP_NOTDIR,
+	.vop_symlink = NULL_VOP_NOTDIR,
+	.vop_namefile = NULL_VOP_NOTDIR,
+	.vop_getdirentry = NULL_VOP_NOTDIR,
+	.vop_reclaim = sfs_reclaim,
+	.vop_ioctl = NULL_VOP_INVAL,
+	.vop_gettype = sfs_gettype,
+	.vop_tryseek = sfs_tryseek,
+	.vop_truncate = sfs_truncfile,
+	.vop_create = NULL_VOP_NOTDIR,
+	.vop_unlink = NULL_VOP_NOTDIR,
+	.vop_lookup = NULL_VOP_NOTDIR,
+	.vop_lookup_parent = NULL_VOP_NOTDIR,
+};
+
+static const struct inode_ops sfs_node_symlinkops = {
+	.vop_magic = VOP_MAGIC,
+	.vop_open = sfs_openfile,
+	.vop_close = sfs_close,
+	.vop_read = sfs_read,
+	.vop_write = sfs_write,
+	.vop_fstat = sfs_fstat,
+	.vop_fsync = sfs_fsync,
+	.vop_mkdir = NULL_VOP_NOTDIR,
+	.vop_link = NULL_VOP_NOTDIR,
+	.vop_rename = NULL_VOP_NOTDIR,
+	.vop_readlink = sfs_readlink,
 	.vop_symlink = NULL_VOP_NOTDIR,
 	.vop_namefile = NULL_VOP_NOTDIR,
 	.vop_getdirentry = NULL_VOP_NOTDIR,

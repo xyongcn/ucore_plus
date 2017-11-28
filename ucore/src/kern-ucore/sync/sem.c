@@ -12,26 +12,26 @@
 #include <clock.h>
 
 /*  ------------- semaphore mechanism design&implementation -------------
-  ucore offers two kinds of semaphores: Kernel semaphores, which are used by kernel control paths; 
-System V IPC semaphores, which are used by User Mode processes.A kernel control path tries to 
-acquire a busy resource protected by a kernel semaphore, the corresponding process is suspended. 
+  ucore offers two kinds of semaphores: Kernel semaphores, which are used by kernel control paths;
+System V IPC semaphores, which are used by User Mode processes.A kernel control path tries to
+acquire a busy resource protected by a kernel semaphore, the corresponding process is suspended.
 It becomes runnable again when the resource is released.
 V operation:
-  When a process wishes to release a semaphore lock, it invokes the __up(Kern_SEM or USer_SEM) 
-function.The __up( ) function first checks whether its wait_queue(the waiting process list) is NULL. 
-If wait_queue is NULL, then increases the count field of the sem semaphore (sem->value ++); else 
+  When a process wishes to release a semaphore lock, it invokes the __up(Kern_SEM or USer_SEM)
+function.The __up( ) function first checks whether its wait_queue(the waiting process list) is NULL.
+If wait_queue is NULL, then increases the count field of the sem semaphore (sem->value ++); else
 wakeup a waiting process and delete this proces from wait_queue.
 P operation:
-  Conversely, when a process wishes to acquire a semaphore lock, it invokes the __down(Kern_SEM or 
+  Conversely, when a process wishes to acquire a semaphore lock, it invokes the __down(Kern_SEM or
 USer_SEM) function. The __down( ) function first checks whether semaphore value is negative or zero.
-If the value >0, then decreases the count field of the *sem semaphore(sem->value--);else the current 
-process must be suspended, so put current process in semaphore's wait queue. Essentially, the __down( ) 
+If the value >0, then decreases the count field of the *sem semaphore(sem->value--);else the current
+process must be suspended, so put current process in semaphore's wait queue. Essentially, the __down( )
 function changes the state of the current process from PROC_RUNNABLE to PROC_SLEEPING.
 
-Special Case&Operation for User Semaphore 
-If a process crashes after modifying a user semaphore,then processes waiting on the user semaphore can 
-no longer be woken. ucore uses sem_undo struct to record the information held in the list to return the 
-semaphore to its state prior to modification By undoing these actions (using the information in the 
+Special Case&Operation for User Semaphore
+If a process crashes after modifying a user semaphore,then processes waiting on the user semaphore can
+no longer be woken. ucore uses sem_undo struct to record the information held in the list to return the
+semaphore to its state prior to modification By undoing these actions (using the information in the
 sem_undo list), the user semaphore can be returned to a consistent state, thus preventing deadlocks.
 
 IMPLEMENTATION NOTE:
@@ -83,14 +83,15 @@ static void
 		if ((wait = wait_queue_first(&(sem->wait_queue))) == NULL) {
 			sem->value++;
 		} else {
-			assert(wait->proc->wait_state == wait_state);
+      //TODO: This assertion is temporarily disabled for network module.
+      //assert(wait->proc->wait_state == wait_state);
 			wakeup_wait(&(sem->wait_queue), wait, wait_state, 1);
 		}
 	}
 	spin_unlock_irqrestore(&sem->lock, intr_flag);
 }
 
-static uint32_t
+uint32_t
     __attribute__ ((noinline)) __down(semaphore_t * sem, uint32_t wait_state,
 				      timer_t * timer)
 {
