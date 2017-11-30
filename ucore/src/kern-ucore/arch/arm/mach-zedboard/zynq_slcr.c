@@ -23,6 +23,8 @@
 #define SLCR_IDCODE_MASK	0x1F000
 #define SLCR_IDCODE_SHIFT	12
 
+struct slcr_regs *slcr_base = ZYNQ_SYS_CTRL_BASEADDR;
+
 /*
  * zynq_slcr_mio_get_status - Get the status of MIO peripheral.
  *

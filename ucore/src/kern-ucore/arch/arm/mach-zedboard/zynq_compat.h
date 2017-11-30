@@ -153,7 +153,7 @@ struct slcr_regs {
 	u32 ocm_cfg; /* 0x910 */
 };
 
-#define slcr_base ((struct slcr_regs *)ZYNQ_SYS_CTRL_BASEADDR)
+extern struct slcr_regs *slcr_base;
 
 static void clrbits_le32(volatile uint32_t* addr, uint32_t mask)
 {

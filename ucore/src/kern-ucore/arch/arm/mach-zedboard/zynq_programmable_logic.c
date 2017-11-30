@@ -50,9 +50,11 @@ struct devcfg_regs {
 };
 
 static struct devcfg_regs *devcfg_base = ((struct devcfg_regs *)ZYNQ_DEV_CFG_APB_BASEADDR);
+static wait_queue_t __wait_queue, *wait_queue = &__wait_queue;
 
 #define CONFIG_SYS_HZ 100000000
 
+const static int DEVCFG_IRQ = 40;
 #define DEVCFG_CTRL_PCFG_PROG_B		0x40000000
 #define DEVCFG_ISR_FATAL_ERROR_MASK	0x00740040
 #define DEVCFG_ISR_ERROR_FLAGS_MASK	0x00340840
@@ -96,6 +98,8 @@ static const u32 bin_format[] = {
 
 #define SWAP_NO		1
 #define SWAP_DONE	2
+
+static uint32_t last_status = 0;
 
 /*
  * Load the whole word from unaligned buffer
@@ -204,6 +208,14 @@ static int zynq_dma_transfer(u32 srcbuf, u32 srclen, u32 dstbuf, u32 dstlen)
 
 	/* Polling the PCAP_INIT status for Set */
 	ts = get_timer(0);
+	bool intr_flag;
+	local_intr_save(intr_flag);
+	wait_t __wait, *wait = &__wait;
+	wait_current_set(wait_queue, wait, WT_KBD);
+	local_intr_restore(intr_flag);
+	schedule();
+
+	isr_status = last_status;
 	while (!(isr_status & DEVCFG_ISR_DMA_DONE)) {
 		if (isr_status & DEVCFG_ISR_ERROR_FLAGS_MASK) {
 			debug("%s: Error: isr = 0x%08X\n", __func__,
@@ -220,7 +232,7 @@ static int zynq_dma_transfer(u32 srcbuf, u32 srclen, u32 dstbuf, u32 dstlen)
 			       __func__);
 			return FPGA_FAIL;
 		}
-		isr_status = readl(&devcfg_base->int_sts);
+		//isr_status = readl(&devcfg_base->int_sts);
 	}
 
 	debug("%s: DMA transfer is done\n", __func__);
@@ -237,8 +249,9 @@ static int zynq_dma_xfer_init(bitstream_type bstype)
 	unsigned long ts;
 
 	/* Clear loopback bit */
-	kprintf("DEBUG! %x %d", devcfg_base, __LINE__);
+	kprintf("DEBUG! %x %d\n", devcfg_base, __LINE__);
 	clrbits_le32(&devcfg_base->mctrl, DEVCFG_MCTRL_PCAP_LPBK);
+	kprintf("DEBUG! %x %d\n", devcfg_base, __LINE__);
 
 	if (bstype != BIT_PARTIAL) {
 		zynq_slcr_devcfg_disable();
@@ -274,7 +287,6 @@ static int zynq_dma_xfer_init(bitstream_type bstype)
 		}
 	}
 
-	kprintf("DEBUG! %x %d", devcfg_base, __LINE__);
 	isr_status = readl(&devcfg_base->int_sts);
 
 	/* Clear it all, so if Boot ROM comes back, it can proceed */
@@ -395,15 +407,6 @@ static int zynq_validate_bitstream(xilinx_desc *desc, const void *buf,
 int zynq_load(xilinx_desc *desc, const void *buf, size_t bsize,
 		     bitstream_type bstype)
 {
-	if(devcfg_base == (struct devcfg_regs *)ZYNQ_DEV_CFG_APB_BASEADDR) {
-		kprintf("Remapping devcfg_base\n");
-		devcfg_base = __ucore_ioremap(ZYNQ_DEV_CFG_APB_BASEADDR, 8 * PGSIZE, 0);
-	}
-	if(V7M_SCS_BASE == (uint8_t*)0xE000E000) {
-		kprintf("Remapping V7M_SCS_BASE\n");
-		V7M_SCS_BASE = __ucore_ioremap(V7M_SCS_BASE, 8 * PGSIZE, 0);
-	}
-	kprintf("Remapping devcfg_base %x\n", V7M_SCS_BASE);
 	unsigned long ts; /* Timestamp */
 	u32 isr_status, swap;
 
@@ -445,4 +448,29 @@ int zynq_load(xilinx_desc *desc, const void *buf, size_t bsize,
 		zynq_slcr_devcfg_enable();
 
 	return FPGA_SUCCESS;
+}
+
+static int zynq_programmable_logic_int_handler(int irq, void * data) {
+	bool intr_flag;
+	local_intr_save(intr_flag);
+	uint32_t status = readl(&devcfg_base->int_sts);
+	last_status = status;
+	writel(status, &devcfg_base->int_sts);
+	if (!wait_queue_empty(wait_queue)) {
+		wakeup_queue(wait_queue, WT_KBD, 1);
+	}
+	local_intr_restore(intr_flag);
+	return 0;
+}
+
+
+void zynq_programmable_logic_init()
+{
+	devcfg_base = __ucore_ioremap(ZYNQ_DEV_CFG_APB_BASEADDR, 8 * PGSIZE, 0);
+	V7M_SCS_BASE = __ucore_ioremap(V7M_SCS_BASE, 8 * PGSIZE, 0);
+	wait_queue_init(wait_queue);
+	writel(~DEVCFG_ISR_DMA_DONE, &devcfg_base->int_mask);
+	register_irq(DEVCFG_IRQ, zynq_programmable_logic_int_handler, NULL);
+	slcr_base  = (struct slcr_regs *)__ucore_ioremap(ZYNQ_SYS_CTRL_BASEADDR, 8 * PGSIZE, 0);
+	pic_enable(DEVCFG_IRQ);
 }

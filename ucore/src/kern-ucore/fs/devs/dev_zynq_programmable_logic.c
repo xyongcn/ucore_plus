@@ -83,7 +83,7 @@ static void zynq_programmable_logic_device_init(struct device *data_device, stru
   control_device->d_io = zynq_programmable_logic_ctrl_io;
   control_device->d_ioctl = zynq_programmable_logic_ioctl;
   struct zynq_programmable_logic_private_data *private_data = kmalloc(sizeof(struct zynq_programmable_logic_private_data));
-  struct Page *page = alloc_pages(1024 * 1024 / PGSIZE);
+  struct Page *page = alloc_pages(4 * 1024 * 1024 / PGSIZE);
   private_data->buffer_kernel_address = page2kva(page);
   private_data->buffer_used = 0;
   private_data->buffer_physical_address = page2pa(page);
