@@ -18,7 +18,7 @@ There are some other packages you need to install (below is there package name i
 * **qemu** : Provide the virtualized environment to run uCore+. Note that to use QEMU binaries for ARM and MIPS, extra packages needs to be installed manually for some linux distributions.
 * **u-boot-tools** : providing the **mkimage** command, used to create u-boot image for ARM uCore+.
 
-## Quick Try
+### Quick Try
 Run the following commands in your terminal to get uCore+ AMD64 running on QEMU.
 
  1. download or clone uCore+ source code
@@ -28,7 +28,54 @@ Run the following commands in your terminal to get uCore+ AMD64 running on QEMU.
  1. make sfsimg
  1. ./uCore_run
 
-## Build with buildroot image
+### Build with buildroot image
+With the "Quick Try" part, you can get uCore run on QEMU. You will notice that when
+running in this way, uCore only comes with a very limited number of program, and their features
+are quiet limited.
+
+However, uCore do have a compatible layer for
+** Linux system calls **, making it possible to
+run native Linux applications on uCore (https://travis-ci.org/oscourse-tsinghua/ucore_plus?branch=master)
+
+## Support detail for architectures and features
+
+### Architectures
+
+#### i386
+
+#### AMD64
+
+#### ARM
+
+** WARNING! Running uCore+ on any ARM hardwares may void your warranty. We are not responsible for bricked devices, dead SD cards, and any kind of problems in your device. **
+
+ * Goldfish
+
+ * Raspberry Pi
+
+ * Zedboard
+
+ To run uCore on Zedboard, you need to build u-boot and have a device tree file. We can extract those files from Arch Linux ARM for Zedboard:
+
+ `wget http://os.archlinuxarm.org/os/ArchLinuxARM-zedboard-latest.tar.gz`
+
+ Then follow the instructions on https://archlinuxarm.org/platforms/armv7/xilinx/zedboard to setup Arch Linux ARM for zedboard on a SD Card. You can skip the part of actually install Arch Linux, configuring the boot partition is enough.
+
+ To build uCore+ for Zedboard, run the following commands:
+
+  1. cd ucore
+  1. make ARCH=arm BOARD=zedboard defconfig
+  1. make sfsimg
+  1. make
+
+ The following devices is supported by uCore+ for Zedboard:
+
+  * GPIO
+  * Serial port
+  * Programmable Logic
+  * UIO Support
+
+#### MIPS
 
 ## Current Progress
  We are working on ucore plus for amd64 smp porting.
