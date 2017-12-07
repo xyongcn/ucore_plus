@@ -73,7 +73,27 @@ run native Linux applications on uCore (https://travis-ci.org/oscourse-tsinghua/
   * GPIO
   * Serial port
   * Programmable Logic
+
+    The driver is ported from u-boot source code,
+    The driver create 2 char device files:
+    * `/dev/zynq_programmable_logic`
+    * `/dev/zynq_programmable_logic_ctl`
+
+    Writing to `/dev/zynq_programmable_logic` updates a kernel space buffer for the contents to be transported to ZynqPL. Those content is not transported to the ZynqPL controller, until a 0x00 or 0x01 is written to `/dev/zynq_programmable_logic_ctl`.
+
+    Writing 0x00 to `/dev/zynq_programmable_logic_ctl` means that you a transporting a full bit stream, and 0x01 stands for partial bitstream. Writing 0xFF clears the kernel space buffer.
+
+    The current implementation uses DMA and interrupt. But it's still very inefficient.
+
+    **TODO**: Implement mmap for kernel device file, or (better) implement sendfile / splice system call.
+
   * UIO Support
+    The UIO support is prepared for Custom Zynq AXI PL Peripherals.
+    Implementing a different device for every custom AXI PL Peripheral doesn't seems a good idea, because it leads to frequent change to kernel, yet these devices may have very simple interface. A UIO Device exposes a range of protected memory to user space, allowing the codes for the driver to be implemented in user space.
+
+    **TODO**: Implement mmap for kernel device file.
+
+    **TODO**:  In standard UIO device, MMIO and DMA uses mmap system call. read system call is used for interrupt handling.
 
 #### MIPS
 
