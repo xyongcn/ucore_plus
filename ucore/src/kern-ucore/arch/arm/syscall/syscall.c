@@ -705,10 +705,14 @@ static uint32_t __sys_linux_writev(uint32_t arg[])
 static uint32_t(*_linux_syscalls[]) (uint32_t arg[]) = {
 	__LINUX_SYSCALL(exit),
 	    __UCORE_SYSCALL(fork),
-	    __UCORE_SYSCALL(read),
-	    __UCORE_SYSCALL(write),
-	    __UCORE_SYSCALL(open),
-	    __UCORE_SYSCALL(close),
+	    //__UCORE_SYSCALL(read),
+	    //__UCORE_SYSCALL(write),
+	    //__UCORE_SYSCALL(open),
+	    //__UCORE_SYSCALL(close),
+			[__NR_read] syscall_linux_read,
+			[__NR_write] syscall_linux_write,
+			[__NR_open] syscall_linux_open,
+			[__NR_close] syscall_linux_close,
 	    __UCORE_SYSCALL(link),
 	    __UCORE_SYSCALL(unlink),
 	    __UCORE_SYSCALL(execve),
@@ -722,19 +726,29 @@ static uint32_t(*_linux_syscalls[]) (uint32_t arg[]) = {
 	    __LINUX_SYSCALL(lseek),
 	    __UCORE_SYSCALL(getpid),
 	    __LINUX_SYSCALL(getppid),
-	    __LINUX_SYSCALL(ioctl),
-	    __LINUX_SYSCALL(fcntl),
+			[__NR_ioctl] syscall_linux_ioctl,
+			[__NR_fcntl] syscall_linux_fcntl,
+			[__NR_fcntl64] syscall_linux_fcntl,
+	    //__LINUX_SYSCALL(ioctl),
+	    //__LINUX_SYSCALL(fcntl),
 	    __UCORE_SYSCALL(dup2),
 	    __LINUX_SYSCALL(sigaction),
-	    __LINUX_SYSCALL(stat),
-	    __LINUX_SYSCALL(fstat),
+			[__NR_stat] syscall_linux_stat,
+			[__NR_fstat] syscall_linux_fstat,
+			[__NR_stat64] syscall_linux_stat64,
+			[__NR_fstat64] syscall_linux_fstat64,
+			[__NR_lstat64] syscall_linux_lstat64,
+			[__NR_getdents64] syscall_linux_getdents64,
+	    /*__LINUX_SYSCALL(stat),
+	    __LINUX_SYSCALL(fstat),*/
 	    __LINUX_SYSCALL(wait4),
 	    __UCORE_SYSCALL(fsync),
 	    __LINUX_SYSCALL(sigreturn),
 	    __LINUX_SYSCALL(clone),
 	    __LINUX_SYSCALL(sigprocmask),
 	    __LINUX_SYSCALL(exit_group),
-	    __UCORE_SYSCALL(getcwd),
+	    //__UCORE_SYSCALL(getcwd),
+			[__NR_getcwd] syscall_linux_getcwd,
 	    __LINUX_SYSCALL(getdents),
 	    __LINUX_SYSCALL(poll),
 	    __LINUX_SYSCALL(rt_sigreturn),
@@ -759,11 +773,13 @@ static uint32_t(*_linux_syscalls[]) (uint32_t arg[]) = {
 	    __LINUX_SYSCALL(mprotect),
 	    __LINUX_SYSCALL(gettid),
 	    __ARM_LINUX_SYSCALL(set_tls),
-	    __LINUX_SYSCALL(stat64),
+	    //__LINUX_SYSCALL(stat64),
+			[__NR_stat] syscall_linux_stat64,
 	    __LINUX_SYSCALL(madvise),
 	    __LINUX_SYSCALL(futex),
 	    __LINUX_SYSCALL(clock_gettime),
-	    __LINUX_SYSCALL(fstat64),
+	    //__LINUX_SYSCALL(fstat64),
+			[__NR_stat] syscall_linux_fstat64,
 	    __LINUX_SYSCALL(fcntl64),
 	    __LINUX_SYSCALL(access), __LINUX_SYSCALL(writev),
 #endif //UCONFIG_BIONIC_LIBC
@@ -781,6 +797,7 @@ static uint32_t(*_linux_syscalls[]) (uint32_t arg[]) = {
 static int __sys_linux_entry(struct trapframe *tf)
 {
 	unsigned int num = tf->tf_regs.reg_r[7];
+	kprintf("*** SYSCALL %d, pid = %d, name = %s.\n", num, current->pid, current->name);
 	if (num < NUM_LINUX_SYSCALLS && _linux_syscalls[num]) {
 		uint32_t arg[6];
 		arg[0] = tf->tf_regs.reg_r[0];	// arg0
@@ -790,8 +807,10 @@ static int __sys_linux_entry(struct trapframe *tf)
 		arg[4] = tf->tf_regs.reg_r[4];	// arg3
 		arg[5] = tf->tf_regs.reg_r[5];	// arg3
 		tf->tf_regs.reg_r[0] = _linux_syscalls[num] (arg);	// calling the system call, return value in r0
+		kprintf("*** SYSCALL DONE %x ***\n", tf->tf_epc);
 		return 0;
 	}
+	panic("__sys_linux_entry");
 
 	return -1;
 }
