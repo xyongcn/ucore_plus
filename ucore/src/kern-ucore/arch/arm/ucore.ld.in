@@ -79,7 +79,7 @@ SECTIONS {
         . = ALIGN(4096);
     PROVIDE(initrd_begin = .);
       *(.initrd)
-      . = ALIGN(4096); 
+      . = ALIGN(4096);
     PROVIDE(initrd_end = .);
     }
 
@@ -96,6 +96,9 @@ SECTIONS {
         PROVIDE(__percpu_end = .);
     }
 
+    __DWARF_DEBUG_LINE_BEGIN__ = .;
+    __DWARF_DEBUG_LINE_END__ = .;
+    
     PROVIDE(end = .);
 
     /DISCARD/ : {
