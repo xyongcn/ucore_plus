@@ -109,7 +109,8 @@ void inode_check(struct inode *node, const char *opstr)
 	assert(node->in_ops->vop_magic == VOP_MAGIC);
 	int ref_count = inode_ref_count(node), open_count =
 	    inode_open_count(node);
-	assert(ref_count >= open_count && open_count >= 0);
+	assert(open_count >= 0);
+	assert(ref_count >= open_count);
 	assert(ref_count < MAX_INODE_COUNT && open_count < MAX_INODE_COUNT);
 }
 

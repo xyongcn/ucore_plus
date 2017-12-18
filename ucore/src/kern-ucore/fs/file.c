@@ -11,10 +11,10 @@
 #include <dirent.h>
 #include <error.h>
 #include <assert.h>
-#include <file_desc_table.h>
-#include <kernel_file_pool.h>
-
 #include <vmm.h>
+
+#include "file_desc_table.h"
+#include "kernel_file_pool.h"
 
 #define testfd(fd)                          ((fd) >= 0 && (fd) < FS_STRUCT_NENTRY)
 
@@ -155,6 +155,30 @@ int file_open(char *path, uint32_t open_flags)
 	file->node = node;
   file->io_flags = 0;
 	return fd;
+}
+
+int file_stat(const char *path, struct stat *stat)
+{
+	int ret;
+	struct inode *node;
+	if ((ret = vfs_lookup(path, &node, true)) != 0) {
+		return ret;
+	}
+	ret = vop_fstat(node, stat);
+	vop_ref_dec(node);
+	return ret;
+}
+
+int file_lstat(const char *path, struct stat *stat)
+{
+	int ret;
+	struct inode *node;
+	if ((ret = vfs_lookup(path, &node, false)) != 0) {
+		return ret;
+	}
+	ret = vop_fstat(node, stat);
+	vop_ref_dec(node);
+	return ret;
 }
 
 //TODO: Rewrite this function.
@@ -343,6 +367,7 @@ int file_dup(int fd1, int fd2)
   //If fd2 is an opened file, close it first. This is what dup2 on linux does.
   struct file *file2 = file_desc_table_get_file(desc_table, fd2);
   if(file2 != NULL) {
+		kprintf("file_desc_table_get_unused called by dup2!\n");
     file_desc_table_dissociate(desc_table, fd2);
   }
 
@@ -598,7 +623,6 @@ void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 		goto out_unlock;
 	}
 	uintptr_t end = start + len;
-  //kprintf("start = %llx, end = %llx, len = %llx", start, end, len);
 	struct vma_struct *vma = find_vma(mm, start);
 	if (vma == NULL || vma->vm_start >= end) {
 		vma = NULL;
@@ -625,13 +649,16 @@ void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 	if (!(flags & MAP_ANONYMOUS)) {
     struct file_desc_table *desc_table = fs_get_desc_table(current->fs_struct);
     struct file* file = file_desc_table_get_file(desc_table, fd);
+#ifdef ARCH_ARM
+		vma_mapfile(vma, file, off << 12, current->fs_struct);
+#else
     vma_mapfile(vma, file, off, current->fs_struct);
-		//vma_mapfile(vma, fd, off << 12, NULL);
+#endif
 	}
 	subret = 0;
 out_unlock:
 	unlock_mm(mm);
-	return subret == 0 ? start : -1;
+	return subret == 0 ? (void*)start : (void*)-1;
 }
 
 int filestruct_setpos(struct file *file, off_t pos)

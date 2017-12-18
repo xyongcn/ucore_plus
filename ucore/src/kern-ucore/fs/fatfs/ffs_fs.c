@@ -94,7 +94,7 @@ static int ffs_mount(struct file_system_type* file_system_type, int flags,
   //It uses low-level disk interface and the devno must be 3 (/dev/disk3)
   //Checks whether devname points to a block device.
   struct inode* dev_node = NULL;
-  if(vfs_lookup(devname, &dev_node) != 0) {
+  if(vfs_lookup(devname, &dev_node, true) != 0) {
     return -E_NOENT;
   }
   uint32_t node_type;

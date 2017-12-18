@@ -23,6 +23,8 @@ int sysfile_fstat(int fd, struct stat *stat);
 int sysfile_stat(const char *fn, struct stat *stat);
 int sysfile_linux_fstat(int fd, struct linux_stat __user * linux_stat_store);
 int sysfile_linux_stat(const char __user * fn, struct linux_stat *__user buf);
+int sysfile_linux_lstat(const char __user * fn, struct linux_stat *__user buf);
+size_t sysfile_readlink(const char *pathname, char *base, size_t len);
 int sysfile_fsync(int fd);
 int sysfile_chdir(const char *path);
 int sysfile_mkdir(const char *path);
@@ -48,6 +50,7 @@ int sysfile_linux_select(int nfds, linux_fd_set_t *readfds, linux_fd_set_t *writ
 #ifndef __UCORE_64__
 int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * linux_stat_store);
 int sysfile_linux_stat64(const char __user * fn, struct linux_stat64 *__user buf);
+int sysfile_linux_lstat64(const char __user * fn, struct linux_stat64 *__user buf);
 #endif
 
 #endif /* !__KERN_FS_SYSFILE_H__ */

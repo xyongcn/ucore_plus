@@ -6,7 +6,7 @@
 #include <vfs.h>
 #include <file.h>
 #include <iobuf.h>
-#include <sysfile.h>
+#include <linux_compat_stat.h>
 #include <stat.h>
 #include <dirent.h>
 #include <unistd.h>
@@ -17,7 +17,37 @@
 #include <poll.h>
 #include <socket.h>
 
+#include "sysfile.h"
+
 #define IOBUF_SIZE                          4096
+
+static void ucore_stat_to_linux_stat(const struct stat *ucore_stat, struct linux_stat *linux_stat)
+{
+	linux_stat->st_ino = ucore_stat->st_ino; //TODO: Some fs have no support for this.
+	/* ucore never check access permision */
+	linux_stat->st_mode = ucore_stat->st_mode | 0777;
+	linux_stat->st_nlink = ucore_stat->st_nlinks;
+	linux_stat->st_blksize = 512;
+	linux_stat->st_blocks = ucore_stat->st_blocks;
+	linux_stat->st_size = ucore_stat->st_size;
+	linux_stat->st_uid = 0;
+	linux_stat->st_gid = 0;
+}
+
+#ifndef __UCORE_64__
+static void ucore_stat_to_linux_stat64(const struct stat *ucore_stat, struct linux_stat64 *linux_stat64)
+{
+	linux_stat64->st_ino = ucore_stat->st_ino; //TODO: Some fs have no support for this.
+	/* ucore never check access permision */
+	linux_stat64->st_mode = ucore_stat->st_mode | 0777;
+	linux_stat64->st_nlink = ucore_stat->st_nlinks;
+	linux_stat64->st_blksize = 512;
+	linux_stat64->st_blocks = ucore_stat->st_blocks;
+	linux_stat64->st_size = ucore_stat->st_size;
+	linux_stat64->st_uid = 0;
+	linux_stat64->st_gid = 0;
+}
+#endif
 
 static int copy_path(char **to, const char *from)
 {
@@ -259,48 +289,125 @@ int sysfile_linux_fstat(int fd, struct linux_stat __user * buf)
 	return ret;
 }
 
-#ifndef __UCORE_64__
-int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * linux_stat_store)
+int sysfile_linux_stat(const char __user *path, struct linux_stat *__user linux_stat_store)
 {
-  struct mm_struct *mm = current->mm;
-
-  //Ensure that buf is a valid userspace address
-  if(!user_mem_check(mm, (uintptr_t)linux_stat_store, sizeof(struct linux_stat64), 1)) {
+	//Ensure that buf is a valid userspace address
+  if(!user_mem_check(current->mm, (uintptr_t)linux_stat_store, sizeof(struct linux_stat), 1)) {
     return -E_FAULT;
   }
 	struct stat ucore_stat;
+  int ret;
+	if ((ret = file_stat(path, &ucore_stat)) != 0) {
+		return ret;
+	}
+  lock_mm(current->mm);
+	ucore_stat_to_linux_stat(&ucore_stat, linux_stat_store);
+  unlock_mm(current->mm);
+	return 0;
+}
 
+int sysfile_linux_lstat(const char __user *path, struct linux_stat *__user linux_stat_store)
+{
+	//Ensure that buf is a valid userspace address
+  if(!user_mem_check(current->mm, (uintptr_t)linux_stat_store, sizeof(struct linux_stat), 1)) {
+    return -E_FAULT;
+  }
+	struct stat ucore_stat;
+  int ret;
+	if ((ret = file_lstat(path, &ucore_stat)) != 0) {
+		return ret;
+	}
+  lock_mm(current->mm);
+	ucore_stat_to_linux_stat(&ucore_stat, linux_stat_store);
+  unlock_mm(current->mm);
+	return 0;
+}
+
+#ifndef __UCORE_64__
+int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * linux_stat_store)
+{
+  //Ensure that buf is a valid userspace address
+  if(!user_mem_check(current->mm, (uintptr_t)linux_stat_store, sizeof(struct linux_stat64), 1)) {
+    return -E_FAULT;
+  }
+	struct stat ucore_stat;
   int ret;
 	if ((ret = file_fstat(fd, &ucore_stat)) != 0) {
 		return ret;
 	}
-
-  lock_mm(mm);
-  memset(linux_stat_store, 0, sizeof(struct linux_stat64));
-
-  linux_stat_store->st_ino = ucore_stat.st_ino; //TODO: Some fs have no support for this.
-  /* ucore never check access permision */
-	linux_stat_store->st_mode = ucore_stat.st_mode | 0777;
-	linux_stat_store->st_nlink = ucore_stat.st_nlinks;
-	linux_stat_store->st_blksize = 512;
-	linux_stat_store->st_blocks = ucore_stat.st_blocks;
-	linux_stat_store->st_size = ucore_stat.st_size;
-  unlock_mm(mm);
-
+  lock_mm(current->mm);
+	ucore_stat_to_linux_stat64(&ucore_stat, linux_stat_store);
+  unlock_mm(current->mm);
 	return 0;
 }
 
-int sysfile_linux_stat64(const char __user * fn, struct linux_stat64 *__user buf)
+int sysfile_linux_stat64(const char __user *path, struct linux_stat64 *__user linux_stat_store)
 {
-	int fd = sysfile_open(fn, O_RDONLY);
-	if (fd < 0)
-		return -1;
-	int ret = sysfile_linux_fstat64(fd, buf);
-	sysfile_close(fd);
+	//Ensure that buf is a valid userspace address
+  if(!user_mem_check(current->mm, (uintptr_t)linux_stat_store, sizeof(struct linux_stat64), 1)) {
+    return -E_FAULT;
+  }
+	struct stat ucore_stat;
+  int ret;
+	if ((ret = file_stat(path, &ucore_stat)) != 0) {
+		return ret;
+	}
+  lock_mm(current->mm);
+	ucore_stat_to_linux_stat64(&ucore_stat, linux_stat_store);
+  unlock_mm(current->mm);
+	return 0;
+}
 
-	return ret;
+int sysfile_linux_lstat64(const char __user *path, struct linux_stat64 *__user linux_stat_store)
+{
+	//Ensure that buf is a valid userspace address
+  if(!user_mem_check(current->mm, (uintptr_t)linux_stat_store, sizeof(struct linux_stat64), 1)) {
+    return -E_FAULT;
+  }
+	struct stat ucore_stat;
+  int ret;
+	if ((ret = file_lstat(path, &ucore_stat)) != 0) {
+		return ret;
+	}
+  lock_mm(current->mm);
+	ucore_stat_to_linux_stat64(&ucore_stat, linux_stat_store);
+  unlock_mm(current->mm);
+	return 0;
 }
 #endif /* __UCORE_64__ */
+
+size_t sysfile_readlink(const char __user *pathname, char __user *base, size_t len)
+{
+	if(!user_mem_check(current->mm, (uintptr_t)base, len, 1)) {
+		return -E_FAULT;
+	}
+	int ret;
+	struct inode *node;
+	if ((ret = vfs_lookup(pathname, &node, false)) != 0) {
+		return ret;
+	}
+	int node_type;
+	vop_gettype(node, &node_type);
+	if(node_type != S_IFLNK) {
+		vop_ref_dec(node);
+		return -E_INVAL;
+	}
+	char *buffer = kmalloc(4096);
+	int length = 0;
+	lock_mm(current->mm);
+	ret = vop_readlink(node, buffer);
+	unlock_mm(current->mm);
+	vop_ref_dec(node);
+	if(ret != 0) {
+		kfree(buffer);
+		return ret;
+	}
+	length = strlen(buffer);
+	length = length < len ? length : len;
+	memcpy(base, buffer, len);
+	kfree(buffer);
+	return length;
+}
 
 #define F_DUPFD		0	/* dup */
 #define F_GETFD		1	/* get close_on_exec */
@@ -310,9 +417,11 @@ int sysfile_linux_stat64(const char __user * fn, struct linux_stat64 *__user buf
 
 int sysfile_linux_fcntl64(int fd, int cmd, int arg)
 {
+	kprintf("FCNTL: %d\n", cmd);
   //const static int F_DUPFD = 0;
   if(cmd == F_DUPFD) {
     int ret =  file_dup(fd, arg);
+		kprintf("DUP: %d %d\n", fd, ret);
     return ret;
     //panic("fd = %d, fd = %d ret = %d", fd, arg, ret);
   }
@@ -320,7 +429,6 @@ int sysfile_linux_fcntl64(int fd, int cmd, int arg)
     struct file *file;
     int fd_type;
     if (fd2file(fd, &file) != 0 || vop_gettype(file->node, &fd_type) != 0) {
-      panic("= = %d", fd);
       return -E_BADF;
     }
     file->io_flags = arg;
@@ -334,23 +442,13 @@ int sysfile_linux_fcntl64(int fd, int cmd, int arg)
   else if(cmd == F_GETFL) {
     struct file *file;
     if (fd2file(fd, &file) != 0) {
-      panic("= = %d", fd);
       return -E_INVAL;
     }
     return file->io_flags;
   }
+	kprintf("Unsupported option for fcntl: %d\n", cmd);
+	return 0;
 	return -E_INVAL;
-}
-
-int sysfile_linux_stat(const char __user * fn, struct linux_stat *__user buf)
-{
-	int fd = sysfile_open(fn, O_RDONLY);
-	if (fd < 0)
-		return -1;
-	int ret = sysfile_linux_fstat(fd, buf);
-	sysfile_close(fd);
-
-	return ret;
 }
 
 int sysfile_fsync(int fd)
@@ -428,6 +526,7 @@ int sysfile_unlink(const char *__path)
 
 int sysfile_getcwd(char *buf, size_t len)
 {
+	kprintf("Entering sysfile_getcwd %x %x %d\n", buf, buf, len);
 	struct mm_struct *mm = current->mm;
 	if (len == 0) {
 		return -E_INVAL;
@@ -442,6 +541,7 @@ int sysfile_getcwd(char *buf, size_t len)
 		}
 	}
 	unlock_mm(mm);
+	kprintf("SScwd %s %d\n", buf, len);
 	return 0;
 }
 

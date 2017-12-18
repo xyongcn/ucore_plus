@@ -133,14 +133,9 @@ int vfs_do_mount_nocheck(const char *devname, const char* mountpoint,
   int ret;
   struct file_system_type *fs_type;
   //TODO: Security issue: This may lead to buffer overflow and memor
-  char *mountpoint_full_path = kmalloc(1024);
-  if(mountpoint[0] != '/') {
-    vfs_expand_path(mountpoint, mountpoint_full_path, 1024);
-  }
-  else {
-    strcpy(mountpoint_full_path, mountpoint);
-  }
-  vfs_simplify_path(mountpoint_full_path);
+  char *mountpoint_full_path = kmalloc(4096);
+	strcpy(mountpoint_full_path, mountpoint);
+  vfs_fullpath(mountpoint_full_path, 4096);
   ret = vfs_find_filesystem_by_name(fs_name, &fs_type);
   if(ret != 0) return ret;
   struct fs *filesystem;
@@ -154,11 +149,11 @@ int vfs_do_mount_nocheck(const char *devname, const char* mountpoint,
 int vfs_do_umount(const char* target, unsigned long flags)
 {
   //TODO: Security issue: This may lead to buffer overflow and memor
-  char *mountpoint_full_path = kmalloc(1024);
+  char *mountpoint_full_path = kmalloc(4096);
+	strcpy(mountpoint_full_path, target);
 
-  //Get the full path for the mount point.
-  vfs_expand_path(target, mountpoint_full_path, 1024);
-  vfs_simplify_path(mountpoint_full_path);
+	//Get the full path for the mount point.
+	vfs_fullpath(mountpoint_full_path, 4096);
 
   //Forbid unmount the root
   if(strlen(mountpoint_full_path) == 1) return -E_INVAL;
@@ -194,7 +189,7 @@ int do_mount(const char *devname, const char* mountpoint, const char *fs_name,
 {
   int ret;
   struct inode* mountpoint_inode;
-  ret = vfs_lookup(mountpoint, &mountpoint_inode);
+  ret = vfs_lookup(mountpoint, &mountpoint_inode, true);
   if(ret != 0) return -E_NOENT;
   uint32_t mountpoint_type;
   ret = vop_gettype(mountpoint_inode, &mountpoint_type);

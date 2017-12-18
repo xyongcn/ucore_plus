@@ -2,10 +2,12 @@
 #define __KERN_FS_FILE_H__
 
 #include <types.h>
-#include <fs.h>
-//#include <proc.h>
 #include <atomic.h>
 #include <assert.h>
+#include <vfs.h>
+
+#include "fs.h"
+#include "kernel_file_pool.h"
 
 struct inode;
 struct stat;
@@ -31,6 +33,8 @@ bool file_testfd(int fd, bool readable, bool writable);
 
 int file_init(struct file *file);
 int file_open(char *path, uint32_t open_flags);
+int file_stat(const char *path, struct stat *stat);
+int file_lstat(const char *path, struct stat *stat);
 int file_close(int fd);
 int file_read(int fd, void *base, size_t len, size_t * copied_store);
 int file_write(int fd, void *base, size_t len, size_t * copied_store);
