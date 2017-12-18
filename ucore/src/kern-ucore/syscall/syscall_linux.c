@@ -61,6 +61,7 @@ machine_word_t syscall_linux_getpgrp(machine_word_t args[])
   return current->gid;
 }
 
+#if defined(ARCH_AMD64) || defined(ARCH_MIPS)
 machine_word_t syscall_linux_ptrace(machine_word_t args[])
 {
   long request = (long)args[0];
@@ -69,6 +70,7 @@ machine_word_t syscall_linux_ptrace(machine_word_t args[])
   unsigned long data = (unsigned long)args[3];
   return ptrace_syscall(request, pid, addr, data);
 }
+#endif
 
 machine_word_t syscall_linux_sigaction(machine_word_t arg[])
 {
@@ -120,6 +122,11 @@ machine_word_t syscall_linux_writev(machine_word_t args[])
 	return sysfile_writev(fd, iov, iovcnt);
 }
 
+machine_word_t syscall_linux_access(machine_word_t args[])
+{
+	return 0;
+}
+
 machine_word_t syscall_linux_open(machine_word_t args[])
 {
 	const char *path = (const char *)args[0];
@@ -144,9 +151,7 @@ machine_word_t syscall_linux_lstat(machine_word_t args[])
 {
 	char *fn = (char *)args[0];
 	struct linux_stat *st = (struct linux_stat *)args[1];
-  //TODO: lstat should be handling symbolic link in a different way than stat.
-  //This is a temporary workaround.
-	return sysfile_linux_stat(fn, st);
+	return sysfile_linux_lstat(fn, st);
 }
 
 machine_word_t syscall_linux_fstat(machine_word_t args[])
@@ -154,6 +159,14 @@ machine_word_t syscall_linux_fstat(machine_word_t args[])
 	int fd = (int)args[0];
 	struct linux_stat *st = (struct linux_stat *)args[1];
 	return sysfile_linux_fstat(fd, st);
+}
+
+machine_word_t syscall_linux_readlink(machine_word_t args[])
+{
+	const char *pathname = (const char *)args[0];
+	char *buf = (char *)args[1];
+	size_t bufsiz = (size_t)args[2];
+	return sysfile_readlink(pathname, buf, bufsiz);
 }
 
 machine_word_t syscall_linux_seek(machine_word_t args[])
@@ -619,9 +632,7 @@ machine_word_t syscall_linux_lstat64(machine_word_t args[])
 {
 	char *fn = (char *)args[0];
 	struct linux_stat64 *st = (struct linux_stat *)args[1];
-  //TODO: lstat should be handling symbolic link in a different way than stat.
-  //This is a temporary workaround.
-	return sysfile_linux_stat64(fn, st);
+	return sysfile_linux_lstat64(fn, st);
 }
 
 machine_word_t syscall_linux_fstat64(machine_word_t args[])
