@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stddef.h>
 
+#define iovec iovec
 #include "lwip/sockets.h"
 #include "socket_inode.h"
 

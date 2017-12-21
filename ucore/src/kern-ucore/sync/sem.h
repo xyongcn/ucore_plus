@@ -5,6 +5,7 @@
 #include <atomic.h>
 #include <wait.h>
 #include <spinlock.h>
+#include <sched.h>
 
 typedef struct semaphore {
 	int value;

@@ -176,7 +176,10 @@ void ethernet_lwip_process_data() {
   uint16_t length;
   uint8_t *data;
   for(;;) {
+    bool intr_flag;
+    local_intr_save(intr_flag);
     ethernet_receive_data(&driver, &length, &data);
+    local_intr_restore(intr_flag);
     if(data == NULL) break;
     struct pbuf *buf = low_level_input(driver->lwip_netif, length, data);
     if(buf != NULL) {

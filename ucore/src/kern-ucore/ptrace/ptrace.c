@@ -1,3 +1,5 @@
+#if defined(ARCH_AMD64) || defined(ARCH_MIPS)
+
 #include <types.h>
 #include <assert.h>
 #include <list.h>
@@ -290,3 +292,5 @@ long ptrace_syscall(long request, long pid, unsigned long addr, unsigned long da
   panic("Not implemented. %d\n", request);
   return 0;
 }
+
+#endif
