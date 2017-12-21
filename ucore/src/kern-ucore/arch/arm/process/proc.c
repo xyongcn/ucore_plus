@@ -262,7 +262,6 @@ init_new_context(struct proc_struct *proc, struct elfhdr *elf, int argc,
 	return 0;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 int
 init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int argc,
 			 char **kargv, int envc, char **kenvp,
@@ -330,8 +329,6 @@ init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int argc,
 
 	return 0;
 }
-
-#endif //UCONFIG_BIONIC_LIBC
 
 // kernel_execve - do SYS_exec syscall to exec a user program called by user_main kernel_thread
 int kernel_execve(const char *name, const char **argv, const char **kenvp)

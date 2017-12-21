@@ -53,14 +53,11 @@ void sem_init(semaphore_t * sem, int value)
 	sem->value = value;
 	sem->valid = 1;
 	spinlock_init(&sem->lock);
-#ifdef UCONFIG_BIONIC_LIBC
 	sem->addr = 0;		//-1 : // Not for futex
-#endif //UCONFIG_BIONIC_LIBC
 	set_sem_count(sem, 0);
 	wait_queue_init(&(sem->wait_queue));
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 void sem_init_with_address(semaphore_t * sem, uintptr_t addr, int value)
 {
 	sem->value = value;
@@ -70,7 +67,6 @@ void sem_init_with_address(semaphore_t * sem, uintptr_t addr, int value)
 	set_sem_count(sem, 0);
 	wait_queue_init(&(sem->wait_queue));
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 static void
     __attribute__ ((noinline)) __up(semaphore_t * sem, uint32_t wait_state)
@@ -179,7 +175,6 @@ void sem_queue_destroy(sem_queue_t * sem_queue)
 	kfree(sem_queue);
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 sem_undo_t *semu_create_with_address(semaphore_t * sem, uintptr_t addr,
 				     int value)
 {
@@ -197,7 +192,6 @@ sem_undo_t *semu_create_with_address(semaphore_t * sem, uintptr_t addr,
 	}
 	return NULL;
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 sem_undo_t *semu_create(semaphore_t * sem, int value)
 {
@@ -272,7 +266,6 @@ static sem_undo_t *semu_list_search(list_entry_t * list, sem_t sem_id)
 	return NULL;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 static int semu_search_with_addr(list_entry_t * list, uintptr_t addr)
 {
 	list_entry_t *le = list;
@@ -308,7 +301,6 @@ ipc_sem_find_or_init_with_address(uintptr_t addr, int value, int create)
 	up(&(sem_queue->sem));
 	return sem2semid(semu->sem);
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 int ipc_sem_init(int value)
 {
@@ -341,7 +333,6 @@ int ipc_sem_post(sem_t sem_id)
 	return -E_INVAL;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 int ipc_sem_post_max(sem_t sem_id, int max)
 {
 	assert(current->sem_queue != NULL);
@@ -364,7 +355,6 @@ int ipc_sem_post_max(sem_t sem_id, int max)
 	}
 	return -E_INVAL;
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 int ipc_sem_wait(sem_t sem_id, unsigned int timeout)
 {
@@ -437,7 +427,6 @@ int ipc_sem_get_value(sem_t sem_id, int *value_store)
 	return ret;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 int do_futex(uintptr_t uaddr, int op, int val)
 {
 	int ret = 0;
@@ -459,4 +448,3 @@ int do_futex(uintptr_t uaddr, int op, int val)
 		panic("unexpected futex op: %d\n", op);
 	}
 }
-#endif //UCONFIG_BIONIC_LIBC

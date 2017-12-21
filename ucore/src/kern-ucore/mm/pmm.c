@@ -200,9 +200,7 @@ int pmm_mmio_map_direct(pgd_t *pgdir, uintptr_t physics_address_start, uintptr_t
   return 0;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
-void
-page_insert_pte(pgd_t * pgdir, struct Page *page, pte_t * ptep, uintptr_t la,
+void page_insert_pte(pgd_t * pgdir, struct Page *page, pte_t * ptep, uintptr_t la,
 		pte_perm_t perm)
 {
 	page_ref_inc(page);
@@ -217,7 +215,6 @@ page_insert_pte(pgd_t * pgdir, struct Page *page, pte_t * ptep, uintptr_t la,
 	ptep_set_perm(ptep, perm);
 	mp_tlb_update(pgdir, la);
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 /**
  * page_remove - free an Page which is related linear address la and has an validated pte

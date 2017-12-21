@@ -19,7 +19,7 @@
  * Common code to pull the device name, if any, off the front of a
  * path and choose the inode to begin the name lookup relative to.
  */
-int get_device(char *path, char *subpath, struct inode **node_store)
+static int get_device(char *path, char *subpath, struct inode **node_store)
 {
   int ret;
 

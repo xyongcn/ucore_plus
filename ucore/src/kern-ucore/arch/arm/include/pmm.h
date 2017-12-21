@@ -40,10 +40,8 @@ pte_t *get_pte(pde_t * pgdir, uintptr_t la, bool create);
 struct Page *get_page(pde_t * pgdir, uintptr_t la, pte_t ** ptep_store);
 void page_remove(pde_t * pgdir, uintptr_t la);
 
-#ifdef UCONFIG_BIONIC_LIBC
 void page_insert_pte(pde_t * pgdir, struct Page *page, pte_t * ptep,
 		     uintptr_t la, uint32_t perm);
-#endif //UCONFIG_BIONIC_LIBC
 int page_insert(pde_t * pgdir, struct Page *page, uintptr_t la, uint32_t perm);
 
 void tlb_invalidate(pde_t * pgdir, uintptr_t la);

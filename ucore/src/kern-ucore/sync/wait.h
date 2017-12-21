@@ -5,7 +5,7 @@
 #include <spinlock.h>
 
 /* TODO use lock-free linked list  */
-typedef struct {
+typedef struct wait_queue {
 	list_entry_t wait_head;
 	spinlock_s lock;
 } wait_queue_t;

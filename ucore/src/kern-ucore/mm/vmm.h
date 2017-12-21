@@ -15,12 +15,10 @@
 //pre define
 struct mm_struct;
 
-#ifdef UCONFIG_BIONIC_LIBC
 struct mapped_file_struct {
 	struct file *file;
 	off_t offset;
 };
-#endif //UCONFIG_BIONIC_LIBC
 
 // the virtual continuous memory area(vma), [vm_start, vm_end),
 // addr belong to a vma means  vma.vm_start<= addr <vma.vm_end
@@ -33,9 +31,7 @@ struct vma_struct {
 	list_entry_t list_link;	// linear list link which sorted by start addr of vma
 	struct shmem_struct *shmem;
 	size_t shmem_off;
-#ifdef UCONFIG_BIONIC_LIBC
 	struct mapped_file_struct mfile;
-#endif				//UCONFIG_BIONIC_LIBC
 };
 
 #define le2vma(le, member)                  \

@@ -446,12 +446,10 @@ static uint32_t __sys_linux_mmap2(uint32_t arg[])
 #endif //UCONFIG_BIONIC_LIBC
 	if (fd == -1 || flags & MAP_ANONYMOUS) {
 		//print_trapframe(current->tf);
-#ifdef UCONFIG_BIONIC_LIBC
 		if (flags & MAP_FIXED) {
 			return linux_regfile_mmap2(addr, len, prot, flags, fd,
 						   off);
 		}
-#endif //UCONFIG_BIONIC_LIBC
 
 		uint32_t ucoreflags = 0;
 		if (prot & PROT_WRITE)
@@ -479,7 +477,6 @@ static uint32_t __sys_linux_fcntl(uint32_t arg[])
 	return -E_INVAL;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 static uint32_t __sys_linux_mprotect(uint32_t arg[])
 {
 
@@ -491,7 +488,6 @@ static uint32_t __sys_linux_mprotect(uint32_t arg[])
 
 	return do_mprotect(addr, len, prot);
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 static uint32_t __sys_linux_brk(uint32_t arg[])
 {
@@ -633,7 +629,6 @@ static uint32_t __sys_linux_gettimeofday(uint32_t arg[])
 	return ucore_gettimeofday(tv, tz);
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 static uint32_t __sys_linux_gettid(uint32_t arg[])
 {
 	return current->tid;
@@ -690,8 +685,6 @@ static uint32_t __sys_linux_writev(uint32_t arg[])
 	int iovcnt = (int)arg[2];
 	return sysfile_writev(fd, iov, iovcnt);
 }
-
-#endif //UCONFIG_BIONIC_LIBC
 
 #define __UCORE_SYSCALL(x) [__NR_##x]  sys_##x
 #define __LINUX_SYSCALL(x) [__NR_##x]  __sys_linux_##x
@@ -769,7 +762,6 @@ static uint32_t(*_linux_syscalls[]) (uint32_t arg[]) = {
 	    __LINUX_SYSCALL(getegid),
 	    __LINUX_SYSCALL(getgid32),
 	    __LINUX_SYSCALL(getegid32), __LINUX_SYSCALL(gettimeofday),
-#ifdef UCONFIG_BIONIC_LIBC
 	    __LINUX_SYSCALL(mprotect),
 	    __LINUX_SYSCALL(gettid),
 	    __ARM_LINUX_SYSCALL(set_tls),
@@ -782,7 +774,6 @@ static uint32_t(*_linux_syscalls[]) (uint32_t arg[]) = {
 			[__NR_stat] syscall_linux_fstat64,
 	    __LINUX_SYSCALL(fcntl64),
 	    __LINUX_SYSCALL(access), __LINUX_SYSCALL(writev),
-#endif //UCONFIG_BIONIC_LIBC
 };
 
 #define NUM_LINUX_SYSCALLS        ((sizeof(_linux_syscalls)) / (sizeof(_linux_syscalls[0])))

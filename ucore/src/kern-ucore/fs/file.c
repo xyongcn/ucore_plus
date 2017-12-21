@@ -582,8 +582,6 @@ void *linux_devfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 	return r;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
-
 int linux_access(char *path, int amode)
 {
 	/* do nothing but return 0 */
@@ -678,5 +676,3 @@ int filestruct_read(struct file *file, void *base, size_t len)
 	file->pos += copied;
 	return copied;
 }
-
-#endif //UCONFIG_BIONIC_LIBC

@@ -2,16 +2,17 @@
 #define __KERN_FS_DEVS_DEV_H__
 
 #include <types.h>
-#include <wait.h>
+//#include <wait.h>
 
 struct inode;
 struct iobuf;
-
 struct file_operations;
 
 #ifndef __user
 #define __user
 #endif
+
+struct __wait_t;
 
 /*
  * Filesystem-namespace-accessible device.
@@ -54,7 +55,7 @@ void *linux_file;
 	int (*d_close) (struct device * dev);
 	int (*d_io) (struct device * dev, struct iobuf * iob, bool write, int io_flags);
 	int (*d_ioctl) (struct device * dev, int op, void *data);
-  int (*d_poll) (struct device *dev, wait_t *wait, int io_requests);
+  int (*d_poll) (struct device *dev, struct __wait_t *wait, int io_requests);
   void* private_data;
 };
 

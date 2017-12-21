@@ -3,7 +3,7 @@
  *
  *       Filename:  dev2devfs_glue.c
  *
- *    Description:  
+ *    Description:
  *
  *        Version:  1.0
  *        Created:  07/21/2012 05:17:37 PM

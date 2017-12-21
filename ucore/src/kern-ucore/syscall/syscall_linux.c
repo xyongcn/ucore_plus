@@ -78,10 +78,12 @@ machine_word_t syscall_linux_sigaction(machine_word_t arg[])
 			    (struct sigaction *)arg[2]);
 }
 
+#ifndef ARCH_X86
 machine_word_t syscall_linux_sigreturn(machine_word_t arg[])
 {
   return do_sigreturn();
 }
+#endif
 
 machine_word_t syscall_linux_sigprocmask(machine_word_t arg[])
 {
@@ -282,18 +284,14 @@ machine_word_t syscall_linux_mmap(machine_word_t args[])
 	unsigned long flags = (unsigned long)args[3];
 	int fd = (int)args[4];
 	unsigned long off = (unsigned long)args[5];
-#ifndef UCONFIG_BIONIC_LIBC
-	kprintf
-	    ("TODO __sys_linux_mmap2 addr=%08x len=%08x prot=%08x flags=%08x fd=%d off=%08x\n",
-	     addr, len, prot, flags, fd, off);
-#endif //UCONFIG_BIONIC_LIBC
+	//kprintf
+	//    ("TODO __sys_linux_mmap2 addr=%08x len=%08x prot=%08x flags=%08x fd=%d off=%08x\n",
+	//     addr, len, prot, flags, fd, off);
 	if (fd == -1 || flags & MAP_ANONYMOUS) {
-#ifdef UCONFIG_BIONIC_LIBC
 		if (flags & MAP_FIXED) {
 			return linux_regfile_mmap2(addr, len, prot, flags, fd,
 						   off);
 		}
-#endif //UCONFIG_BIONIC_LIBC
 
 		uint32_t ucoreflags = 0;
 		if (prot & PROT_WRITE)

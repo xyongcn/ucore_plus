@@ -344,13 +344,11 @@ static int copy_mm(uint32_t clone_flags, struct proc_struct *proc)
 	}
 	unlock_mm(oldmm);
 
-#ifdef UCONFIG_BIONIC_LIBC
 	lock_mm(mm);
 	{
 		ret = remapfile(mm, proc);
 	}
 	unlock_mm(mm);
-#endif //UCONFIG_BIONIC_LIBC
 
 	if (ret != 0) {
 		goto bad_dup_cleanup_mmap;
@@ -1774,8 +1772,6 @@ int do_munmap(uintptr_t addr, size_t len)
 	return ret;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
-
 int do_mprotect(void *addr, size_t len, int prot)
 {
 
@@ -1849,8 +1845,6 @@ out:
 	unlock_mm(mm);
 	return ret;
 }
-
-#endif //UCONFIG_BIONIC_LIBC
 
 // do_shmem - create a share memory with addr, len, flags(VM_READ/M_WRITE/VM_STACK)
 int do_shmem(uintptr_t * addr_store, size_t len, uint32_t mmap_flags)

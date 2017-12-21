@@ -755,13 +755,10 @@ void *sysfile_linux_mmap2(void *addr, size_t len, int prot, int flags,
 	if (__is_linux_devfile(fd)) {
 		return linux_devfile_mmap2(addr, len, prot, flags, fd, pgoff);
 	}
-#ifdef UCONFIG_BIONIC_LIBC
 	else {
     return linux_regfile_mmap2(addr, len, prot, flags, fd, pgoff);
 	}
-#else
 	warn("mmap not implemented except ARM architecture.\n");
-#endif //UCONFIG_BIONIC_LIBC
 	return MAP_FAILED;
 }
 
