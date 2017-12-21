@@ -773,12 +773,15 @@ static int load_icode_read(int fd, void *buf, size_t len, off_t offset)
 
 static bool proc_elf_program_load_needed(struct proghdr *program_header)
 {
+	/*#define ELF_PT_GNU_RELRO 0x6474e552
   return program_header->p_type == ELF_PT_LOAD ||
     program_header->p_type == ELF_PT_DYNAMIC ||
-    program_header->p_type == ELF_PT_PHDR;
+    program_header->p_type == ELF_PT_PHDR ||
+		program_header->p_type == ELF_PT_GNU_RELRO;*/
+	return program_header->p_memsz > 0;
 }
 
-static off_t proc_elf_determine_load_offset(struct proghdr *program_headers,
+static off_t proc_elf_determine_load_offset(struct elfhdr *elf_header, struct proghdr *program_headers,
 int program_count, struct mm_struct *mm)
 {
   //TODO: Currently this is only for the whole elf, instead of
@@ -799,16 +802,15 @@ int program_count, struct mm_struct *mm)
   }
   begin_address = ROUNDDOWN(begin_address, PGSIZE);
   end_address = ROUNDUP(end_address, PGSIZE);
+	// For non-PIC code, offset must be 0
+	if(elf_header->e_type == 2) {
+		if (mm->brk_start < end_address) {
+			mm->brk_start = end_address;
+		}
+		return 0;
+	}
   off_t offset = 0;
-  //TODO: Currently, this is just intended for ld.so,
-  //whose base address tends to be 0.
-  if (begin_address == 0) {
-    //TODO: Seems use get_unmapped_area will not work, for the returned area
-    //is in mmap preserved region and doing this can break its data structure
-    offset = 0x8000;
-    //offset = get_unmapped_area(mm, end_address - begin_address);
-  }
-  return offset;
+	return get_unmapped_area(mm, end_address - begin_address);
 }
 
 /*
@@ -845,14 +847,15 @@ int program_count, struct mm_struct *mm, int fd, off_t bias)
     if (program_header->p_flags & ELF_PF_R)
       vm_flags |= VM_READ;
 
-    //TODO: This is a workaround. If bias is not 0, it means that this program
+    /*//TODO: This is a workaround. If bias is not 0, it means that this program
     //is a elf interpreter, and will be loaded to as high as the mmap-preserved
     //memory region. Setting brk to that high will lead to problem.
     if(bias == 0) {
       if (mm->brk_start < program_header->p_va + bias + program_header->p_memsz) {
         mm->brk_start = program_header->p_va + bias + program_header->p_memsz;
       }
-    }
+    }*/
+		vm_flags |= VM_WRITE;
 
     char *start = program_header->p_va + bias;
     char *end = program_header->p_va + bias + program_header->p_memsz;
@@ -860,21 +863,19 @@ int program_count, struct mm_struct *mm, int fd, off_t bias)
     if((uintptr_t)end % program_header->p_align != 0) {
       end = ((uintptr_t)end / program_header->p_align + 1) * program_header->p_align;
     }
-    if(bias == 0) {
+    /*if(bias == 0) {
       if (mm->brk_start < end) {
         mm->brk_start = end;
       }
-    }
+    }*/
 
     //TODO: Not certain if this may introduce a bug if end % PGSIZE == 0.
     start = ROUNDDOWN(start, PGSIZE);
     end = ROUNDUP(end, PGSIZE);
-    ranges[i].start_addr = start;
-    ranges[i].end_addr = end;
 
     for(int j = 0; j < i; j++) {
-      if(ranges[j].end_addr <= start || ranges[i].start_addr >= end ||
-      ranges[j].end_addr == ranges[i].start_addr) {
+      if(ranges[j].end_addr <= start || ranges[j].start_addr >= end ||
+      ranges[j].end_addr == ranges[j].start_addr) {
         continue;
       }
       mm_unmap(mm, ranges[j].start_addr, ranges[j].end_addr - ranges[j].start_addr);
@@ -882,6 +883,8 @@ int program_count, struct mm_struct *mm, int fd, off_t bias)
       end = ranges[j].end_addr > end ? ranges[j].end_addr : end;
       ranges[j].start_addr = ranges[j].end_addr = 0;
     }
+		ranges[i].start_addr = start;
+		ranges[i].end_addr = end;
     if(mm_map(mm, start, end - start, vm_flags, NULL) != 0) {
       return -E_NOMEM;
     }
@@ -960,10 +963,10 @@ int program_count, struct mm_struct *mm, int fd, off_t bias)
   return 0;
 }
 
-static void proc_load_elf(struct proghdr *program_headers,
+static void proc_load_elf(struct elfhdr *elf_header, struct proghdr *program_headers,
 int program_count, struct mm_struct *mm, int fd, off_t* offset_store)
 {
-  off_t offset = proc_elf_determine_load_offset(program_headers,
+  off_t offset = proc_elf_determine_load_offset(elf_header, program_headers,
     program_count, mm);
   proc_elf_allocate_memory(program_headers, program_count, mm, fd, offset);
   proc_elf_load_program(program_headers, program_count, fd, offset);
@@ -1016,8 +1019,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 
   struct proghdr* program_headers = kmalloc(sizeof(struct proghdr) * elf->e_phnum);
   load_icode_read(fd, program_headers, sizeof(struct proghdr) * elf->e_phnum, elf->e_phoff);
-  proc_load_elf(program_headers, elf->e_phnum, mm, fd, &bias);
-
+  proc_load_elf(elf, program_headers, elf->e_phnum, mm, fd, &bias);
   for(int i = 0; i < elf->e_phnum; i++) {
     struct proghdr* ph = &program_headers[i];
     if (ph->p_type == ELF_PT_INTERP) {
@@ -1041,7 +1043,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
     }
   }
 
-	mm->brk_start = mm->brk = ROUNDUP(mm->brk_start, PGSIZE);
+	mm->brk_start = mm->brk = ROUNDUP(mm->brk_start, 16 * PGSIZE);
 
 	/* setup user stack */
 	vm_flags = VM_READ | VM_WRITE | VM_STACK;
@@ -1064,7 +1066,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
       interp_fd, interpreter_headers, sizeof(struct proghdr) * interp_elf->e_phnum,
       interp_elf->e_phoff
     );
-    proc_load_elf(interpreter_headers, interp_elf->e_phnum, mm, interp_fd, &bias);
+    proc_load_elf(interp_elf, interpreter_headers, interp_elf->e_phnum, mm, interp_fd, &bias);
 		sysfile_close(interp_fd);
 		kfree(interpreter_path);
 	}
@@ -1262,7 +1264,9 @@ int do_execve(const char *filename, const char **argv, const char **envp)
 
 	put_kargv(argc, kargv);
 	put_kargv(envc, kenvp);
+	#if defined(ARCH_AMD64) || defined(ARCH_MIPS)
   ptrace_execve_hook();
+	#endif
 	return 0;
 
 execve_exit:
@@ -1901,7 +1905,7 @@ out_unlock:
 
 #define __KERNEL_EXECVE(name, path, ...) ({                         \
             const char *argv[] = {path, ##__VA_ARGS__, NULL};       \
-            const char *envp[] = {"PATH=/bin/", NULL};              \
+            const char *envp[] = {"PATH=/usr/local/bin:/usr/bin:/bin", NULL};              \
             kprintf("kernel_execve: pid = %d, name = \"%s\".\n",    \
                     current->pid, name);                            \
             kernel_execve(path, argv, envp);                              \
