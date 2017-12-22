@@ -4,12 +4,13 @@ language: cpp
 services: docker
 
 env:
-    - GCC_VER=7 UCORE_ARCH=i386 UCORE_BOARD=default
-    - GCC_VER=7 UCORE_ARCH=amd64 UCORE_BOARD=default
-    - GCC_VER=7 UCORE_ARCH=arm UCORE_BOARD=goldfishv7
-    - GCC_VER=7 UCORE_ARCH=arm UCORE_BOARD=pandaboardes
-    - GCC_VER=7 UCORE_ARCH=arm UCORE_BOARD=raspberrypi
-    - GCC_VER=7 UCORE_ARCH=arm UCORE_BOARD=zedboard
+    - GCC_VER=7 ARCH=i386 BOARD=default
+    - GCC_VER=7 ARCH=amd64 BOARD=default
+    - GCC_VER=7 ARCH=arm BOARD=goldfishv7
+    - GCC_VER=7 ARCH=arm BOARD=pandaboardes
+    - GCC_VER=7 ARCH=arm BOARD=raspberrypi
+    - GCC_VER=7 ARCH=arm BOARD=zedboard
+    - GCC_VER=7 ARCH=mips BOARD=qemu
 
 
 before_install:
@@ -26,7 +27,7 @@ script:
     - docker exec ucore_build_environment apt-get install -y ncurses-dev u-boot-tools
     - |
       docker exec ucore_build_environment bash -c "cd /ucore && python misc/evaluate_build.py \
-      --gcc_major_versions=${GCC_VER} --ucore_arch=${UCORE_ARCH} --ucore_board=${UCORE_BOARD} \
+      --gcc_major_versions=${GCC_VER} --ucore_arch=${ARCH} --ucore_board=${BOARD} \
       /opt/ucore_build_environment"
 
 compiler:
