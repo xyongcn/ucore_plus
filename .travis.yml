@@ -14,7 +14,7 @@ env:
 
 before_install:
     - sudo docker pull tinytangent/ucore_build_environment:gcc7
-    - sudo docker create --name=ucore_build_environment -it tinytangent/ucore_build_environment
+    - sudo docker create --name=ucore_build_environment -it tinytangent/ucore_build_environment:gcc7
     - sudo apt-get update -qq
 
 install:
@@ -26,7 +26,7 @@ script:
     - docker exec ucore_build_environment apt-get install -y ncurses-dev u-boot-tools
     - |
       docker exec ucore_build_environment bash -c "cd /ucore && python misc/evaluate_build.py \
-      python misc/evaluate_build.py --gcc_major_versions=${GCC_VER} --ucore_arch=${UCORE_ARCH} --ucore_board=${UCORE_BOARD} \
+      --gcc_major_versions=${GCC_VER} --ucore_arch=${UCORE_ARCH} --ucore_board=${UCORE_BOARD} \
       /opt/ucore_build_environment"
 
 compiler:
