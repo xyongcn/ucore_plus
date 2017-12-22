@@ -123,9 +123,7 @@ struct vma_struct *vma_create(uintptr_t vm_start, uintptr_t vm_end,
 		vma->vm_flags = vm_flags;
 		vma->shmem = NULL;
 		vma->shmem_off = 0;
-#ifdef UCONFIG_BIONIC_LIBC
 		vma->mfile.file = NULL;
-#endif //UCONFIG_BIONIC_LIBC
 	}
 	return vma;
 }
@@ -226,8 +224,7 @@ static inline int vma_compare(rb_node * node1, rb_node * node2)
 	return (start1 < start2) ? -1 : (start1 > start2) ? 1 : 0;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
-void vma_mapfile(struct vma_struct *vma, int fd, off_t off, struct fs_struct *fs_struct)
+void vma_mapfile(struct vma_struct *vma, struct file *file, off_t off, struct fs_struct *fs_struct)
 {
 
 	if(fs_struct == NULL) {
@@ -238,7 +235,8 @@ void vma_mapfile(struct vma_struct *vma, int fd, off_t off, struct fs_struct *fs
 
 	vma->mfile.offset = off;
 	assert(vma != NULL);
-	assert((vma->mfile.file = fd2file_onfs(fd, fs_struct)) != NULL);
+	//assert((vma->mfile.file = fd2file_onfs(fd, fs_struct)) != NULL);
+  assert((vma->mfile.file = file) != NULL);
 	filemap_acquire(vma->mfile.file);
 }
 
@@ -266,8 +264,6 @@ static void vma_copymapfile(struct vma_struct *to, struct vma_struct *from)
 		filemap_acquire(to->mfile.file);
 	}
 }
-
-#endif //UCONFIG_BIONIC_LIBC
 
 // check_vma_overlap - check if vma1 overlaps vma2 ?
 static inline void
@@ -443,11 +439,9 @@ static void vma_resize(struct vma_struct *vma, uintptr_t start, uintptr_t end)
 	if (vma->vm_flags & VM_SHARE) {
 		vma->shmem_off += start - vma->vm_start;
 	}
-#ifdef UCONFIG_BIONIC_LIBC
 	if (vma->mfile.file != NULL) {
 		vma->mfile.offset += start - vma->vm_start;
 	}
-#endif //UCONFIG_BIONIC_LIBC
 
 	vma->vm_start = start, vma->vm_end = end;
 }
@@ -473,9 +467,7 @@ int mm_unmap(struct mm_struct *mm, uintptr_t addr, size_t len)
 		     vma_create(vma->vm_start, start, vma->vm_flags)) == NULL) {
 			return -E_NO_MEM;
 		}
-#ifdef UCONFIG_BIONIC_LIBC
 		vma_copymapfile(nvma, vma);
-#endif //UCONFIG_BIONIC_LIBC
 		vma_resize(vma, end, vma->vm_end);
 		insert_vma_struct(mm, nvma);
 		unmap_range(mm->pgdir, start, end);
@@ -510,9 +502,7 @@ int mm_unmap(struct mm_struct *mm, uintptr_t addr, size_t len)
 				vma_resize(vma, un_end, vma->vm_end);
 				insert_vma_struct(mm, vma);
 			} else {
-#ifdef UCONFIG_BIONIC_LIBC
 				vma_unmapfile(vma);
-#endif //UCONFIG_BIONIC_LIBC
 				vma_destroy(vma);
 			}
 		}
@@ -521,7 +511,6 @@ int mm_unmap(struct mm_struct *mm, uintptr_t addr, size_t len)
 	return 0;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 int mm_unmap_keep_pages(struct mm_struct *mm, uintptr_t addr, size_t len)
 {
 	uintptr_t start = ROUNDDOWN(addr, PGSIZE), end =
@@ -587,7 +576,6 @@ int mm_unmap_keep_pages(struct mm_struct *mm, uintptr_t addr, size_t len)
 	}
 	return 0;
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 int dup_mmap(struct mm_struct *to, struct mm_struct *from)
 {
@@ -605,9 +593,7 @@ int dup_mmap(struct mm_struct *to, struct mm_struct *from)
 				nvma->shmem_off = vma->shmem_off;
 				shmem_ref_inc(vma->shmem);
 			}
-#ifdef UCONFIG_BIONIC_LIBC
 			nvma->mfile = vma->mfile;
-#endif //UCONFIG_BIONIC_LIBC
 		}
 		insert_vma_struct(to, nvma);
 		bool share = (vma->vm_flags & VM_SHARE);
@@ -629,9 +615,7 @@ void exit_mmap(struct mm_struct *mm)
 		struct vma_struct *vma = le2vma(le, list_link);
 		unmap_range(pgdir, vma->vm_start, vma->vm_end);
 
-#ifdef UCONFIG_BIONIC_LIBC
 		vma_unmapfile(vma);
-#endif //UCONFIG_BIONIC_LIBC
 	}
 	while ((le = list_next(le)) != list) {
 		struct vma_struct *vma = le2vma(le, list_link);
@@ -639,7 +623,6 @@ void exit_mmap(struct mm_struct *mm)
 	}
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 int remapfile(struct mm_struct *mm, struct proc_struct *proc)
 {
 	//kprintf("remap!!\n");
@@ -652,12 +635,11 @@ int remapfile(struct mm_struct *mm, struct proc_struct *proc)
 			   kprintf("remapfile:0x%08x fd:%d offset:0x%08x\n", vma->mfile.file, vma->mfile.file->fd,
 			   vma->mfile.offset);
 			 */
-			vma_mapfile(vma, vma->mfile.file->fd, vma->mfile.offset, proc->fs_struct);
+			vma_mapfile(vma, vma->mfile.file, vma->mfile.offset, proc->fs_struct);
 		}
 	}
 	return 0;
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 uintptr_t get_unmapped_area(struct mm_struct * mm, size_t len)
 {
@@ -865,7 +847,6 @@ static void check_pgfault(void)
 #endif
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 static inline struct mapped_addr *find_maddr(struct file *file, off_t offset,
 					     struct Page *page)
 {
@@ -880,7 +861,6 @@ static inline struct mapped_addr *find_maddr(struct file *file, off_t offset,
 	}
 	return NULL;
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 int do_madvise(void *addr, size_t len, int advice)
 {
@@ -964,7 +944,6 @@ int do_pgfault(struct mm_struct *mm, machine_word_t error_code, uintptr_t addr)
 		goto failed;
 	}
 	if (ptep_invalid(ptep)) {
-#ifdef UCONFIG_BIONIC_LIBC
 		if (vma->mfile.file != NULL) {
 			struct file *file = vma->mfile.file;
 			off_t old_pos = file->pos, new_pos =
@@ -1027,16 +1006,13 @@ int do_pgfault(struct mm_struct *mm, machine_word_t error_code, uintptr_t addr)
 #endif //SHARE_MAPPED_FILE
 
 		} else
-#endif //UCONFIG_BIONIC_LIBC
 		if (!(vma->vm_flags & VM_SHARE)) {
 			if (pgdir_alloc_page(mm->pgdir, addr, perm) == NULL) {
 				goto failed;
 			}
-#ifdef UCONFIG_BIONIC_LIBC
 			if (vma->vm_flags & VM_ANONYMOUS) {
 				memset((void *)addr, 0, PGSIZE);
 			}
-#endif //UCONFIG_BIONIC_LIBC
 		} else {	//shared mem
 			lock_shmem(vma->shmem);
 			uintptr_t shmem_addr =
@@ -1118,7 +1094,6 @@ int do_pgfault(struct mm_struct *mm, machine_word_t error_code, uintptr_t addr)
 				page = newpage, newpage = NULL;
 			}
 		}
-#ifdef UCONFIG_BIONIC_LIBC
 		else if (vma->mfile.file != NULL) {
 #ifdef UCONFIG_SWAP
 			assert(page_reg(page) + swap_page_count(page) == 1);
@@ -1140,7 +1115,6 @@ int do_pgfault(struct mm_struct *mm, machine_word_t error_code, uintptr_t addr)
 			}
 #endif //SHARE_MAPPED_FILE
 		}
-#endif //UCONFIG_BIONIC_LIBC
 		else {
 		}
 		page_insert(mm->pgdir, page, addr, perm);

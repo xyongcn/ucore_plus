@@ -42,7 +42,7 @@ int vfs_open(char *path, uint32_t open_flags, struct inode **node_store)
 		ret = vop_create(dir, name, excl, &node);
 		vop_ref_dec(dir);
 	} else {
-		ret = vfs_lookup(path, &node);
+		ret = vfs_lookup(path, &node, true);
 	}
 
 	if (ret != 0) {
@@ -134,7 +134,7 @@ int vfs_link(char *old_path, char *new_path)
 	int ret;
 	char *new_name;
 	struct inode *old_node, *new_dir;
-	if ((ret = vfs_lookup(old_path, &old_node)) != 0) {
+	if ((ret = vfs_lookup(old_path, &old_node, true)) != 0) {
 		return ret;
 	}
 	if ((ret = vfs_lookup_parent(new_path, &new_dir, &new_name)) != 0) {
@@ -183,7 +183,7 @@ int vfs_readlink(char *path, struct iobuf *iob)
 {
 	int ret;
 	struct inode *node;
-	if ((ret = vfs_lookup(path, &node)) != 0) {
+	if ((ret = vfs_lookup(path, &node, true)) != 0) {
 		return ret;
 	}
 	ret = vop_readlink(node, iob);

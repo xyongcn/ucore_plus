@@ -11,148 +11,72 @@
 #include <dirent.h>
 #include <error.h>
 #include <assert.h>
-
 #include <vmm.h>
+
+#include "file_desc_table.h"
+#include "kernel_file_pool.h"
 
 #define testfd(fd)                          ((fd) >= 0 && (fd) < FS_STRUCT_NENTRY)
 
-static struct file *get_filemap(void)
-{
-	struct fs_struct *fs_struct = current->fs_struct;
-	assert(fs_struct != NULL && fs_count(fs_struct) > 0);
-	return fs_struct->filemap;
-}
-
-void filemap_init(struct file *filemap)
-{
-	int fd;
-	struct file *file = filemap;
-	for (fd = 0; fd < FS_STRUCT_NENTRY; fd++, file++) {
-		atomic_set(&(file->open_count), 0);
-		file->status = FD_NONE, file->fd = fd;
-	}
-}
-
-static int filemap_alloc(int fd, struct file **file_store)
-{
-	struct file *file = get_filemap();
-	if (fd == NO_FD) {
-		for (fd = 0; fd < FS_STRUCT_NENTRY; fd++, file++) {
-			if (file->status == FD_NONE) {
-				goto found;
-			}
-		}
-		return -E_MAX_OPEN;
-	} else {
-		if (testfd(fd)) {
-			file += fd;
-			if (file->status == FD_NONE) {
-				goto found;
-			}
-			return -E_BUSY;
-		}
-		return -E_INVAL;
-	}
-found:
-	assert(fopen_count(file) == 0);
-	file->status = FD_INIT, file->node = NULL;
-	*file_store = file;
-	return 0;
-}
-
-static void filemap_free(struct file *file)
-{
-	assert(file->status == FD_INIT || file->status == FD_CLOSED);
-	assert(fopen_count(file) == 0);
-	if (file->status == FD_CLOSED) {
-		vfs_close(file->node);
-	}
-	file->status = FD_NONE;
-}
-
 void filemap_acquire(struct file *file)
 {
-	assert(file->status == FD_OPENED || file->status == FD_CLOSED);
 	fopen_count_inc(file);
 }
 
 void filemap_release(struct file *file)
 {
-	assert(file->status == FD_OPENED || file->status == FD_CLOSED);
 	assert(fopen_count(file) > 0);
-	if (fopen_count_dec(file) == 0) {
-		filemap_free(file);
-	}
+	fopen_count_dec(file);
 }
 
-void filemap_open(struct file *file)
+int file_init(struct file *file)
 {
-	assert((file->status == FD_INIT || file->status == FD_OPENED)
-	       && file->node != NULL);
-	file->status = FD_OPENED;
-	fopen_count_inc(file);
-}
-
-void filemap_close(struct file *file)
-{
-	assert(file->status == FD_OPENED);
-	assert(fopen_count(file) > 0);
-	file->status = FD_CLOSED;
-	if (fopen_count_dec(file) == 0) {
-		filemap_free(file);
-	}
-}
-
-void filemap_dup(struct file *to, struct file *from)
-{
-	assert(to->status == FD_INIT && from->status == FD_OPENED);
-	to->pos = from->pos;
-	to->readable = from->readable;
-	to->writable = from->writable;
-	struct inode *node = from->node;
-	vop_ref_inc(node), vop_open_inc(node);
-	to->node = node;
-	filemap_open(to);
-}
-
-void filemap_dup_close(struct file *to, struct file *from)
-{
-	assert(to->status == FD_CLOSED && from->status == FD_CLOSED);
-	to->pos = from->pos;
-	to->readable = from->readable;
-	to->writable = from->writable;
-	struct inode *node = from->node;
-	vop_ref_inc(node), vop_open_inc(node);
-	to->node = node;
+  file->readable = 0;
+  file->writable = 0;
+  file->pos = 0;
+  file->io_flags = 0;
+  file->node = NULL;
+  atomic_set(&file->open_count, 0);
+  return 0;
 }
 
 inline int fd2file(int fd, struct file **file_store)
 {
-	if (testfd(fd)) {
+  struct file_desc_table *desc_table = fs_get_desc_table(current->fs_struct);
+  struct file *file = file_desc_table_get_file(desc_table, fd);
+  *file_store = file;
+  if(file == NULL) {
+    return -E_BADF;
+  }
+  else {
+    return 0;
+  }
+  //TODO: delete the following codes.
+	/*if (testfd(fd)) {
 		struct file *file = get_filemap() + fd;
 		if (file->status == FD_OPENED && file->fd == fd) {
 			*file_store = file;
 			return 0;
 		}
 	}
-	return -E_INVAL;
+	return -E_BADF;*/
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
-struct file*
-fd2file_onfs(int fd, struct fs_struct *fs_struct) {
+struct file* fd2file_onfs(int fd, struct fs_struct *fs_struct)
+{
+  struct file_desc_table *desc_table = fs_get_desc_table(fs_struct);
 	if(testfd(fd)) {
 		assert(fs_struct != NULL && fs_count(fs_struct) > 0);
-		struct file *file = fs_struct->filemap + fd;
-		if((file->status == FD_OPENED || file->status == FD_CLOSED) && file->fd == fd) {
+		struct file *file = file_desc_table_get_file(desc_table, fd);
+    return file;
+    /*if((file->status == FD_OPENED || file->status == FD_CLOSED) && file->fd == fd) {
 			return file;
-		}
+		}*/
 	} else {
-		panic("testfd() failed");
+		panic("testfd() failed %d", fd);
 	}
 	return NULL;
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 bool file_testfd(int fd, bool readable, bool writable)
 {
@@ -186,45 +110,90 @@ int file_open(char *path, uint32_t open_flags)
 	default:
 		return -E_INVAL;
 	}
+  //TODO: Implement other open flags.
 
-	int ret;
-	struct file *file;
-	if ((ret = filemap_alloc(NO_FD, &file)) != 0) {
-		return ret;
-	}
+  //Try to allocate a new kernel struct file object.
+	struct file *file = kernel_file_pool_allocate();
+  file_init(file);
+  if(file == NULL) {
+    return -E_NO_MEM;
+  }
+  file->readable = readable;
+  file->writable = writable;
 
+  //Allocate a new file descriptor
+  struct file_desc_table *desc_table = fs_get_desc_table(current->fs_struct);
+  int fd = file_desc_table_get_unused(desc_table);
+  if(fd < 0) {
+    return -E_MFILE;
+  }
+
+  int ret;
+  //Allocate a new inode for the kernel file
 	struct inode *node;
-	if ((ret = vfs_open(path, open_flags, &node)) != 0) {
-		filemap_free(file);
+  ret = vfs_open(path, open_flags, &node);
+	if (ret != 0) {
+		kernel_file_pool_free(file);
 		return ret;
 	}
 
+  //Initialize file state
 	file->pos = 0;
 	if (open_flags & O_APPEND) {
 		struct stat __stat, *stat = &__stat;
 		if ((ret = vop_fstat(node, stat)) != 0) {
 			vfs_close(node);
-			filemap_free(file);
+			kernel_file_pool_free(file);
 			return ret;
 		}
 		file->pos = stat->st_size;
 	}
 
+  //Associate the file descriptor with kernel file object
+  file_desc_table_associate(desc_table, fd, file);
+
 	file->node = node;
-	file->readable = readable;
-	file->writable = writable;
-	filemap_open(file);
-	return file->fd;
+  file->io_flags = 0;
+	return fd;
 }
 
+int file_stat(const char *path, struct stat *stat)
+{
+	int ret;
+	struct inode *node;
+	if ((ret = vfs_lookup(path, &node, true)) != 0) {
+		return ret;
+	}
+	ret = vop_fstat(node, stat);
+	vop_ref_dec(node);
+	return ret;
+}
+
+int file_lstat(const char *path, struct stat *stat)
+{
+	int ret;
+	struct inode *node;
+	if ((ret = vfs_lookup(path, &node, false)) != 0) {
+		return ret;
+	}
+	ret = vop_fstat(node, stat);
+	vop_ref_dec(node);
+	return ret;
+}
+
+//TODO: Rewrite this function.
 int file_close(int fd)
 {
+  struct file_desc_table *desc_table = fs_get_desc_table(current->fs_struct);
+  if(file_desc_table_get_file(desc_table, fd) == NULL) {
+    return -E_BADF;
+  }
 	int ret;
 	struct file *file;
 	if ((ret = fd2file(fd, &file)) != 0) {
 		return ret;
 	}
-	filemap_close(file);
+  file_desc_table_dissociate(desc_table, fd);
 	return 0;
 }
 
@@ -245,12 +214,10 @@ int file_read(int fd, void *base, size_t len, size_t * copied_store)
 	filemap_acquire(file);
 
 	struct iobuf __iob, *iob = iobuf_init(&__iob, base, len, file->pos);
-	ret = vop_read(file->node, iob);
+	ret = vop_read(file->node, iob, file->io_flags);
 
 	size_t copied = iobuf_used(iob);
-	if (file->status == FD_OPENED) {
-		file->pos += copied;
-	}
+	file->pos += copied;
 	*copied_store = copied;
 	filemap_release(file);
 	return ret;
@@ -270,12 +237,10 @@ int file_write(int fd, void *base, size_t len, size_t * copied_store)
 	filemap_acquire(file);
 
 	struct iobuf __iob, *iob = iobuf_init(&__iob, base, len, file->pos);
-	ret = vop_write(file->node, iob);
+	ret = vop_write(file->node, iob, file->io_flags);
 
 	size_t copied = iobuf_used(iob);
-	if (file->status == FD_OPENED) {
-		file->pos += copied;
-	}
+	file->pos += copied;
 	*copied_store = copied;
 	filemap_release(file);
 	return ret;
@@ -385,68 +350,93 @@ int file_getdirentry64(int fd, struct dirent64 *direntp)
 int file_dup(int fd1, int fd2)
 {
 	int ret;
-	struct file *file1, *file2;
+	struct file *file;
 
-  //If fd1 is invalid, return.
-	if ((ret = fd2file(fd1, &file1)) != 0) {
+  //If fd1 is invalid, return -E_BADF.
+	if ((ret = fd2file(fd1, &file)) != 0) {
 		return ret;
 	}
+
+  //fd1 and fd2 cannot be the same
+  if (fd1 == fd2) {
+    return -E_INVAL;
+  }
+
+  struct file_desc_table *desc_table = fs_get_desc_table(current->fs_struct);
 
   //If fd2 is an opened file, close it first. This is what dup2 on linux does.
-  if (testfd(fd2)) {
-    file2 = &get_filemap()[fd2];
-    if (file2->status != FD_NONE) {
-      file_close(fd2);
-    }
+  struct file *file2 = file_desc_table_get_file(desc_table, fd2);
+  if(file2 != NULL) {
+		kprintf("file_desc_table_get_unused called by dup2!\n");
+    file_desc_table_dissociate(desc_table, fd2);
   }
-  file2 = NULL;
+
+  //If fd2 is NO_FD, a new fd will be assigned.
+  if (fd2 == NO_FD) {
+    fd2 = file_desc_table_get_unused(desc_table);
+  }
 
   //Now let fd2 become a duplication for fd1.
-	if ((ret = filemap_alloc(fd2, &file2)) != 0) {
-		return ret;
-	}
-	filemap_dup(file2, file1);
-	return file2->fd;
+  file_desc_table_associate(desc_table, fd2, file);
+
+  //fd2 is returned.
+	return fd2;
 }
 
 int file_pipe(int fd[])
 {
-	int ret;
+  int ret;
+  struct file_desc_table *desc_table = fs_get_desc_table(current->fs_struct);
 	struct file *file[2] = { NULL, NULL };
-	if ((ret = filemap_alloc(NO_FD, &file[0])) != 0) {
-		goto failed_cleanup;
-	}
-	if ((ret = filemap_alloc(NO_FD, &file[1])) != 0) {
-		goto failed_cleanup;
-	}
+  file[0] = kernel_file_pool_allocate();
+  file[1] = kernel_file_pool_allocate();
+  if(file[0] == NULL || file[1] == NULL) {
+    ret = -E_NFILE;
+    goto failed_cleanup;
+  }
+  file_init(file[0]);
+  file_init(file[1]);
+  if ((ret = pipe_open(&(file[0]->node), &(file[1]->node))) != 0) {
+    ret = -E_INVAL;
+    goto failed_cleanup;
+  }
+  file[0]->pos = 0;
+  file[0]->readable = 1;
+  file[0]->writable = 0;
 
-	if ((ret = pipe_open(&(file[0]->node), &(file[1]->node))) != 0) {
-		goto failed_cleanup;
-	}
-	file[0]->pos = 0;
-	file[0]->readable = 1, file[0]->writable = 0;
-	filemap_open(file[0]);
+  file[1]->pos = 0;
+  file[1]->readable = 0;
+  file[1]->writable = 1;
 
-	file[1]->pos = 0;
-	file[1]->readable = 0, file[1]->writable = 1;
-	filemap_open(file[1]);
-
-	fd[0] = file[0]->fd, fd[1] = file[1]->fd;
+  fd[0] = file_desc_table_get_unused(desc_table);
+  if(fd[0] == -1) {
+    ret = -E_MFILE;
+    goto failed_cleanup;
+  }
+  file_desc_table_associate(desc_table, fd[0], file[0]);
+  fd[1] = file_desc_table_get_unused(desc_table);
+  if(fd[1] == -1) {
+    file_desc_table_dissociate(desc_table, fd[0]);
+    ret = -E_MFILE;
+    goto failed_cleanup;
+  }
+  file_desc_table_associate(desc_table, fd[1], file[1]);
 	return 0;
 
 failed_cleanup:
 	if (file[0] != NULL) {
-		filemap_free(file[0]);
+		kernel_file_pool_free(file[0]);
 	}
 	if (file[1] != NULL) {
-		filemap_free(file[1]);
+		kernel_file_pool_free(file[1]);
 	}
 	return ret;
 }
 
 int file_mkfifo(const char *__name, uint32_t open_flags)
 {
-	bool readonly = 0;
+  panic("TODO: mkfifo not implemented.");
+	/*bool readonly = 0;
 	switch (open_flags & O_ACCMODE) {
 	case O_RDONLY:
 		readonly = 1;
@@ -483,7 +473,7 @@ failed_cleanup_name:
 	kfree(name);
 failed_cleanup_file:
 	filemap_free(file);
-	return ret;
+	return ret;*/
 }
 
 /* linux devfile adaptor */
@@ -592,8 +582,6 @@ void *linux_devfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 	return r;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
-
 int linux_access(char *path, int amode)
 {
 	/* do nothing but return 0 */
@@ -633,7 +621,6 @@ void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 		goto out_unlock;
 	}
 	uintptr_t end = start + len;
-  //kprintf("start = %llx, end = %llx, len = %llx", start, end, len);
 	struct vma_struct *vma = find_vma(mm, start);
 	if (vma == NULL || vma->vm_start >= end) {
 		vma = NULL;
@@ -658,13 +645,18 @@ void *linux_regfile_mmap2(void *addr, size_t len, int prot, int flags, int fd,
 		goto out_unlock;
 	}
 	if (!(flags & MAP_ANONYMOUS)) {
-    vma_mapfile(vma, fd, off, NULL);
-		//vma_mapfile(vma, fd, off << 12, NULL);
+    struct file_desc_table *desc_table = fs_get_desc_table(current->fs_struct);
+    struct file* file = file_desc_table_get_file(desc_table, fd);
+#ifdef ARCH_ARM
+		vma_mapfile(vma, file, off << 12, current->fs_struct);
+#else
+    vma_mapfile(vma, file, off, current->fs_struct);
+#endif
 	}
 	subret = 0;
 out_unlock:
 	unlock_mm(mm);
-	return subret == 0 ? start : -1;
+	return subret == 0 ? (void*)start : (void*)-1;
 }
 
 int filestruct_setpos(struct file *file, off_t pos)
@@ -681,10 +673,6 @@ int filestruct_read(struct file *file, void *base, size_t len)
 	struct iobuf __iob, *iob = iobuf_init(&__iob, base, len, file->pos);
 	vop_read(file->node, iob);
 	size_t copied = iobuf_used(iob);
-	if (file->status == FD_OPENED) {
-		file->pos += copied;
-	}
+	file->pos += copied;
 	return copied;
 }
-
-#endif //UCONFIG_BIONIC_LIBC

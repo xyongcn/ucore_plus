@@ -36,4 +36,4 @@ HAVE_FATFS=y
 #
 # Bionic libc porting related code is currently not supported in i386.
 #
-BIONIC_LIBC=n
+BIONIC_LIBC=y

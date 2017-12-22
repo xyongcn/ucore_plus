@@ -5,6 +5,7 @@
 #include <mmu.h>
 #include <sem.h>
 #include <atomic.h>
+#include <file_desc_table.h>
 
 #define SECTSIZE            512
 #define PAGE_NSECT          (PGSIZE / SECTSIZE)
@@ -18,10 +19,11 @@ void fs_cleanup(void);
 
 struct inode;
 struct file;
+struct file_desc_table* file_desc_table;
 
 struct fs_struct {
 	struct inode *pwd;
-	struct file *filemap;
+  struct file_desc_table desc_table;
 	atomic_t fs_count;
 	semaphore_t fs_sem;
 };
@@ -33,6 +35,7 @@ void lock_fs(struct fs_struct *fs_struct);
 void unlock_fs(struct fs_struct *fs_struct);
 
 struct fs_struct *fs_create(void);
+struct file_desc_table* fs_get_desc_table(struct fs_struct *fs_struct);
 void fs_destroy(struct fs_struct *fs_struct);
 void fs_closeall(struct fs_struct *fs_struct);
 int dup_fs(struct fs_struct *to, struct fs_struct *from);

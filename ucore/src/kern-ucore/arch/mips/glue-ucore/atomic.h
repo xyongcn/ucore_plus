@@ -158,6 +158,17 @@ static __always_inline int atomic_add_return(atomic_t * v, int i)
 
 }
 
+static inline int atomic_add_return_orig(atomic_t * v, int i)
+{
+  bool intr_flag;
+  int ret;
+  local_intr_save(intr_flag);
+  ret = v->counter;
+  v->counter += i;
+  local_intr_restore(intr_flag);
+  return ret;
+}
+
 /* *
  * atomic_sub_return - subtract integer and return
  * @v:  pointer of type atomic_t

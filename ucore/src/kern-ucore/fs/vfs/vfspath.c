@@ -7,10 +7,11 @@
 #include <proc.h>
 #include <error.h>
 #include <assert.h>
+#include <slab.h>
 
 #include "vfsmount.h"
 
-void vfs_simplify_path(char* path) {
+static void vfs_simplify_path(char* path) {
   int write_pos = 0;
   int last_slash_pos = 0;
   int current_pos = 1;
@@ -51,24 +52,27 @@ void vfs_simplify_path(char* path) {
   else path[1] = '\0';
 }
 
-void vfs_expand_path(const char* path, char* full_path_buffer, int max_length)
+void vfs_fullpath(char *path, int size)
 {
-  //TODO: Security issue: this may lead to buffer overflow.
-  struct inode *node;
   //Firstly, get current working directory inode
-  full_path_buffer[0] = '\0';
-  if (vfs_get_curdir(&node) == 0) {
-    if(path[0] != '/') {
+  struct inode *node;
+  if(path[0] != '/') {
+    if (vfs_get_curdir(&node) == 0) {
+      char *cwd_buffer = kmalloc(4096);
+      cwd_buffer[0] = '\0';
       struct iobuf full_path_iob;
-      iobuf_init(&full_path_iob, full_path_buffer, max_length, 0);
+      iobuf_init(&full_path_iob, cwd_buffer, size, 0);
       vfs_getcwd(&full_path_iob);
-      strcat(full_path_buffer, "/");
-      strcat(full_path_buffer, path);
+      strcat(cwd_buffer, "/");
+      strcat(cwd_buffer, path);
+      strcpy(path, cwd_buffer);
+      kfree(cwd_buffer);
     }
     else {
-      strcpy(full_path_buffer, path);
+      panic("Failed to get current directory! %s", path);
     }
   }
+  vfs_simplify_path(path);
 }
 
 static struct inode *get_cwd_nolock(void)
@@ -144,7 +148,7 @@ int vfs_path_init_cwd(char* mountpoint)
 {
   //First set root to "/", after this, vfs_chdir can be used.
   assert(mountpoint[0] == '/');
-  vfs_simplify_path(mountpoint);
+  vfs_fullpath(mountpoint, 4096);
   struct mount_record* root_mount_record;
   struct inode* root_inode;
   vfs_mount_find_record_by_mountpoint(mountpoint, &root_mount_record);
@@ -165,7 +169,7 @@ int vfs_chdir(char *path)
   int ret;
   struct inode *node;
   //Try to lookup from current inode
-	if ((ret = vfs_lookup(path, &node)) == 0) {
+	if ((ret = vfs_lookup(path, &node, true)) == 0) {
     //If found, change directory.
 		ret = vfs_set_curdir(node);
 		vop_ref_dec(node);

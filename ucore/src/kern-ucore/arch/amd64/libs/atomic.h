@@ -216,6 +216,9 @@ static inline int atomic_sub_return(atomic_t * v, int i)
 	return atomic_add_return(v, -i);
 }
 
+int cmpxchg(volatile int *value, int old, int new);
+int xchg(volatile int *value, int new);
+
 static inline int atomic_cmpxchg(atomic_t *v, int old, int new)
 {
 	return cmpxchg(&v->counter, old, new);

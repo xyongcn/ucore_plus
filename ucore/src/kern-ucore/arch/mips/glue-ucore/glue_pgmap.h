@@ -2,6 +2,7 @@
 #define __GLUE_PGMAP_H__
 
 #include <mmu.h>
+#include <memlayout.h>
 
 typedef pte_t pte_perm_t;
 

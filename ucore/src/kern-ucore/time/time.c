@@ -5,9 +5,9 @@
  * Currently only amd64 architecture is supported.
  */
 
-#if ARCH_AMD64
+#if ARCH_AMD64 || ARCH_X86
 
-#include <driver/cmos_rtc.h>
+#include <cmos_rtc.h>
 #include <assert.h>
 #include "time.h"
 
@@ -52,6 +52,15 @@ time_t time_get_current() {
   ret += rtc_data.second;
   //panic("%d", ret);
   return ret;
+}
+
+#else
+
+#include <clock.h>
+#include "time.h"
+
+time_t time_get_current() {
+  return ticks;
 }
 
 #endif // ARCH_AMD64

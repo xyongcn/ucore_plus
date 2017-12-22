@@ -1305,6 +1305,14 @@ static inline void tlb_write_indexed(void)
 		".set reorder");
 }
 
+static inline void tlb_read_indexed(void)
+{
+	__asm__ __volatile__(
+		".set noreorder\n\t"
+		"tlbr\n\t"
+		".set reorder");
+}
+
 static inline void tlb_write_random(void)
 {
 	__asm__ __volatile__(

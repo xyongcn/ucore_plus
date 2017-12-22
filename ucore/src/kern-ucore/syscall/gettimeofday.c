@@ -1,6 +1,7 @@
 #include "linux_misc_struct.h"
 #include <vmm.h>
 #include <proc.h>
+#include <time/time.h>
 #include <string.h>
 
 extern int ticks;
@@ -9,8 +10,8 @@ int ucore_gettimeofday(struct linux_timeval __user * tv,
 {
 	struct mm_struct *mm = current->mm;
 	struct linux_timeval ktv;
-	ktv.tv_sec = ticks / 100;
-	ktv.tv_usec = (ticks % 100) * 10000;
+	ktv.tv_sec = time_get_current();
+	ktv.tv_usec = ktv.tv_sec * 1000 + ticks % 1000;
 	lock_mm(mm);
 	if (!copy_to_user(mm, tv, &ktv, sizeof(struct linux_timeval))) {
 		unlock_mm(mm);

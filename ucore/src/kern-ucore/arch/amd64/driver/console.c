@@ -54,7 +54,7 @@ static void delay(void)
 
 static uint16_t *crt_buf;
 static uint16_t crt_pos;
-static uint16_t addr_6845;
+uint16_t addr_6845;
 
 /* TEXT-mode CGA/VGA display output */
 
@@ -77,6 +77,7 @@ static void cga_init(void)
 	pos = inb(addr_6845 + 1) << 8;
 	outb(addr_6845, 15);
 	pos |= inb(addr_6845 + 1);
+  vga_text_set_cursor_position(pos % CRT_COLS, pos / CRT_COLS);
 
 	crt_buf = (uint16_t *) cp;
 	crt_pos = pos;
@@ -144,6 +145,8 @@ static inline void lpt_putc(int c){}
 /* cga_putc - print character to console */
 static void cga_putc(int c)
 {
+  uint32_t cursor_x, cursor_y;
+  vga_text_get_cursor_position(&cursor_x, &cursor_y);
 	// set black on white
 	if (!(c & ~0xFF)) {
 		c |= 0x0700;
@@ -154,20 +157,34 @@ static void cga_putc(int c)
 		if (crt_pos > 0) {
 			crt_pos--;
 			crt_buf[crt_pos] = (c & ~0xff) | ' ';
+      if(cursor_x > 0) {
+        cursor_x--;
+      }
+      else if(cursor_y > 0){
+        cursor_x = vga_text_get_width() - 1;
+        cursor_y--;
+      }
 		}
 		break;
 	case '\n':
 		crt_pos += CRT_COLS;
+    cursor_y++;
 	case '\r':
 		crt_pos -= (crt_pos % CRT_COLS);
+    cursor_x = 0;
 		break;
 	default:
 		crt_buf[crt_pos++] = c;	// write the character
+    cursor_x++;
+    if(cursor_x == CRT_COLS) {
+      cursor_x = 0;
+      cursor_y++;
+    }
 		break;
 	}
 
 	// What is the purpose of this?
-	if (crt_pos >= CRT_SIZE) {
+	if (crt_pos >= CRT_SIZE || cursor_y >= CRT_ROWS) {
 		int i;
 		memmove(crt_buf, crt_buf + CRT_COLS,
 			(CRT_SIZE - CRT_COLS) * sizeof(uint16_t));
@@ -175,12 +192,9 @@ static void cga_putc(int c)
 			crt_buf[i] = 0x0700 | ' ';
 		}
 		crt_pos -= CRT_COLS;
+    cursor_y--;
 	}
-	// move that little blinky thing
-	outb(addr_6845, 14);
-	outb(addr_6845 + 1, crt_pos >> 8);
-	outb(addr_6845, 15);
-	outb(addr_6845 + 1, crt_pos);
+  vga_text_set_cursor_position(cursor_x, cursor_y);
 }
 
 static void serial_putc_sub(int c)

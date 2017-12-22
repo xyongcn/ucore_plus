@@ -39,8 +39,15 @@ etext = .; _etext = .;
   *(.dynamic)
   *(.got2)
   *(.sdata) *(.sdata.*) *(.lit8) *(.lit4)
+  __percpu_start = .;
+  *(.percpu)
+  __percpu_end = .;
+  __DWARF_DEBUG_LINE_BEGIN__ = .;
+  __DWARF_DEBUG_LINE_END__ = .;
     . = ALIGN(16);
 }
+initrd_begin = .;
+initrd_end = .;
 . = ALIGN(16);
 edata = .; _edata = .;
 wrs_kernel_data_end = .; _wrs_kernel_data_end = .;
@@ -51,14 +58,15 @@ wrs_kernel_data_end = .; _wrs_kernel_data_end = .;
   . = ALIGN(16);
 }
 . = ALIGN(16);
+
 end = .; _end = .;
 wrs_kernel_bss_end = .; _wrs_kernel_bss_end = .;
 
 /DISCARD/ :
 {
-  /*
-  *(.stub)
-  *(.debug*) */
+  *(.symtab)
+  *(.strtab)
+  *(.debug*)
   *(.note)    /* seen on Pentium ELF */
   *(.comment)    /* seen on PPC & SH ELF */
   *(.reginfo)

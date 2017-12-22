@@ -14,7 +14,7 @@ static inline struct cpu* mycpu(void)
 
 }
 
-static inline mp_lcr3(uintptr_t cr3)
+static inline void mp_lcr3(uintptr_t cr3)
 {
 	mycpu()->arch_data.tlb_cr3 = cr3;
 	lcr3(cr3);

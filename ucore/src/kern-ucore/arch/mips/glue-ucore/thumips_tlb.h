@@ -3,7 +3,7 @@
  *
  *       Filename:  thumips_tlb.h
  *
- *    Description:  
+ *    Description:
  *
  *        Version:  1.0
  *        Created:  07/06/2012 10:20:30 AM
@@ -70,8 +70,12 @@ static inline void tlb_refill(uint32_t badaddr, pte_t * pte)
 		return;
 	if (badaddr & (1 << 12))
 		pte--;
-	tlb_replace_random(0, badaddr & THUMIPS_TLB_ENTRYH_VPN2_MASK,
-			   pte2tlblow(*pte), pte2tlblow(*(pte + 1)));
+  //Considering that many thinpad based processor have no or wrong tlbwr
+  //implementation, this might be the best solution.
+  static int index=0;
+  index = index * 1103515245 + 12345;
+  write_one_tlb(index & 0x1F,0, badaddr & THUMIPS_TLB_ENTRYH_VPN2_MASK,
+    pte2tlblow(*pte), pte2tlblow(*(pte+1)));
 }
 
 void tlb_invalidate_all();

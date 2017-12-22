@@ -1,6 +1,6 @@
-/* 
+/*
  * Chen Yuheng 2012/3
- * 
+ *
  */
 
 #include <proc.h>
@@ -30,20 +30,20 @@ manage all these details efficiently. In ucore, a thread is just a special kind 
 process state       :     meaning               -- reason
     PROC_UNINIT     :   uninitialized           -- alloc_proc
     PROC_SLEEPING   :   sleeping                -- try_free_pages, do_wait, do_sleep
-    PROC_RUNNABLE   :   runnable(maybe running) -- proc_init, wakeup_proc, 
+    PROC_RUNNABLE   :   runnable(maybe running) -- proc_init, wakeup_proc,
     PROC_ZOMBIE     :   almost dead             -- do_exit
 
 -----------------------------
 process state changing:
-                                            
+
   alloc_proc                                 RUNNING
       +                                   +--<----<--+
       +                                   + proc_run +
-      V                                   +-->---->--+ 
+      V                                   +-->---->--+
 PROC_UNINIT -- proc_init/wakeup_proc --> PROC_RUNNABLE -- try_free_pages/do_wait/do_sleep --> PROC_SLEEPING --
                                            A      +                                                           +
                                            |      +--- do_exit --> PROC_ZOMBIE                                +
-                                           +                                                                  + 
+                                           +                                                                  +
                                            -----------------------wakeup_proc----------------------------------
 -----------------------------
 process relations
@@ -59,9 +59,9 @@ SYS_wait        : wait process                            -->do_wait
 SYS_exec        : after fork, process execute a program   -->load a program and refresh the mm
 SYS_clone       : create child thread                     -->do_fork-->wakeup_proc
 SYS_yield       : process flag itself need resecheduling, -- proc->need_sched=1, then scheduler will rescheule this process
-SYS_sleep       : process sleep                           -->do_sleep 
+SYS_sleep       : process sleep                           -->do_sleep
 SYS_kill        : kill process                            -->do_kill-->proc->flags |= PF_EXITING
-                                                                 -->wakeup_proc-->do_wait-->do_exit   
+                                                                 -->wakeup_proc-->do_wait-->do_exit
 SYS_getpid      : get the process's pid
 
 */
@@ -149,6 +149,11 @@ int ucore_kernel_thread(int (*fn) (void *), void *arg, uint32_t clone_flags)
 	return do_fork(clone_flags | CLONE_VM, 0, &tf_struct);
 }
 
+int kernel_thread(int (*fn) (void *), void *arg, uint32_t clone_flags)
+{
+	ucore_kernel_thread(fn, arg, clone_flags);
+}
+
 void de_thread_arch_hook(struct proc_struct *proc)
 {
 }
@@ -196,14 +201,14 @@ copy_thread(uint32_t clone_flags, struct proc_struct *proc,
 	return 0;
 }
 
-/*  
+/*
  	At this entry point, most registers' values are unspecified, except:
 
     a1		Contains a function pointer to be registered with `atexit'.
 		This is how the dynamic linker arranges to have DT_FINI
 		functions called for shared libraries that have been loaded
 		before this code runs.
- 
+
     sp		The stack contains the arguments and environment:
 		0(sp)			argc
 		4(sp)			argv[0]
@@ -248,7 +253,7 @@ init_new_context(struct proc_struct *proc, struct elfhdr *elf, int argc,
 	tf->tf_esp = stacktop;
 	tf->tf_epc = elf->e_entry;
 	tf->tf_sr = ARM_SR_F | ARM_SR_MODE_USR;	//user mode, interrput
-	/* r3 = argc, r1 = argv 
+	/* r3 = argc, r1 = argv
 	 * initcode in user mode should copy r3 to r0
 	 */
 	/* return 0 for child */
@@ -257,12 +262,11 @@ init_new_context(struct proc_struct *proc, struct elfhdr *elf, int argc,
 	return 0;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 int
 init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int argc,
 			 char **kargv, int envc, char **kenvp,
 			 uint32_t is_dynamic, uint32_t real_entry,
-			 uint32_t load_address, uint32_t linker_base)
+			 uint32_t load_address, uint32_t linker_base, void* program_header_address)
 {
 	uintptr_t stacktop = USTACKTOP - (argc + envc) * PGSIZE;
 	uintptr_t argvbase = stacktop;
@@ -297,7 +301,7 @@ init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int argc,
 		aux[0] = ELF_AT_BASE;
 		aux[1] = linker_base;
 		aux[2] = ELF_AT_PHDR;
-		aux[3] = load_address + elf->e_phoff;
+		aux[3] = program_header_address; //load_address + elf->e_phoff;
 		aux[4] = ELF_AT_PHNUM;
 		aux[5] = elf->e_phnum;
 		aux[6] = ELF_AT_ENTRY;
@@ -310,9 +314,14 @@ init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int argc,
 	struct trapframe *tf = proc->tf;
 	memset(tf, 0, sizeof(struct trapframe));
 	tf->tf_esp = stacktop;
-	tf->tf_epc = real_entry;	//elf->e_entry;
+	if(is_dynamic) {
+		tf->tf_epc = real_entry;
+	}
+	else {
+		tf->tf_epc = load_address;
+	}
 	tf->tf_sr = ARM_SR_F | ARM_SR_MODE_USR;	//user mode, interrput
-	/* r3 = argc, r1 = argv 
+	/* r3 = argc, r1 = argv
 	 * initcode in user mode should copy r3 to r0
 	 */
 	/* return 0 for child */
@@ -320,8 +329,6 @@ init_new_context_dynamic(struct proc_struct *proc, struct elfhdr *elf, int argc,
 
 	return 0;
 }
-
-#endif //UCONFIG_BIONIC_LIBC
 
 // kernel_execve - do SYS_exec syscall to exec a user program called by user_main kernel_thread
 int kernel_execve(const char *name, const char **argv, const char **kenvp)

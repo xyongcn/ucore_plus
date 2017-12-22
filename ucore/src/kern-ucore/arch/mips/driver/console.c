@@ -42,7 +42,7 @@ static void serial_init(void)
 	if (serial_exists)
 		return;
 	serial_exists = 1;
-#ifdef MACH_QEMU
+#ifndef UCONFIG_MIPS_USE_THINPAD_SERIAL_DRIVER
 	// Turn off the FIFO
 	outb(COM1 + COM_FCR, 0);
 	// Set speed; requires DLAB latch
@@ -57,7 +57,7 @@ static void serial_init(void)
 	outb(COM1 + COM_MCR, 0);
 	// Enable rcv interrupts
 	outb(COM1 + COM_IER, COM_IER_RDI);
-#elif defined MACH_FPGA
+#else
 	//TODO
 #endif
 
@@ -66,9 +66,9 @@ static void serial_init(void)
 
 static void serial_putc_sub(int c)
 {
-#ifdef MACH_QEMU
+#ifndef UCONFIG_MIPS_USE_THINPAD_SERIAL_DRIVER
 	outb(COM1 + COM_TX, c);
-#elif defined MACH_FPGA
+#else
 	//TODO
 	while ((inw(COM1 + 0x04) & 0x01) == 0) ;
 	outw(COM1 + 0x00, c & 0xFF);
@@ -76,7 +76,7 @@ static void serial_putc_sub(int c)
 }
 
 /* serial_putc - print character to serial port */
-static void serial_putc(int c)
+void serial_putc(int c)
 {
 	if (c == '\b') {
 		serial_putc_sub('\b');
@@ -91,12 +91,12 @@ static void serial_putc(int c)
 static int serial_proc_data(void)
 {
 	int c;
-#ifdef MACH_QEMU
+#ifndef UCONFIG_MIPS_USE_THINPAD_SERIAL_DRIVER
 	if (!(inb(COM1 + COM_LSR) & COM_LSR_DATA)) {
 		return -1;
 	}
 	c = inb(COM1 + COM_RX);
-#elif defined MACH_FPGA
+#else
 	//TODO
 	if ((inw(COM1 + 0x04) & 0x02) == 0)
 		return -1;
@@ -116,6 +116,10 @@ void serial_int_handler(void *opaque)
 	//int c = serial_proc_data();
 	int c = cons_getc(c);
 	extern void dev_stdin_write(char c);
+  if(c == '\r') {
+    dev_stdin_write('\n');
+  }
+  else
 	dev_stdin_write(c);
 }
 

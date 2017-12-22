@@ -152,6 +152,7 @@ int kern_init(void)
 	cons_init();		// init the console
 
 	sched_init();		// init scheduler
+	network_init();
 	_PROBE_();
 	proc_init();		// init process table
 	_PROBE_();
