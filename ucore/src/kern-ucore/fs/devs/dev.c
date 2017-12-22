@@ -176,7 +176,7 @@ static const struct inode_ops dev_node_ops = {
 void dev_init(void)
 {
 	init_device(null);
-	#if defined(ARCH_ARM) || defined(ARCH_MIPS)
+	#if defined(ARCH_ARM)
 	init_device(uio);
 	#endif
 	#if defined(UCONFIG_ARM_BOARD_ZEDBOARD)

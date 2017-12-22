@@ -5,7 +5,7 @@
 
 //TODO: Follow the implementation of linux kernel.
 
-#if defined(ARCH_ARM) || defined(ARCH_MIPS)
+#if defined(ARCH_ARM)
 
 #include <types.h>
 #include <dev.h>
