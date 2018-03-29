@@ -1991,7 +1991,7 @@ void proc_init(void)
 	int cpuid = myid();
 	struct proc_struct *idle;
 
-	spinlock_init(&proc_lock);
+		spinlock_init(&proc_lock);
 	list_init(&proc_list);
 	list_init(&proc_mm_list);
 	for (i = 0; i < HASH_LIST_SIZE; i++) {

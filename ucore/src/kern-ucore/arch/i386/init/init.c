@@ -17,6 +17,7 @@
 #include <kio.h>
 #include <mp.h>
 #include <mod.h>
+#include <slab.h>
 
 int kern_init(void) __attribute__ ((noreturn));
 
