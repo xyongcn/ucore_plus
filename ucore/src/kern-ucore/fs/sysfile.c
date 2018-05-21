@@ -6,14 +6,48 @@
 #include <vfs.h>
 #include <file.h>
 #include <iobuf.h>
-#include <sysfile.h>
+#include <linux_compat_stat.h>
 #include <stat.h>
 #include <dirent.h>
 #include <unistd.h>
 #include <error.h>
 #include <assert.h>
+#include <inode.h>
+#include <fd_set.h>
+#include <poll.h>
+#include <socket.h>
+
+#include "sysfile.h"
 
 #define IOBUF_SIZE                          4096
+
+static void ucore_stat_to_linux_stat(const struct stat *ucore_stat, struct linux_stat *linux_stat)
+{
+	linux_stat->st_ino = ucore_stat->st_ino; //TODO: Some fs have no support for this.
+	/* ucore never check access permision */
+	linux_stat->st_mode = ucore_stat->st_mode | 0777;
+	linux_stat->st_nlink = ucore_stat->st_nlinks;
+	linux_stat->st_blksize = 512;
+	linux_stat->st_blocks = ucore_stat->st_blocks;
+	linux_stat->st_size = ucore_stat->st_size;
+	linux_stat->st_uid = 0;
+	linux_stat->st_gid = 0;
+}
+
+#ifndef __UCORE_64__
+static void ucore_stat_to_linux_stat64(const struct stat *ucore_stat, struct linux_stat64 *linux_stat64)
+{
+	linux_stat64->st_ino = ucore_stat->st_ino; //TODO: Some fs have no support for this.
+	/* ucore never check access permision */
+	linux_stat64->st_mode = ucore_stat->st_mode | 0777;
+	linux_stat64->st_nlink = ucore_stat->st_nlinks;
+	linux_stat64->st_blksize = 512;
+	linux_stat64->st_blocks = ucore_stat->st_blocks;
+	linux_stat64->st_size = ucore_stat->st_size;
+	linux_stat64->st_uid = 0;
+	linux_stat64->st_gid = 0;
+}
+#endif
 
 static int copy_path(char **to, const char *from)
 {
@@ -174,30 +208,28 @@ out:
 	return ret;
 }
 
-int sysfile_writev(int fd, struct iovec __user * iov, int iovcnt)
+int sysfile_readv(int fd, const struct iovec __user *iov, int iovcnt)
 {
-	/* do nothing but return 0 */
-	kprintf("writev: fd=%08x iov=%08x iovcnt=%d\n", fd, iov, iovcnt);
-	struct iovec *tv;
-	int rcode = 0, count = 0, i;
-	struct mm_struct *mm = current->mm;
-	for (i = 0; i < iovcnt; ++i) {
-		char *pbase;
-		size_t plen;
-
-		copy_from_user(mm, &pbase, &(iov[i].iov_base), sizeof(char *),
-			       0);
-		copy_from_user(mm, &plen, &(iov[i].iov_len), sizeof(size_t), 0);
-
-		rcode = sysfile_write(fd, pbase, plen);
-		if (rcode < 0)
-			break;
-		count += rcode;
+  int bytes_read = 0;
+	for (int i = 0; i < iovcnt; ++i) {
+		int ret = sysfile_read(fd, iov[i].iov_base, iov[i].iov_len);
+		if (ret < 0) return ret;
+		bytes_read += ret;
+    if(ret < iov[i].iov_len) break;
 	}
-	if (count == 0)
-		return (rcode);
-	else
-		return (count);
+  return bytes_read;
+}
+
+int sysfile_writev(int fd, const struct iovec __user * iov, int iovcnt)
+{
+  int bytes_written = 0;
+	for (int i = 0; i < iovcnt; ++i) {
+		int ret = sysfile_write(fd, iov[i].iov_base, iov[i].iov_len);
+		if (ret < 0) return ret;
+		bytes_written += ret;
+    if(ret < iov[i].iov_len) break;
+	}
+  return bytes_written;
 }
 
 int sysfile_seek(int fd, off_t pos, int whence)
@@ -237,7 +269,7 @@ int sysfile_linux_fstat(int fd, struct linux_stat __user * buf)
 		return -1;
 	}
 	memset(kls, 0, sizeof(struct linux_stat));
-	kls->st_ino = 1;
+	kls->st_ino = kstat->st_ino; //TODO: Some fs have no support for this.
 	/* ucore never check access permision */
 	kls->st_mode = kstat->st_mode | 0777;
 	kls->st_nlink = kstat->st_nlinks;
@@ -257,70 +289,166 @@ int sysfile_linux_fstat(int fd, struct linux_stat __user * buf)
 	return ret;
 }
 
-int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * linux_stat_store)
+int sysfile_linux_stat(const char __user *path, struct linux_stat *__user linux_stat_store)
 {
-  struct mm_struct *mm = current->mm;
-
-  //Ensure that buf is a valid userspace address
-  if(!user_mem_check(mm, (uintptr_t)linux_stat_store, sizeof(struct linux_stat64), 1)) {
+	//Ensure that buf is a valid userspace address
+  if(!user_mem_check(current->mm, (uintptr_t)linux_stat_store, sizeof(struct linux_stat), 1)) {
     return -E_FAULT;
   }
 	struct stat ucore_stat;
+  int ret;
+	if ((ret = file_stat(path, &ucore_stat)) != 0) {
+		return ret;
+	}
+  lock_mm(current->mm);
+	ucore_stat_to_linux_stat(&ucore_stat, linux_stat_store);
+  unlock_mm(current->mm);
+	return 0;
+}
 
+int sysfile_linux_lstat(const char __user *path, struct linux_stat *__user linux_stat_store)
+{
+	//Ensure that buf is a valid userspace address
+  if(!user_mem_check(current->mm, (uintptr_t)linux_stat_store, sizeof(struct linux_stat), 1)) {
+    return -E_FAULT;
+  }
+	struct stat ucore_stat;
+  int ret;
+	if ((ret = file_lstat(path, &ucore_stat)) != 0) {
+		return ret;
+	}
+  lock_mm(current->mm);
+	ucore_stat_to_linux_stat(&ucore_stat, linux_stat_store);
+  unlock_mm(current->mm);
+	return 0;
+}
+
+#ifndef __UCORE_64__
+int sysfile_linux_fstat64(int fd, struct linux_stat64 __user * linux_stat_store)
+{
+  //Ensure that buf is a valid userspace address
+  if(!user_mem_check(current->mm, (uintptr_t)linux_stat_store, sizeof(struct linux_stat64), 1)) {
+    return -E_FAULT;
+  }
+	struct stat ucore_stat;
   int ret;
 	if ((ret = file_fstat(fd, &ucore_stat)) != 0) {
 		return ret;
 	}
-
-  lock_mm(mm);
-  memset(linux_stat_store, 0, sizeof(struct linux_stat64));
-
-  linux_stat_store->st_ino = ucore_stat.st_ino; //TODO: Some fs have no support for this.
-  /* ucore never check access permision */
-	linux_stat_store->st_mode = ucore_stat.st_mode | 0777;
-	linux_stat_store->st_nlink = ucore_stat.st_nlinks;
-	linux_stat_store->st_blksize = 512;
-	linux_stat_store->st_blocks = ucore_stat.st_blocks;
-	linux_stat_store->st_size = ucore_stat.st_size;
-  unlock_mm(mm);
-
+  lock_mm(current->mm);
+	ucore_stat_to_linux_stat64(&ucore_stat, linux_stat_store);
+  unlock_mm(current->mm);
 	return 0;
 }
+
+int sysfile_linux_stat64(const char __user *path, struct linux_stat64 *__user linux_stat_store)
+{
+	//Ensure that buf is a valid userspace address
+  if(!user_mem_check(current->mm, (uintptr_t)linux_stat_store, sizeof(struct linux_stat64), 1)) {
+    return -E_FAULT;
+  }
+	struct stat ucore_stat;
+  int ret;
+	if ((ret = file_stat(path, &ucore_stat)) != 0) {
+		return ret;
+	}
+  lock_mm(current->mm);
+	ucore_stat_to_linux_stat64(&ucore_stat, linux_stat_store);
+  unlock_mm(current->mm);
+	return 0;
+}
+
+int sysfile_linux_lstat64(const char __user *path, struct linux_stat64 *__user linux_stat_store)
+{
+	//Ensure that buf is a valid userspace address
+  if(!user_mem_check(current->mm, (uintptr_t)linux_stat_store, sizeof(struct linux_stat64), 1)) {
+    return -E_FAULT;
+  }
+	struct stat ucore_stat;
+  int ret;
+	if ((ret = file_lstat(path, &ucore_stat)) != 0) {
+		return ret;
+	}
+  lock_mm(current->mm);
+	ucore_stat_to_linux_stat64(&ucore_stat, linux_stat_store);
+  unlock_mm(current->mm);
+	return 0;
+}
+#endif /* __UCORE_64__ */
+
+size_t sysfile_readlink(const char __user *pathname, char __user *base, size_t len)
+{
+	if(!user_mem_check(current->mm, (uintptr_t)base, len, 1)) {
+		return -E_FAULT;
+	}
+	int ret;
+	struct inode *node;
+	if ((ret = vfs_lookup(pathname, &node, false)) != 0) {
+		return ret;
+	}
+	int node_type;
+	vop_gettype(node, &node_type);
+	if(node_type != S_IFLNK) {
+		vop_ref_dec(node);
+		return -E_INVAL;
+	}
+	char *buffer = kmalloc(4096);
+	int length = 0;
+	lock_mm(current->mm);
+	ret = vop_readlink(node, buffer);
+	unlock_mm(current->mm);
+	vop_ref_dec(node);
+	if(ret != 0) {
+		kfree(buffer);
+		return ret;
+	}
+	length = strlen(buffer);
+	length = length < len ? length : len;
+	memcpy(base, buffer, len);
+	kfree(buffer);
+	return length;
+}
+
+#define F_DUPFD		0	/* dup */
+#define F_GETFD		1	/* get close_on_exec */
+#define F_SETFD		2	/* set/clear close_on_exec */
+#define F_GETFL		3	/* get file->f_flags */
+#define F_SETFL		4	/* set file->f_flags */
 
 int sysfile_linux_fcntl64(int fd, int cmd, int arg)
 {
-  const static int F_DUPFD = 0;
+	kprintf("FCNTL: %d\n", cmd);
+  //const static int F_DUPFD = 0;
   if(cmd == F_DUPFD) {
     int ret =  file_dup(fd, arg);
+		kprintf("DUP: %d %d\n", fd, ret);
     return ret;
     //panic("fd = %d, fd = %d ret = %d", fd, arg, ret);
   }
-	//kprintf("sysfile_linux_fcntl64:fd=%08x cmd=%08x arg=%08x\n", fd, cmd,
-	//	arg);
+  else if(cmd == F_SETFL) {
+    struct file *file;
+    int fd_type;
+    if (fd2file(fd, &file) != 0 || vop_gettype(file->node, &fd_type) != 0) {
+      return -E_BADF;
+    }
+    file->io_flags = arg;
+    if(S_ISSOCK(fd_type)/* && (arg & O_NONBLOCK)*/) {
+      panic("XX");
+      /*linux_fd_set_set(lwip_wrapper_readfds, i);
+      socket_fds++;*/
+    }
+    return 0;
+  }
+  else if(cmd == F_GETFL) {
+    struct file *file;
+    if (fd2file(fd, &file) != 0) {
+      return -E_INVAL;
+    }
+    return file->io_flags;
+  }
+	kprintf("Unsupported option for fcntl: %d\n", cmd);
 	return 0;
-}
-
-int sysfile_linux_stat(const char __user * fn, struct linux_stat *__user buf)
-{
-	int fd = sysfile_open(fn, O_RDONLY);
-	if (fd < 0)
-		return -1;
-	int ret = sysfile_linux_fstat(fd, buf);
-	sysfile_close(fd);
-
-	return ret;
-}
-
-int
-sysfile_linux_stat64(const char __user * fn, struct linux_stat64 *__user buf)
-{
-	int fd = sysfile_open(fn, O_RDONLY);
-	if (fd < 0)
-		return -1;
-	int ret = sysfile_linux_fstat64(fd, buf);
-	sysfile_close(fd);
-
-	return ret;
+	return -E_INVAL;
 }
 
 int sysfile_fsync(int fd)
@@ -398,6 +526,7 @@ int sysfile_unlink(const char *__path)
 
 int sysfile_getcwd(char *buf, size_t len)
 {
+	kprintf("Entering sysfile_getcwd %x %x %d\n", buf, buf, len);
 	struct mm_struct *mm = current->mm;
 	if (len == 0) {
 		return -E_INVAL;
@@ -412,6 +541,7 @@ int sysfile_getcwd(char *buf, size_t len)
 		}
 	}
 	unlock_mm(mm);
+	kprintf("SScwd %s %d\n", buf, len);
 	return 0;
 }
 
@@ -559,6 +689,11 @@ out:
 }
 #endif
 
+int sysfile_dup1(int fd)
+{
+  return file_dup(fd, NO_FD);
+}
+
 int sysfile_dup(int fd1, int fd2)
 {
 	return file_dup(fd1, fd2);
@@ -583,6 +718,7 @@ int sysfile_pipe(int *fd_store)
 			file_close(fd[0]), file_close(fd[1]);
 		}
 	}
+  kprintf("Creating pipe %d %d!\n", fd[0], fd[1]);
 	return ret;
 }
 
@@ -619,12 +755,202 @@ void *sysfile_linux_mmap2(void *addr, size_t len, int prot, int flags,
 	if (__is_linux_devfile(fd)) {
 		return linux_devfile_mmap2(addr, len, prot, flags, fd, pgoff);
 	}
-#ifdef UCONFIG_BIONIC_LIBC
 	else {
     return linux_regfile_mmap2(addr, len, prot, flags, fd, pgoff);
 	}
-#else
 	warn("mmap not implemented except ARM architecture.\n");
-#endif //UCONFIG_BIONIC_LIBC
 	return MAP_FAILED;
+}
+
+int sysfile_linux_select(int nfds, linux_fd_set_t *readfds, linux_fd_set_t *writefds,
+  linux_fd_set_t *exceptfds, struct linux_timeval *timeout)
+{
+  kprintf("Entering sysfile_linux_select\n");
+  int ret;
+  linux_fd_set_t *lwip_wrapper_readfds = kmalloc(sizeof(linux_fd_set_t));
+  linux_fd_set_t *lwip_wrapper_writefds = kmalloc(sizeof(linux_fd_set_t));
+  linux_fd_set_t *lwip_wrapper_exceptfds = kmalloc(sizeof(linux_fd_set_t));
+  linux_fd_set_t *ucore_readfds = kmalloc(sizeof(linux_fd_set_t));
+  linux_fd_set_t *ucore_writefds = kmalloc(sizeof(linux_fd_set_t));
+  linux_fd_set_t *ucore_exceptfds = kmalloc(sizeof(linux_fd_set_t));
+  struct linux_timeval *ktimeout;
+  memset(lwip_wrapper_readfds, 0, sizeof(linux_fd_set_t));
+  memset(lwip_wrapper_writefds, 0, sizeof(linux_fd_set_t));
+  memset(lwip_wrapper_exceptfds, 0, sizeof(linux_fd_set_t));
+  memset(ucore_readfds, 0, sizeof(linux_fd_set_t));
+  memset(ucore_writefds, 0, sizeof(linux_fd_set_t));
+  memset(ucore_exceptfds, 0, sizeof(linux_fd_set_t));
+  if(timeout != NULL) {
+    ktimeout = kmalloc(sizeof(struct linux_timeval));
+    memcpy(ktimeout, timeout, sizeof(struct linux_timeval));
+  }
+  else {
+    ktimeout = NULL;
+  }
+
+  int socket_fds = 0;
+  int other_fds = 0;
+  for(int i = 0; i < nfds; i++) {
+    struct file* file;
+    int fd_type;
+    if(readfds != NULL && linux_fd_set_is_set(readfds, i)) {
+      if (fd2file(i, &file) != 0 || vop_gettype(file->node, &fd_type) != 0) {
+        ret = -E_BADF;
+        goto out;
+      }
+      if(S_ISSOCK(fd_type)) {
+        linux_fd_set_set(lwip_wrapper_readfds, i);
+        socket_fds++;
+      }
+      else {
+        linux_fd_set_set(ucore_readfds, i);
+        other_fds++;
+      }
+    }
+    if(writefds != NULL && linux_fd_set_is_set(writefds, i)) {
+      if (fd2file(i, &file) != 0 || vop_gettype(file->node, &fd_type) != 0) {
+        ret = -E_BADF;
+        goto out;
+      }
+      if(S_ISSOCK(fd_type)) {
+        linux_fd_set_set(lwip_wrapper_writefds, i);
+        socket_fds++;
+      }
+      else {
+        linux_fd_set_set(ucore_writefds, i);
+        other_fds++;
+      }
+    }
+    if(exceptfds != NULL && linux_fd_set_is_set(exceptfds, i)) {
+      if (fd2file(i, &file) != 0 || vop_gettype(file->node, &fd_type) != 0) {
+        ret = -E_BADF;
+        goto out;
+      }
+      if(S_ISSOCK(fd_type)) {
+                kprintf("Adding excfd %d\n", i);
+        linux_fd_set_set(lwip_wrapper_exceptfds, i);
+        socket_fds++;
+      }
+      else {
+        //TODO: Not implemented.
+        /*linux_fd_set_set(ucore_exceptfds, i);
+        other_fds++;*/
+      }
+    }
+  }
+  if(socket_fds == 0 && other_fds == 0) {
+    ret = 0;
+    goto out;
+  }
+  else if(socket_fds != 0 && other_fds == 0) {
+      kprintf("XXXX = %x\n", *(uint32_t*)lwip_wrapper_exceptfds);
+    ret = socket_lwip_select_wrapper(
+      nfds, lwip_wrapper_readfds, lwip_wrapper_writefds, lwip_wrapper_exceptfds,
+      ktimeout
+    );
+  }
+  else {
+    wait_t *wait = kmalloc(sizeof(wait_t) * other_fds);
+    for(int i = 0; i < other_fds; i++) {
+      wait_init(&wait[i], current);
+      wait[i].wait_queue = NULL;
+    }
+    int ready_fd_count = 0;
+    for(int i = 0, j = 0; i < nfds; i++) {
+      struct file* file = NULL;
+      if(fd2file(i, &file) != 0) continue;
+      struct inode* inode = file->node;
+      if(linux_fd_set_is_set(ucore_readfds, i)) {
+        if(inode->in_ops->vop_poll(inode, &wait[j], POLL_READ_AVAILABLE) == 0) {
+          //linux_fd_set_unset(ucore_readfds, i);
+        }
+        else {
+          ready_fd_count++;
+        }
+        j++;
+      }
+      else if(linux_fd_set_is_set(ucore_writefds, i)) {
+        if(inode->in_ops->vop_poll(inode, &wait[j], POLL_WRITE_AVAILABLE) == 0) {
+          //linux_fd_set_unset(ucore_writefds, i);
+        }
+        else {
+          ready_fd_count++;
+        }
+        j++;
+      }
+    }
+    volatile struct proc **lwip_notify = kmalloc(sizeof(struct proc**));
+    volatile int *lwip_ret = kmalloc(sizeof(int));
+    *lwip_notify = current;
+    *lwip_ret = 0;
+    if(socket_fds > 0) {
+      socket_lwip_select_wrapper_no_block(
+        nfds, lwip_wrapper_readfds, lwip_wrapper_writefds, lwip_wrapper_exceptfds,
+        ktimeout, lwip_notify, lwip_ret
+      );
+    }
+    if(ready_fd_count == 0 && (*lwip_ret) == 0) {
+      if(timeout) {
+        do_linux_sleep(timeout);
+      }
+      else {
+        bool intr_flag;
+        local_intr_save(intr_flag);
+        current->state = PROC_SLEEPING;
+        current->wait_state = WT_INTERRUPTED;
+        local_intr_restore(intr_flag);
+        schedule();
+      }
+    }
+    *lwip_notify = NULL;
+    for(int i = 0; i < other_fds; i++) {
+      if(wait[i].wait_queue != NULL) {
+        wait_queue_del(wait[i].wait_queue, &wait[i]);
+      }
+    }
+    kfree(wait);
+
+    ret = 0;
+    for(int i = 0, j = 0; i < nfds; i++) {
+      struct file* file = NULL;
+      if(fd2file(i, &file) != 0) continue;
+      struct inode* inode = file->node;
+      if(linux_fd_set_is_set(ucore_readfds, i)) {
+        if(inode->in_ops->vop_poll(inode, NULL, POLL_READ_AVAILABLE) == 0) {
+          linux_fd_set_unset(ucore_readfds, i);
+        }
+        else ret++;
+      }
+      else if(linux_fd_set_is_set(ucore_writefds, i)) {
+        if(inode->in_ops->vop_poll(inode, NULL, POLL_WRITE_AVAILABLE) == 0) {
+          linux_fd_set_unset(ucore_writefds, i);
+        }
+        else ret++;
+      }
+    }
+    if(readfds != NULL) memcpy(readfds, ucore_readfds, sizeof(linux_fd_set_t));
+    if(writefds != NULL) memcpy(writefds, ucore_writefds, sizeof(linux_fd_set_t));
+    if(exceptfds != NULL) memset(exceptfds, 0, sizeof(linux_fd_set_t));
+    if((*lwip_ret) > 0) {
+      if(readfds != NULL) linux_fd_set_or(readfds, lwip_wrapper_readfds);
+      if(writefds != NULL) linux_fd_set_or(writefds, lwip_wrapper_writefds);
+      if(exceptfds != NULL) linux_fd_set_or(exceptfds, lwip_wrapper_exceptfds);
+    }
+    ret += *lwip_ret;
+  }
+out:
+  kfree(lwip_wrapper_readfds);
+  kfree(lwip_wrapper_writefds);
+  kfree(lwip_wrapper_exceptfds);
+  kfree(ucore_readfds);
+  kfree(ucore_writefds);
+  kfree(ucore_exceptfds);
+  if(ktimeout != NULL) kfree(ktimeout);
+  if(writefds != NULL) {
+    kprintf("Leaving sysfile_linux_select %x %x\n", *(int*)readfds, *(int*)writefds);
+  }
+  else
+    kprintf("Leaving sysfile_linux_select %x\n", *(int*)readfds);
+
+  return ret;
 }

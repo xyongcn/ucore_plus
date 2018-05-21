@@ -60,9 +60,7 @@ struct inode {
 	struct fs *in_fs;
 	const struct inode_ops *in_ops;
   void* private_data;
-#ifdef UCONFIG_BIONIC_LIBC
 	list_entry_t mapped_addr_list;
-#endif				//UCONFIG_BIONIC_LIBC
 };
 
 #define __in_type(type)                                             inode_type_##type##_info
@@ -221,8 +219,8 @@ struct inode_ops {
 	unsigned long vop_magic;
 	int (*vop_open) (struct inode * node, uint32_t open_flags);
 	int (*vop_close) (struct inode * node);
-	int (*vop_read) (struct inode * node, struct iobuf * iob);
-	int (*vop_write) (struct inode * node, struct iobuf * iob);
+	int (*vop_read) (struct inode * node, struct iobuf * iob, int io_flags);
+	int (*vop_write) (struct inode * node, struct iobuf * iob, int io_flags);
 	int (*vop_fstat) (struct inode * node, struct stat * stat);
 	int (*vop_fsync) (struct inode * node);
 	int (*vop_mkdir) (struct inode * node, const char *name);
@@ -247,6 +245,7 @@ struct inode_ops {
 			   struct inode ** node_store);
 	int (*vop_lookup_parent) (struct inode * node, char *path,
 				  struct inode ** node_store, char **endp);
+  int (*vop_poll) (struct inode *node, wait_t *wait, int io_requests);
 };
 
 int null_vop_pass(void);
@@ -268,10 +267,15 @@ void inode_check(struct inode *node, const char *opstr);
         __node->in_ops->vop_##sym;                                                                  \
      })
 
+#define __vop_get_macro(_1,_2,_3,name,...) name
 #define vop_open(node, open_flags)                                  (__vop_op(node, open)(node, open_flags))
 #define vop_close(node)                                             (__vop_op(node, close)(node))
-#define vop_read(node, iob)                                         (__vop_op(node, read)(node, iob))
-#define vop_write(node, iob)                                        (__vop_op(node, write)(node, iob))
+#define vop_read2(node, iob)                                        (__vop_op(node, read)(node, iob, 0))
+#define vop_read3(node, iob, flags)                                 (__vop_op(node, read)(node, iob, flags))
+#define vop_read(...) __vop_get_macro(__VA_ARGS__, vop_read3, vop_read2)(__VA_ARGS__)
+#define vop_write2(node, iob)                                       (__vop_op(node, write)(node, iob, 0))
+#define vop_write3(node, iob, flags)                                (__vop_op(node, write)(node, iob, flags))
+#define vop_write(...) __vop_get_macro(__VA_ARGS__, vop_write3, vop_write2)(__VA_ARGS__)
 #define vop_fstat(node, stat)                                       (__vop_op(node, fstat)(node, stat))
 #define vop_fsync(node)                                             (__vop_op(node, fsync)(node))
 #define vop_mkdir(node, name)                                       (__vop_op(node, mkdir)(node, name))

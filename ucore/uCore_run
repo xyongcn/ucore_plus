@@ -88,6 +88,14 @@ case $UCONFIG_ARCH in
             exit 1
         fi
         ;;
+    mips)
+        QEMU=qemu
+        which qemu-system-mipsel > /dev/null 2>&1
+        if [ $? -eq 0 ]; then
+            QEMU=qemu-system-mipsel
+        fi
+        exec $QEMU -M mipssim -m 64M -kernel obj/kernel/ucore-kernel-initrd -serial stdio
+        ;;
     i386)
         QEMU=qemu
         which qemu-system-i386 > /dev/null 2>&1
@@ -111,6 +119,9 @@ case $UCONFIG_ARCH in
         exec $QEMU -m 128 \
             -hda $BUILD_DIR/kernel.img$TEST_POSTFIX \
             -drive file=$BUILD_DIR/sfs.img$TEST_POSTFIX,media=disk,cache=writeback,index=2 \
+            -drive file=yaffs_disk.img,media=disk,cache=writeback,index=3 \
+            -net nic,model=e1000 -net dump,file=/tmp/vm0.pcap \
+            -net user,id=mynet0,net=192.168.76.0/24,hostfwd=tcp::10022-:22 \
             $EXTRA_OPT
         ;;
     amd64)
@@ -136,6 +147,9 @@ case $UCONFIG_ARCH in
         exec $QEMU -m 512 \
             -hda $BUILD_DIR/kernel.img$TEST_POSTFIX \
             -drive file=$BUILD_DIR/sfs.img$TEST_POSTFIX,media=disk,cache=writeback,index=2 \
+            -drive file=yaffs_disk.img,media=disk,cache=writeback,index=3 \
+            -net nic,model=e1000 -net dump,file=/tmp/vm0.pcap \
+            -net user,id=mynet0,net=192.168.76.0/24,hostfwd=tcp::10022-:22 \
             $EXTRA_OPT
         ;;
 esac

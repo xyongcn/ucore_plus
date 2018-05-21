@@ -23,6 +23,8 @@
 #include <multiboot.h>
 #include <refcache.h>
 #include <dde_kit/dde_kit.h>
+#include <pci.h>
+#include <network.h>
 
 int kern_init(uint64_t, uint64_t) __attribute__ ((noreturn));
 
@@ -113,9 +115,10 @@ int kern_init(uint64_t mbmagic, uint64_t mbmem)
 	//init the acpi stuff
 
 	idt_init();		// init interrupt descriptor table
-	pic_init();		// init interrupt controller
+  //Note: on amd64 I/O APIC have replaced PIC, use irq_enable instead of pic_enable
+	//pic_init();		// init interrupt controller
 
-	syscall_init(); // init fast syscall using SYSCALL op
+  syscall_init(); // init fast syscall using SYSCALL op
 
 //	acpi_conf_init();
 
@@ -134,8 +137,14 @@ int kern_init(uint64_t mbmagic, uint64_t mbmem)
 	sync_init();		// init sync struct
 
 	/* ext int */
-	ioapic_init();
+  ioapic_init();
 	acpi_init();
+  interrupt_manager_init();
+  ptrace_init();
+
+  pci_init(); //Init PCI Driver
+  network_init(); //Init network subsystem
+  e1000_init();
 
 	ide_init();		// init ide devices
 #ifdef UCONFIG_SWAP

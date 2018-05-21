@@ -3,10 +3,12 @@
 
 /* This file contains the definitions for memory management in our OS. */
 
+#define PageIO(page)            test_bit(PG_IO, &((page)->flags))
+#define PG_IO                    6
 #define KERNBASE            0x80000000
 
 #ifdef MACH_FPGA
-#define KMEMSIZE            (1 << 20)
+#define KMEMSIZE            (32 << 20)
 #else
 #define KMEMSIZE            (32 << 20)	// 512M the maximum amount of physical memory
 #endif
@@ -16,7 +18,7 @@
 #define KSTACKPAGE          2	// # of pages in kernel stack
 #define KSTACKSIZE          (KSTACKPAGE * 4096)	// sizeof kernel stack
 
-#define USERBASE            0x10000000
+#define USERBASE            0x00001000
 #define USERTOP             MIPS_KSEG0
 
 #define USTACKTOP           USERTOP

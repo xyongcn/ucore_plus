@@ -26,7 +26,7 @@
 #include <sysconf.h>
 #include <refcache.h>
 #include <spinlock.h>
-
+#include <network/input_thread.h>
 /* ------------- process/thread mechanism design&implementation -------------
 (an simplified Linux process/thread mechanism )
 introduction:
@@ -344,13 +344,11 @@ static int copy_mm(uint32_t clone_flags, struct proc_struct *proc)
 	}
 	unlock_mm(oldmm);
 
-#ifdef UCONFIG_BIONIC_LIBC
 	lock_mm(mm);
 	{
 		ret = remapfile(mm, proc);
 	}
 	unlock_mm(mm);
-#endif //UCONFIG_BIONIC_LIBC
 
 	if (ret != 0) {
 		goto bad_dup_cleanup_mmap;
@@ -773,12 +771,15 @@ static int load_icode_read(int fd, void *buf, size_t len, off_t offset)
 
 static bool proc_elf_program_load_needed(struct proghdr *program_header)
 {
+	/*#define ELF_PT_GNU_RELRO 0x6474e552
   return program_header->p_type == ELF_PT_LOAD ||
     program_header->p_type == ELF_PT_DYNAMIC ||
-    program_header->p_type == ELF_PT_PHDR;
+    program_header->p_type == ELF_PT_PHDR ||
+		program_header->p_type == ELF_PT_GNU_RELRO;*/
+	return program_header->p_memsz > 0;
 }
 
-static off_t proc_elf_determine_load_offset(struct proghdr *program_headers,
+static off_t proc_elf_determine_load_offset(struct elfhdr *elf_header, struct proghdr *program_headers,
 int program_count, struct mm_struct *mm)
 {
   //TODO: Currently this is only for the whole elf, instead of
@@ -799,16 +800,15 @@ int program_count, struct mm_struct *mm)
   }
   begin_address = ROUNDDOWN(begin_address, PGSIZE);
   end_address = ROUNDUP(end_address, PGSIZE);
+	// For non-PIC code, offset must be 0
+	if(elf_header->e_type == 2) {
+		if (mm->brk_start < end_address) {
+			mm->brk_start = end_address;
+		}
+		return 0;
+	}
   off_t offset = 0;
-  //TODO: Currently, this is just intended for ld.so,
-  //whose base address tends to be 0.
-  if (begin_address == 0) {
-    //TODO: Seems use get_unmapped_area will not work, for the returned area
-    //is in mmap preserved region and doing this can break its data structure
-    offset = 0x8000;
-    //offset = get_unmapped_area(mm, end_address - begin_address);
-  }
-  return offset;
+	return get_unmapped_area(mm, end_address - begin_address);
 }
 
 /*
@@ -845,27 +845,35 @@ int program_count, struct mm_struct *mm, int fd, off_t bias)
     if (program_header->p_flags & ELF_PF_R)
       vm_flags |= VM_READ;
 
-    //TODO: This is a workaround. If bias is not 0, it means that this program
+    /*//TODO: This is a workaround. If bias is not 0, it means that this program
     //is a elf interpreter, and will be loaded to as high as the mmap-preserved
     //memory region. Setting brk to that high will lead to problem.
     if(bias == 0) {
       if (mm->brk_start < program_header->p_va + bias + program_header->p_memsz) {
         mm->brk_start = program_header->p_va + bias + program_header->p_memsz;
       }
-    }
+    }*/
+		vm_flags |= VM_WRITE;
 
     char *start = program_header->p_va + bias;
     char *end = program_header->p_va + bias + program_header->p_memsz;
 
+    if((uintptr_t)end % program_header->p_align != 0) {
+      end = ((uintptr_t)end / program_header->p_align + 1) * program_header->p_align;
+    }
+    /*if(bias == 0) {
+      if (mm->brk_start < end) {
+        mm->brk_start = end;
+      }
+    }*/
+
     //TODO: Not certain if this may introduce a bug if end % PGSIZE == 0.
     start = ROUNDDOWN(start, PGSIZE);
     end = ROUNDUP(end, PGSIZE);
-    ranges[i].start_addr = start;
-    ranges[i].end_addr = end;
 
     for(int j = 0; j < i; j++) {
-      if(ranges[j].end_addr <= start || ranges[i].start_addr >= end ||
-      ranges[j].end_addr == ranges[i].start_addr) {
+      if(ranges[j].end_addr <= start || ranges[j].start_addr >= end ||
+      ranges[j].end_addr == ranges[j].start_addr) {
         continue;
       }
       mm_unmap(mm, ranges[j].start_addr, ranges[j].end_addr - ranges[j].start_addr);
@@ -873,6 +881,8 @@ int program_count, struct mm_struct *mm, int fd, off_t bias)
       end = ranges[j].end_addr > end ? ranges[j].end_addr : end;
       ranges[j].start_addr = ranges[j].end_addr = 0;
     }
+		ranges[i].start_addr = start;
+		ranges[i].end_addr = end;
     if(mm_map(mm, start, end - start, vm_flags, NULL) != 0) {
       return -E_NOMEM;
     }
@@ -951,10 +961,10 @@ int program_count, struct mm_struct *mm, int fd, off_t bias)
   return 0;
 }
 
-static void proc_load_elf(struct proghdr *program_headers,
+static void proc_load_elf(struct elfhdr *elf_header, struct proghdr *program_headers,
 int program_count, struct mm_struct *mm, int fd, off_t* offset_store)
 {
-  off_t offset = proc_elf_determine_load_offset(program_headers,
+  off_t offset = proc_elf_determine_load_offset(elf_header, program_headers,
     program_count, mm);
   proc_elf_allocate_memory(program_headers, program_count, mm, fd, offset);
   proc_elf_load_program(program_headers, program_count, fd, offset);
@@ -1007,8 +1017,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 
   struct proghdr* program_headers = kmalloc(sizeof(struct proghdr) * elf->e_phnum);
   load_icode_read(fd, program_headers, sizeof(struct proghdr) * elf->e_phnum, elf->e_phoff);
-  proc_load_elf(program_headers, elf->e_phnum, mm, fd, &bias);
-
+  proc_load_elf(elf, program_headers, elf->e_phnum, mm, fd, &bias);
   for(int i = 0; i < elf->e_phnum; i++) {
     struct proghdr* ph = &program_headers[i];
     if (ph->p_type == ELF_PT_INTERP) {
@@ -1032,7 +1041,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
     }
   }
 
-	mm->brk_start = mm->brk = ROUNDUP(mm->brk_start, PGSIZE);
+	mm->brk_start = mm->brk = ROUNDUP(mm->brk_start, 16 * PGSIZE);
 
 	/* setup user stack */
 	vm_flags = VM_READ | VM_WRITE | VM_STACK;
@@ -1055,7 +1064,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
       interp_fd, interpreter_headers, sizeof(struct proghdr) * interp_elf->e_phnum,
       interp_elf->e_phoff
     );
-    proc_load_elf(interpreter_headers, interp_elf->e_phnum, mm, interp_fd, &bias);
+    proc_load_elf(interp_elf, interpreter_headers, interp_elf->e_phnum, mm, interp_fd, &bias);
 		sysfile_close(interp_fd);
 		kfree(interpreter_path);
 	}
@@ -1073,7 +1082,7 @@ static int load_icode(int fd, int argc, char **kargv, int envc, char **kenvp)
 	set_pgdir(current, mm->pgdir);
 	mp_set_mm_pagetable(mm);
 
-#if defined(UCONFIG_BIONIC_LIBC) || defined(ARCH_AMD64)
+#if defined(ARCH_ARM) || defined(ARCH_AMD64) || defined(ARCH_MIPS)
 	if (init_new_context_dynamic(current, elf, argc, kargv, envc, kenvp,
 				     elf_have_interpreter, interpreter_entry + bias, elf_entry,
 				     bias, program_header_address) < 0)
@@ -1253,6 +1262,9 @@ int do_execve(const char *filename, const char **argv, const char **envp)
 
 	put_kargv(argc, kargv);
 	put_kargv(envc, kenvp);
+	#if defined(ARCH_AMD64) || defined(ARCH_MIPS)
+  ptrace_execve_hook();
+	#endif
 	return 0;
 
 execve_exit:
@@ -1371,7 +1383,7 @@ repeat:
 			do {
 				if (proc->parent == cproc) {
 					haskid = 1;
-					if (proc->state == PROC_ZOMBIE) {
+					if (proc->state == PROC_ZOMBIE || proc->state == PROC_STOPPED) {
 						goto found;
 					}
 					break;
@@ -1386,7 +1398,7 @@ repeat:
 			proc = cproc->cptr;
 			for (; proc != NULL; proc = proc->optr) {
 				haskid = 1;
-				if (proc->state == PROC_ZOMBIE) {
+				if (proc->state == PROC_ZOMBIE || proc->state == PROC_STOPPED) {
 					goto found;
 				}
 			}
@@ -1410,21 +1422,26 @@ found:
 		panic("wait idleproc or initproc.\n");
 	}
 	int exit_code = proc->exit_code;
-	int return_pid = proc->pid;
-	local_intr_save(intr_flag);
-	{
-		unhash_proc(proc);
-		remove_links(proc);
-	}
-	local_intr_restore(intr_flag);
-	put_kstack(proc);
-	kfree(proc);
+  int return_pid = proc->pid;
+  if(proc->state == PROC_ZOMBIE) {
+  	local_intr_save(intr_flag);
+  	{
+  		unhash_proc(proc);
+  		remove_links(proc);
+  	}
+  	local_intr_restore(intr_flag);
+  	put_kstack(proc);
+  	kfree(proc);
+  }
 
 	int ret = 0;
 	if (code_store != NULL) {
 		lock_mm(mm);
 		{
 			int status = exit_code << 8;
+      if(proc->state == PROC_STOPPED) {
+        status |= 0x7F;
+      }
 			if (!copy_to_user(mm, code_store, &status, sizeof(int))) {
 				ret = -E_INVAL;
 			}
@@ -1755,8 +1772,6 @@ int do_munmap(uintptr_t addr, size_t len)
 	return ret;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
-
 int do_mprotect(void *addr, size_t len, int prot)
 {
 
@@ -1831,8 +1846,6 @@ out:
 	return ret;
 }
 
-#endif //UCONFIG_BIONIC_LIBC
-
 // do_shmem - create a share memory with addr, len, flags(VM_READ/M_WRITE/VM_STACK)
 int do_shmem(uintptr_t * addr_store, size_t len, uint32_t mmap_flags)
 {
@@ -1886,7 +1899,7 @@ out_unlock:
 
 #define __KERNEL_EXECVE(name, path, ...) ({                         \
             const char *argv[] = {path, ##__VA_ARGS__, NULL};       \
-            const char *envp[] = {"PATH=/bin/", NULL};              \
+            const char *envp[] = {"PATH=/usr/local/bin:/usr/bin:/bin", NULL};              \
             kprintf("kernel_execve: pid = %d, name = \"%s\".\n",    \
                     current->pid, name);                            \
             kernel_execve(path, argv, envp);                              \
@@ -1918,6 +1931,11 @@ static int user_main(void *arg)
 	kprintf("user_main execve failed, no /bin/sh?.\n");
 }
 
+
+static void foo(void* arg) {
+  struct netif *netif = (struct netif*)arg;
+  dhcp_start(netif);
+}
 // init_main - the second kernel thread used to create kswapd_main & user_main kernel threads
 static int init_main(void *arg)
 {
@@ -1942,6 +1960,12 @@ static int init_main(void *arg)
 	size_t nr_used_pages_store = nr_used_pages();
 
 	unsigned int nr_process_store = nr_process;
+
+  extern struct netif *__netif;
+  if(__netif != NULL) {
+    ucore_kernel_thread(network_input_thread_main, NULL, 0);
+    tcpip_init(foo, __netif);
+  }
 
 	pid = ucore_kernel_thread(user_main, NULL, 0);
 	if (pid <= 0) {
@@ -2118,7 +2142,8 @@ int do_linux_usetrlimit(int res, const struct linux_rlimit *__user __limit)
 		limit.rlim_max = USTACKSIZE;
 		break;
 	default:
-		return -E_INVAL;
+		ret = -E_INVAL;
+    goto out;
 	}
 	if (__limit->rlim_cur > limit.rlim_max)
 	{

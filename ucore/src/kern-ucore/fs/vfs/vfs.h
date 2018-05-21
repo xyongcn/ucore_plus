@@ -162,8 +162,8 @@ int vfs_getcwd(struct iobuf *iob);
  *
  * Both of these may destroy the path passed in.
  */
-void vfs_simplify_path(char* path);
-int vfs_lookup(char *path, struct inode **node_store);
+//void vfs_simplify_path(char* path);
+int vfs_lookup(const char *path, struct inode **node_store, bool follow_symlink);
 int vfs_lookup_parent(char *path, struct inode **node_store, char **endp);
 
 /*
@@ -205,6 +205,7 @@ int vfs_mount(const char *devname,
 	      int (*mountfunc) (struct device * dev, struct fs ** fs_store));
 int vfs_unmount(const char *devname);
 int vfs_unmount_all(void);
+void vfs_fullpath(char *path, int size);
 
 void file_system_type_list_init(void);
 int register_filesystem(struct file_system_type* fs_type);
@@ -213,7 +214,7 @@ int unregister_filesystem(struct file_system_type* fs_type);
 int vfs_do_mount_nocheck(const char *devname, const char* mountpoint,
   const char *fs_name, int flags, void* data);
 int do_mount(const char *devname, const char* mountpoint, const char *fs_name,
-  unsigned long flags, void* data);
+  unsigned long flags, const void* data);
 int do_umount(const char *target);
 
 #endif /* !__KERN_FS_VFS_VFS_H__ */

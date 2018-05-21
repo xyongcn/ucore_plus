@@ -16,6 +16,7 @@
 #include <syscall.h>
 #include <resource.h>
 #include <iobuf.h>
+#include <syscall_linux.h>
 
 static uint32_t sys_exit(uint32_t arg[])
 {
@@ -214,35 +215,6 @@ static uint32_t sys_mbox_info(uint32_t arg[])
 	return ipc_mbox_info(id, info);
 }
 
-static uint32_t sys_open(uint32_t arg[])
-{
-	const char *path = (const char *)arg[0];
-	uint32_t open_flags = (uint32_t) arg[1];
-	return sysfile_open(path, open_flags);
-}
-
-static uint32_t sys_close(uint32_t arg[])
-{
-	int fd = (int)arg[0];
-	return sysfile_close(fd);
-}
-
-static uint32_t sys_read(uint32_t arg[])
-{
-	int fd = (int)arg[0];
-	void *base = (void *)arg[1];
-	size_t len = (size_t) arg[2];
-	return sysfile_read(fd, base, len);
-}
-
-static uint32_t sys_write(uint32_t arg[])
-{
-	int fd = (int)arg[0];
-	void *base = (void *)arg[1];
-	size_t len = (size_t) arg[2];
-	return sysfile_write(fd, base, len);
-}
-
 static uint32_t sys_seek(uint32_t arg[])
 {
 	int fd = (int)arg[0];
@@ -360,22 +332,6 @@ static uint32_t sys_list_module(uint32_t arg[])
 	return 0;
 }
 
-static uint32_t sys_mount(uint32_t arg[])
-{
-	const char *source = (const char *)arg[0];
-	const char *target = (const char *)arg[1];
-	const char *filesystemtype = (const char *)arg[2];
-  uint32_t mountflags = arg[3];
-	const void *data = (const void *)arg[4];
-	return do_mount(source, target, filesystemtype, mountflags, data);
-}
-
-static uint32_t sys_umount(uint32_t arg[])
-{
-	const char *target = (const char *)arg[0];
-	return do_umount(target);
-}
-
 static uint32_t sys_linux_mmap(uint32_t arg[])
 {
 	void *addr = (void *)arg[0];
@@ -490,12 +446,10 @@ static uint32_t __sys_linux_mmap2(uint32_t arg[])
 #endif //UCONFIG_BIONIC_LIBC
 	if (fd == -1 || flags & MAP_ANONYMOUS) {
 		//print_trapframe(current->tf);
-#ifdef UCONFIG_BIONIC_LIBC
 		if (flags & MAP_FIXED) {
 			return linux_regfile_mmap2(addr, len, prot, flags, fd,
 						   off);
 		}
-#endif //UCONFIG_BIONIC_LIBC
 
 		uint32_t ucoreflags = 0;
 		if (prot & PROT_WRITE)
@@ -523,7 +477,6 @@ static uint32_t __sys_linux_fcntl(uint32_t arg[])
 	return -E_INVAL;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 static uint32_t __sys_linux_mprotect(uint32_t arg[])
 {
 
@@ -535,7 +488,6 @@ static uint32_t __sys_linux_mprotect(uint32_t arg[])
 
 	return do_mprotect(addr, len, prot);
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 static uint32_t __sys_linux_brk(uint32_t arg[])
 {
@@ -554,22 +506,6 @@ static uint32_t __sys_linux_getdents(uint32_t arg[])
 	if (ret < 0)
 		return -1;
 	return count;
-}
-
-static uint32_t __sys_linux_stat(uint32_t args[])
-{
-	char *fn = (char *)args[0];
-	struct linux_stat *st = (struct linux_stat *)args[1];
-	//kprintf("TODO __sys_linux_stat, %s %d\n", fn, sizeof(struct linux_stat));
-	return sysfile_linux_stat(fn, st);
-}
-
-static uint32_t __sys_linux_fstat(uint32_t args[])
-{
-	int fd = (int)args[0];
-	struct linux_stat *st = (struct linux_stat *)args[1];
-	//kprintf("TODO __sys_linux_fstat, %d %d\n", fd, sizeof(struct linux_stat));
-	return sysfile_linux_fstat(fd, st);
 }
 
 static uint32_t __sys_linux_waitpid(uint32_t arg[])
@@ -693,7 +629,6 @@ static uint32_t __sys_linux_gettimeofday(uint32_t arg[])
 	return ucore_gettimeofday(tv, tz);
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 static uint32_t __sys_linux_gettid(uint32_t arg[])
 {
 	return current->tid;
@@ -703,13 +638,6 @@ static uint32_t __sys_arm_linux_set_tls(uint32_t arg[])
 {
 	struct user_tls_desc *tlsp = (struct user_tls_desc *)arg[0];
 	return do_set_tls(tlsp);
-}
-
-static uint32_t __sys_linux_stat64(uint32_t arg[])
-{
-	char *path = (char *)arg[0];
-	struct linux_stat64 *filestat = arg[1];
-	return sysfile_linux_stat64(path, filestat);
 }
 
 static uint32_t __sys_linux_madvise(uint32_t arg[])
@@ -732,13 +660,6 @@ static uint32_t __sys_linux_clock_gettime(uint32_t arg[])
 {
 	struct linux_timespec *time = (struct linux_timespec *)arg[1];
 	return do_clock_gettime(time);
-}
-
-static uint32_t __sys_linux_fstat64(uint32_t arg[])
-{
-	int fd = (int)arg[0];
-	struct linux_stat64 *st = (struct linux_stat64 *)arg[1];
-	return sysfile_linux_fstat64(fd, st);
 }
 
 static uint32_t __sys_linux_fcntl64(uint32_t arg[])
@@ -765,8 +686,6 @@ static uint32_t __sys_linux_writev(uint32_t arg[])
 	return sysfile_writev(fd, iov, iovcnt);
 }
 
-#endif //UCONFIG_BIONIC_LIBC
-
 #define __UCORE_SYSCALL(x) [__NR_##x]  sys_##x
 #define __LINUX_SYSCALL(x) [__NR_##x]  __sys_linux_##x
 
@@ -779,10 +698,14 @@ static uint32_t __sys_linux_writev(uint32_t arg[])
 static uint32_t(*_linux_syscalls[]) (uint32_t arg[]) = {
 	__LINUX_SYSCALL(exit),
 	    __UCORE_SYSCALL(fork),
-	    __UCORE_SYSCALL(read),
-	    __UCORE_SYSCALL(write),
-	    __UCORE_SYSCALL(open),
-	    __UCORE_SYSCALL(close),
+	    //__UCORE_SYSCALL(read),
+	    //__UCORE_SYSCALL(write),
+	    //__UCORE_SYSCALL(open),
+	    //__UCORE_SYSCALL(close),
+			[__NR_read] syscall_linux_read,
+			[__NR_write] syscall_linux_write,
+			[__NR_open] syscall_linux_open,
+			[__NR_close] syscall_linux_close,
 	    __UCORE_SYSCALL(link),
 	    __UCORE_SYSCALL(unlink),
 	    __UCORE_SYSCALL(execve),
@@ -796,19 +719,29 @@ static uint32_t(*_linux_syscalls[]) (uint32_t arg[]) = {
 	    __LINUX_SYSCALL(lseek),
 	    __UCORE_SYSCALL(getpid),
 	    __LINUX_SYSCALL(getppid),
-	    __LINUX_SYSCALL(ioctl),
-	    __LINUX_SYSCALL(fcntl),
+			[__NR_ioctl] syscall_linux_ioctl,
+			[__NR_fcntl] syscall_linux_fcntl,
+			[__NR_fcntl64] syscall_linux_fcntl,
+	    //__LINUX_SYSCALL(ioctl),
+	    //__LINUX_SYSCALL(fcntl),
 	    __UCORE_SYSCALL(dup2),
 	    __LINUX_SYSCALL(sigaction),
-	    __LINUX_SYSCALL(stat),
-	    __LINUX_SYSCALL(fstat),
+			[__NR_stat] syscall_linux_stat,
+			[__NR_fstat] syscall_linux_fstat,
+			[__NR_stat64] syscall_linux_stat64,
+			[__NR_fstat64] syscall_linux_fstat64,
+			[__NR_lstat64] syscall_linux_lstat64,
+			[__NR_getdents64] syscall_linux_getdents64,
+	    /*__LINUX_SYSCALL(stat),
+	    __LINUX_SYSCALL(fstat),*/
 	    __LINUX_SYSCALL(wait4),
 	    __UCORE_SYSCALL(fsync),
 	    __LINUX_SYSCALL(sigreturn),
 	    __LINUX_SYSCALL(clone),
 	    __LINUX_SYSCALL(sigprocmask),
 	    __LINUX_SYSCALL(exit_group),
-	    __UCORE_SYSCALL(getcwd),
+	    //__UCORE_SYSCALL(getcwd),
+			[__NR_getcwd] syscall_linux_getcwd,
 	    __LINUX_SYSCALL(getdents),
 	    __LINUX_SYSCALL(poll),
 	    __LINUX_SYSCALL(rt_sigreturn),
@@ -829,18 +762,18 @@ static uint32_t(*_linux_syscalls[]) (uint32_t arg[]) = {
 	    __LINUX_SYSCALL(getegid),
 	    __LINUX_SYSCALL(getgid32),
 	    __LINUX_SYSCALL(getegid32), __LINUX_SYSCALL(gettimeofday),
-#ifdef UCONFIG_BIONIC_LIBC
 	    __LINUX_SYSCALL(mprotect),
 	    __LINUX_SYSCALL(gettid),
 	    __ARM_LINUX_SYSCALL(set_tls),
-	    __LINUX_SYSCALL(stat64),
+	    //__LINUX_SYSCALL(stat64),
+			[__NR_stat] syscall_linux_stat64,
 	    __LINUX_SYSCALL(madvise),
 	    __LINUX_SYSCALL(futex),
 	    __LINUX_SYSCALL(clock_gettime),
-	    __LINUX_SYSCALL(fstat64),
+	    //__LINUX_SYSCALL(fstat64),
+			[__NR_stat] syscall_linux_fstat64,
 	    __LINUX_SYSCALL(fcntl64),
 	    __LINUX_SYSCALL(access), __LINUX_SYSCALL(writev),
-#endif //UCONFIG_BIONIC_LIBC
 };
 
 #define NUM_LINUX_SYSCALLS        ((sizeof(_linux_syscalls)) / (sizeof(_linux_syscalls[0])))
@@ -855,6 +788,7 @@ static uint32_t(*_linux_syscalls[]) (uint32_t arg[]) = {
 static int __sys_linux_entry(struct trapframe *tf)
 {
 	unsigned int num = tf->tf_regs.reg_r[7];
+	kprintf("*** SYSCALL %d, pid = %d, name = %s.\n", num, current->pid, current->name);
 	if (num < NUM_LINUX_SYSCALLS && _linux_syscalls[num]) {
 		uint32_t arg[6];
 		arg[0] = tf->tf_regs.reg_r[0];	// arg0
@@ -864,8 +798,10 @@ static int __sys_linux_entry(struct trapframe *tf)
 		arg[4] = tf->tf_regs.reg_r[4];	// arg3
 		arg[5] = tf->tf_regs.reg_r[5];	// arg3
 		tf->tf_regs.reg_r[0] = _linux_syscalls[num] (arg);	// calling the system call, return value in r0
+		kprintf("*** SYSCALL DONE %x ***\n", tf->tf_epc);
 		return 0;
 	}
+	panic("__sys_linux_entry");
 
 	return -1;
 }
@@ -900,10 +836,10 @@ static uint32_t(*syscalls[]) (uint32_t arg[]) = {
 	    [SYS_mbox_recv] sys_mbox_recv,
 	    [SYS_mbox_free] sys_mbox_free,
 	    [SYS_mbox_info] sys_mbox_info,
-	    [SYS_open] sys_open,
-	    [SYS_close] sys_close,
-	    [SYS_read] sys_read,
-	    [SYS_write] sys_write,
+	    [SYS_open] syscall_linux_open,
+	    [SYS_close] syscall_linux_close,
+	    [SYS_read] syscall_linux_read,
+	    [SYS_write] syscall_linux_write,
 	    [SYS_seek] sys_seek,
 	    [SYS_fstat] sys_fstat,
 	    [SYS_fsync] sys_fsync,
@@ -928,7 +864,8 @@ static uint32_t(*syscalls[]) (uint32_t arg[]) = {
 	    [SYS_init_module] sys_init_module,
 	    [SYS_cleanup_module] sys_cleanup_module,
 	    [SYS_list_module] sys_list_module,
-	    [SYS_mount] sys_mount,[SYS_umount] sys_umount};
+	    [SYS_mount] syscall_linux_mount,
+      [SYS_umount] syscall_linux_umount};
 
 #define NUM_SYSCALLS        ((sizeof(syscalls)) / (sizeof(syscalls[0])))
 

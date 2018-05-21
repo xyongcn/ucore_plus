@@ -12,7 +12,7 @@ struct __ucore_linux_timer {
 	void (*function) (unsigned long);
 };
 
-typedef struct {
+typedef struct __ucore_timer {
 	unsigned int expires;
 	struct proc_struct *proc;
 	struct __ucore_linux_timer linux_timer;
@@ -39,9 +39,9 @@ static inline int __ucore_is_linux_timer(timer_t * t)
 
 struct run_queue;
 
-// The introduction of scheduling classes is borrrowed from Linux, and makes the 
-// core scheduler quite extensible. These classes (the scheduler modules) encapsulate 
-// the scheduling policies. 
+// The introduction of scheduling classes is borrrowed from Linux, and makes the
+// core scheduler quite extensible. These classes (the scheduler modules) encapsulate
+// the scheduling policies.
 struct sched_class {
 	// the name of sched_class
 	const char *name;

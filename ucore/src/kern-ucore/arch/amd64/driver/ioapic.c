@@ -11,7 +11,7 @@
 #define REG_TABLE  0x10  // Redirection table base
 
 // The redirection table starts at REG_TABLE and uses
-// two registers to configure each interrupt.  
+// two registers to configure each interrupt.
 // The first (low) register in a pair contains configuration bits.
 // The second (high) register contains a bitmask telling which
 // CPUs can serve that interrupt.
@@ -62,8 +62,8 @@ int ioapic_init(void)
 		return -1;
 	}
 	/* maybe not needed
-	 * see MP spec3.6 
-	 */	
+	 * see MP spec3.6
+	 */
 	outb(0x22, 0x70);   // Select IMCR
 	outb(0x23, inb(0x23) | 1);  // Mask external interrupts.
 	return 0;
@@ -123,4 +123,3 @@ void ioapic_register_one(ioapic_s *one)
 
 
 }
-

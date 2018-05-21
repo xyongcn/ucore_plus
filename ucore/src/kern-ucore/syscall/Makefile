@@ -1,1 +1,1 @@
-obj-y := gettimeofday.o
+obj-y := gettimeofday.o syscall_linux.o

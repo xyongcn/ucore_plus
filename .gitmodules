@@ -1,0 +1,3 @@
+[submodule "ucore/src/kern-ucore/network/lwIP"]
+	path = ucore/src/kern-ucore/network/lwIP
+	url = https://github.com/oscourse-tsinghua/ucore_lwIP.git

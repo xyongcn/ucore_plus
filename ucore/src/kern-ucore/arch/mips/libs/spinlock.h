@@ -22,6 +22,7 @@ static inline int spinlock_acquire_try(spinlock_t lock)
 static inline void spinlock_release(spinlock_t lock)
 {
 }
+
 #define spin_lock_irqsave(lock, x)      do { x = __intr_save();spinlock_acquire(lock); } while (0)
 
 #define spin_unlock_irqrestore(lock, x)      do { spinlock_release(lock);__intr_restore(x); } while (0)

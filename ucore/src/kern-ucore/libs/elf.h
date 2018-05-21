@@ -332,6 +332,12 @@ struct elf64_auxiliary_vector
   uint64_t a_val;
 } Elf64_auxv_t;
 
+struct elf32_auxiliary_vector
+{
+  uint32_t a_type;
+  uint32_t a_val;
+} Elf32_auxv_t;
+
 /* Symbolic values for the entries in the auxiliary table
    put on the initial stack */
 #define AT_NULL   0	/* end of vector */

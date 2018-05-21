@@ -12,26 +12,26 @@
 #include <clock.h>
 
 /*  ------------- semaphore mechanism design&implementation -------------
-  ucore offers two kinds of semaphores: Kernel semaphores, which are used by kernel control paths; 
-System V IPC semaphores, which are used by User Mode processes.A kernel control path tries to 
-acquire a busy resource protected by a kernel semaphore, the corresponding process is suspended. 
+  ucore offers two kinds of semaphores: Kernel semaphores, which are used by kernel control paths;
+System V IPC semaphores, which are used by User Mode processes.A kernel control path tries to
+acquire a busy resource protected by a kernel semaphore, the corresponding process is suspended.
 It becomes runnable again when the resource is released.
 V operation:
-  When a process wishes to release a semaphore lock, it invokes the __up(Kern_SEM or USer_SEM) 
-function.The __up( ) function first checks whether its wait_queue(the waiting process list) is NULL. 
-If wait_queue is NULL, then increases the count field of the sem semaphore (sem->value ++); else 
+  When a process wishes to release a semaphore lock, it invokes the __up(Kern_SEM or USer_SEM)
+function.The __up( ) function first checks whether its wait_queue(the waiting process list) is NULL.
+If wait_queue is NULL, then increases the count field of the sem semaphore (sem->value ++); else
 wakeup a waiting process and delete this proces from wait_queue.
 P operation:
-  Conversely, when a process wishes to acquire a semaphore lock, it invokes the __down(Kern_SEM or 
+  Conversely, when a process wishes to acquire a semaphore lock, it invokes the __down(Kern_SEM or
 USer_SEM) function. The __down( ) function first checks whether semaphore value is negative or zero.
-If the value >0, then decreases the count field of the *sem semaphore(sem->value--);else the current 
-process must be suspended, so put current process in semaphore's wait queue. Essentially, the __down( ) 
+If the value >0, then decreases the count field of the *sem semaphore(sem->value--);else the current
+process must be suspended, so put current process in semaphore's wait queue. Essentially, the __down( )
 function changes the state of the current process from PROC_RUNNABLE to PROC_SLEEPING.
 
-Special Case&Operation for User Semaphore 
-If a process crashes after modifying a user semaphore,then processes waiting on the user semaphore can 
-no longer be woken. ucore uses sem_undo struct to record the information held in the list to return the 
-semaphore to its state prior to modification By undoing these actions (using the information in the 
+Special Case&Operation for User Semaphore
+If a process crashes after modifying a user semaphore,then processes waiting on the user semaphore can
+no longer be woken. ucore uses sem_undo struct to record the information held in the list to return the
+semaphore to its state prior to modification By undoing these actions (using the information in the
 sem_undo list), the user semaphore can be returned to a consistent state, thus preventing deadlocks.
 
 IMPLEMENTATION NOTE:
@@ -53,14 +53,11 @@ void sem_init(semaphore_t * sem, int value)
 	sem->value = value;
 	sem->valid = 1;
 	spinlock_init(&sem->lock);
-#ifdef UCONFIG_BIONIC_LIBC
 	sem->addr = 0;		//-1 : // Not for futex
-#endif //UCONFIG_BIONIC_LIBC
 	set_sem_count(sem, 0);
 	wait_queue_init(&(sem->wait_queue));
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 void sem_init_with_address(semaphore_t * sem, uintptr_t addr, int value)
 {
 	sem->value = value;
@@ -70,7 +67,6 @@ void sem_init_with_address(semaphore_t * sem, uintptr_t addr, int value)
 	set_sem_count(sem, 0);
 	wait_queue_init(&(sem->wait_queue));
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 static void
     __attribute__ ((noinline)) __up(semaphore_t * sem, uint32_t wait_state)
@@ -83,14 +79,15 @@ static void
 		if ((wait = wait_queue_first(&(sem->wait_queue))) == NULL) {
 			sem->value++;
 		} else {
-			assert(wait->proc->wait_state == wait_state);
+      //TODO: This assertion is temporarily disabled for network module.
+      //assert(wait->proc->wait_state == wait_state);
 			wakeup_wait(&(sem->wait_queue), wait, wait_state, 1);
 		}
 	}
 	spin_unlock_irqrestore(&sem->lock, intr_flag);
 }
 
-static uint32_t
+uint32_t
     __attribute__ ((noinline)) __down(semaphore_t * sem, uint32_t wait_state,
 				      timer_t * timer)
 {
@@ -178,7 +175,6 @@ void sem_queue_destroy(sem_queue_t * sem_queue)
 	kfree(sem_queue);
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 sem_undo_t *semu_create_with_address(semaphore_t * sem, uintptr_t addr,
 				     int value)
 {
@@ -196,7 +192,6 @@ sem_undo_t *semu_create_with_address(semaphore_t * sem, uintptr_t addr,
 	}
 	return NULL;
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 sem_undo_t *semu_create(semaphore_t * sem, int value)
 {
@@ -271,7 +266,6 @@ static sem_undo_t *semu_list_search(list_entry_t * list, sem_t sem_id)
 	return NULL;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 static int semu_search_with_addr(list_entry_t * list, uintptr_t addr)
 {
 	list_entry_t *le = list;
@@ -307,7 +301,6 @@ ipc_sem_find_or_init_with_address(uintptr_t addr, int value, int create)
 	up(&(sem_queue->sem));
 	return sem2semid(semu->sem);
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 int ipc_sem_init(int value)
 {
@@ -340,7 +333,6 @@ int ipc_sem_post(sem_t sem_id)
 	return -E_INVAL;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 int ipc_sem_post_max(sem_t sem_id, int max)
 {
 	assert(current->sem_queue != NULL);
@@ -363,7 +355,6 @@ int ipc_sem_post_max(sem_t sem_id, int max)
 	}
 	return -E_INVAL;
 }
-#endif //UCONFIG_BIONIC_LIBC
 
 int ipc_sem_wait(sem_t sem_id, unsigned int timeout)
 {
@@ -436,7 +427,6 @@ int ipc_sem_get_value(sem_t sem_id, int *value_store)
 	return ret;
 }
 
-#ifdef UCONFIG_BIONIC_LIBC
 int do_futex(uintptr_t uaddr, int op, int val)
 {
 	int ret = 0;
@@ -458,4 +448,3 @@ int do_futex(uintptr_t uaddr, int op, int val)
 		panic("unexpected futex op: %d\n", op);
 	}
 }
-#endif //UCONFIG_BIONIC_LIBC

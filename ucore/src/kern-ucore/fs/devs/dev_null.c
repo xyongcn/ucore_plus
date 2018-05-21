@@ -3,7 +3,9 @@
  * immediate EOF on read and throws away anything written to it.
  */
 #include <types.h>
+#include <string.h>
 #include <dev.h>
+#include <poll.h>
 #include <vfs.h>
 #include <iobuf.h>
 #include <inode.h>
@@ -35,6 +37,11 @@ static int null_io(struct device *dev, struct iobuf *iob, bool write)
 	return 0;
 }
 
+static int null_poll(struct device *dev, wait_t *wait, int io_requests)
+{
+  return io_requests & POLL_WRITE_AVAILABLE;
+}
+
 /* For ioctl() */
 static int null_ioctl(struct device *dev, int op, void *data)
 {
@@ -50,6 +57,7 @@ static void null_device_init(struct device *dev)
 	dev->d_close = null_close;
 	dev->d_io = null_io;
 	dev->d_ioctl = null_ioctl;
+  dev->d_poll = null_poll;
 }
 
 /*

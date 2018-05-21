@@ -49,8 +49,14 @@ void __noreturn kern_init(void)
 	vmm_init();		// init virtual memory management
 
 	sched_init();
-	proc_init();		// init process table
+  //thinpad_flashrom_check();
+  //panic("Stop here!");
+  network_init();
+  //Note: This only works in a modified qemu!
+  dm9000_initialize();
 	ide_init();
+  proc_init();		// init process table
+  ptrace_init();
 	fs_init();
 	intr_enable();		// enable irq interrupt
 	//*(int*)(0x00124) = 0x432;

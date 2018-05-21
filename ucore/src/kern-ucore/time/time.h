@@ -14,4 +14,11 @@ typedef __time_t time_t;
 
 time_t time_get_current();
 
+struct linux_tms {
+  unsigned long tms_utime;  /* user time */
+  unsigned long tms_stime;  /* system time */
+  unsigned long tms_cutime; /* user time of children */
+  unsigned long tms_cstime; /* system time of children */
+};
+
 #endif

@@ -13,13 +13,13 @@
 
 /* at least 8 syscall per cacheline */
 #define __NR_read				0
-__SYSCALL(__NR_read, sys_read)
+__SYSCALL(__NR_read, syscall_linux_read)
 #define __NR_write				1
-__SYSCALL(__NR_write, sys_write)
+__SYSCALL(__NR_write, syscall_linux_write)
 #define __NR_open				2
-__SYSCALL(__NR_open, sys_open)
+__SYSCALL(__NR_open, syscall_linux_open)
 #define __NR_close				3
-__SYSCALL(__NR_close, sys_close)
+__SYSCALL(__NR_close, syscall_linux_close)
 #define __NR_stat				4
 __SYSCALL(__NR_stat, sys_newstat)
 #define __NR_fstat				5
@@ -377,9 +377,9 @@ __SYSCALL(__NR_acct, sys_acct)
 __SYSCALL(__NR_settimeofday, sys_settimeofday)
 
 #define __NR_mount				165
-__SYSCALL(__NR_mount, sys_mount)
+__SYSCALL(__NR_mount, syscall_linux_mount)
 #define __NR_umount2				166
-__SYSCALL(__NR_umount2, sys_umount)
+__SYSCALL(__NR_umount2, syscall_linux_umount)
 
 #define __NR_swapon				167
 __SYSCALL(__NR_swapon, sys_swapon)

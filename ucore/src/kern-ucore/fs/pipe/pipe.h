@@ -31,6 +31,7 @@ struct pipe_inode {
 	int reclaim_count;
 	struct pipe_state *state;
 	list_entry_t pipe_link;
+  bool no_block;
 };
 
 #define le2pin(le, member)                          \

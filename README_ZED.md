@@ -10,13 +10,24 @@ The software is distributed with completely **no** warranty.
 
 [Click here! ](http://zedboard.org/product/zedboard)
 
-## Development Environment
+## Build
+1. update `gcc` as
+```apt install gcc-6-arm-linux-gnueabi```
+2. cd ucore
+3. export CROSS_COMPILE=arm-linux-gnueabi-
+4. make ARCH=arm BOARD=zedboard defconfig
+5. make sfsimg
+6. make
+
+## Run
+TBD
+
+## Environment
 
 ```
-Intel Pentium Dual Core E5200
-4GB DDR2 SDRAM
-Ubuntu GNOME Desktop 15.10
-default shell zsh
+Arch Linux 
+gcc 7.2.0 arm-none-eabi-gcc
+
 ```
 
 ## What works

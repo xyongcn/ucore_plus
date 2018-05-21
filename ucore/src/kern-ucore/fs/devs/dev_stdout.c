@@ -1,5 +1,7 @@
 #include <types.h>
+#include <string.h>
 #include <stdio.h>
+#include <console.h>
 #include <dev.h>
 #include <vfs.h>
 #include <iobuf.h>
@@ -7,11 +9,12 @@
 #include <unistd.h>
 #include <error.h>
 #include <assert.h>
+#include <poll.h>
 
 /* *
- * stdout is abstract device built on console 
+ * stdout is abstract device built on console
  * console is binding with serial, cga
- * the stdout io is simple, just write a Bit to serial or cga address 
+ * the stdout io is simple, just write a Bit to serial or cga address
  * */
 static int stdout_open(struct device *dev, uint32_t open_flags)
 {
@@ -43,6 +46,11 @@ static int stdout_ioctl(struct device *dev, int op, void *data)
 	return -E_INVAL;
 }
 
+static int stdout_poll(struct device *dev, wait_t *wait, int io_requests)
+{
+  return io_requests & POLL_WRITE_AVAILABLE;
+}
+
 static void stdout_device_init(struct device *dev)
 {
 	memset(dev, 0, sizeof(*dev));
@@ -52,6 +60,7 @@ static void stdout_device_init(struct device *dev)
 	dev->d_close = stdout_close;
 	dev->d_io = stdout_io;
 	dev->d_ioctl = stdout_ioctl;
+  dev->d_poll = stdout_poll;
 }
 
 void dev_init_stdout(void)

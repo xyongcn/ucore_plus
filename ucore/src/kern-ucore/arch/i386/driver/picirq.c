@@ -67,7 +67,7 @@ void pic_init(void)
 	outb(IO_PIC2 + 1, IRQ_SLAVE);	// ICW3
 	// NB Automatic EOI mode doesn't tend to work on the slave.
 	// Linux source code says it's "to be investigated".
-	outb(IO_PIC2 + 1, 0x3);	// ICW4
+	outb(IO_PIC2 + 1, 0x1);	// ICW4
 
 	// OCW3:  0ef01prs
 	//   ef:  0x = NOP, 10 = clear specific mask, 11 = set specific mask
@@ -82,4 +82,18 @@ void pic_init(void)
 	if (irq_mask != 0xFFFF) {
 		pic_setmask(irq_mask);
 	}
+}
+
+/**
+ * pic_send_end_of_interrupt is required to called for PIC controller whose
+ * "Automatic EOI" bit is not set. As is mentioned above, slave PIC controller
+ * have problem enabling automatic EOI, so trap_dispatch will call this function
+ * for IRQ 8-15.
+ */
+void pic_send_end_of_interrupt(unsigned int irq)
+{
+  if(irq >= 8) {
+    outb(IO_PIC2, 0x20);
+  }
+  outb(IO_PIC1, 0x20);
 }

@@ -8,15 +8,15 @@ SECTIONS
   .text      :
   {
     . = ALIGN(4);
-    *(.text) 
+    *(.text)
     *(.text.*)
     *(.gnu.linkonce.t*)
-    *(.mips16.fn.*) 
+    *(.mips16.fn.*)
     *(.mips16.call.*) /* for MIPS */
     *(.rodata) *(.rodata.*) *(.gnu.linkonce.r*) *(.rodata1)
   }
 . = ALIGN(4096);
-.data    : 
+.data    :
 {
   *(.data)
   *(.data.*)
@@ -50,7 +50,7 @@ SECTIONS
   *(.debug*)  */
   *(.note)    /* seen on Pentium ELF */
   *(.comment)    /* seen on PPC & SH ELF */
-  *(.reginfo)  
+  *(.reginfo)
   *(.pdr)    /* seen on MIPS ELF */
 }
 

@@ -5,7 +5,7 @@ endif
 PHONY+=all subdir clean
 
 #TARGET_CFLAGS := -g -ggdb
-TARGET_CFLAGS += -fno-builtin -nostdlib  -nostdinc --std=gnu99 -fno-stack-protector
+TARGET_CFLAGS += -fno-builtin -nostdlib  -nostdinc --std=gnu99 -Wall -fno-stack-protector
 TARGET_CFLAGS += -D__KERNEL__ -D__KERN__
 TARGET_CFLAGS += $(shell echo $(UCONFIG_ADDITIONAL_CFLAGS))
 ifdef UCONFIG_PROFILER_ON
@@ -20,7 +20,7 @@ export KTREE_OBJ_ROOT
 
 KERN_INCLUDES := . libs syscall debug driver mm numa sync schedule process fs \
                  fs/swap fs/vfs fs/pipe fs/sfs fs/devs module kmodule sysconf \
-                 dde36
+                 dde36 network trap network/src/include
 
 ifdef UCONFIG_HAVE_LINUX_DDE_BASE
 KERN_INCLUDES += module/include

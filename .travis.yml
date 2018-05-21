@@ -4,11 +4,18 @@ language: cpp
 services: docker
 
 env:
-    - BUILDTYPE=Default
+    - GCC_VER=7 ARCH=i386 BOARD=default
+    - GCC_VER=7 ARCH=amd64 BOARD=default
+    - GCC_VER=7 ARCH=arm BOARD=goldfishv7
+    - GCC_VER=7 ARCH=arm BOARD=pandaboardes
+    - GCC_VER=7 ARCH=arm BOARD=raspberrypi
+    - GCC_VER=7 ARCH=arm BOARD=zedboard
+    - GCC_VER=7 ARCH=mips BOARD=qemu
+
 
 before_install:
-    - sudo docker pull tinytangent/ucore_build_environment
-    - sudo docker create --name=ucore_build_environment -it tinytangent/ucore_build_environment
+    - sudo docker pull tinytangent/ucore_build_environment:gcc7
+    - sudo docker create --name=ucore_build_environment -it tinytangent/ucore_build_environment:gcc7
     - sudo apt-get update -qq
 
 install:
@@ -18,7 +25,10 @@ script:
     - docker cp ucore ucore_build_environment:/
     - docker start ucore_build_environment
     - docker exec ucore_build_environment apt-get install -y ncurses-dev u-boot-tools
-    - docker exec ucore_build_environment bash -c "cd /ucore && python misc/evaluate_build.py /opt/ucore_build_environment"
+    - |
+      docker exec ucore_build_environment bash -c "cd /ucore && python misc/evaluate_build.py \
+      --gcc_major_versions=${GCC_VER} --ucore_arch=${ARCH} --ucore_board=${BOARD} \
+      /opt/ucore_build_environment"
 
 compiler:
     - gcc

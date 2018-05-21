@@ -33,19 +33,19 @@ static int dev_close(struct inode *node)
 /*
  * Called for read. Hand off to dop_io.
  */
-static int dev_read(struct inode *node, struct iobuf *iob)
+static int dev_read(struct inode *node, struct iobuf *iob, int io_flags)
 {
 	struct device *dev = vop_info(node, device);
-	return dop_io(dev, iob, 0);
+	return dop_io(dev, iob, 0, io_flags);
 }
 
 /*
  * Called for write. Hand off to dop_io.
  */
-static int dev_write(struct inode *node, struct iobuf *iob)
+static int dev_write(struct inode *node, struct iobuf *iob, int io_flags)
 {
 	struct device *dev = vop_info(node, device);
-	return dop_io(dev, iob, 1);
+	return dop_io(dev, iob, 1, io_flags);
 }
 
 /*
@@ -55,6 +55,15 @@ static int dev_ioctl(struct inode *node, int op, void *data)
 {
 	struct device *dev = vop_info(node, device);
 	return dop_ioctl(dev, op, data);
+}
+
+/*
+ * Called for poll(). Just pass through.
+ */
+static int dev_poll(struct inode *node, wait_t *wait, int io_requests)
+{
+	struct device *dev = vop_info(node, device);
+	return dop_poll(dev, wait, io_requests);
 }
 
 /*
@@ -155,6 +164,7 @@ static const struct inode_ops dev_node_ops = {
 	.vop_unlink = NULL_VOP_NOTDIR,
 	.vop_lookup = dev_lookup,
 	.vop_lookup_parent = NULL_VOP_NOTDIR,
+  .vop_poll = dev_poll,
 };
 
 #define init_device(x)                                  \
@@ -166,12 +176,23 @@ static const struct inode_ops dev_node_ops = {
 void dev_init(void)
 {
 	init_device(null);
-	#if defined(ARCH_ARM) || defined(ARCH_MIPS)
+	#if defined(ARCH_ARM)
 	init_device(uio);
+	#endif
+	#if defined(UCONFIG_ARM_BOARD_ZEDBOARD)
+	init_device(zynq_programmable_logic);
 	#endif
 	init_device(stdin);
 	init_device(stdout);
+  init_device(urandom);
+#ifdef UCONFIG_HAVE_FUSE
   init_device(fuse);
+#endif
+
+#ifdef UCONFIG_MIPS_ENABLE_THINPAD_FLASH_DRIVER
+  init_device(thinpad_flashrom);
+#endif
+
 	init_device(disk);
 }
 
